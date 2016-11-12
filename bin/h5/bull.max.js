@@ -1,6 +1,7 @@
-var document=document || {};var window=window || (global.document=document,global);
+var window = window || global;
+var document = document || (window.document = {});
 /***********************************/
-/*http://www.layabox.com 2016/05/19*/
+/*http://www.layabox.com 2016/11/11*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -95,11 +96,8 @@ var Laya=window.Laya=(function(window,document){
 					if(fullName.indexOf('laya.')==0){
 						var paths=fullName.split('.');
 						miniName=miniName || paths[paths.length-1];
-						if(miniName!="Image")
-						{
-							if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
-							Laya[miniName]=o;
-						}
+						if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
+						Laya[miniName]=o;
 					}
 				}
 				else {
@@ -191,15 +189,15 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.runtime.ICPlatformClass');
+	Laya.interface('laya.ui.IItem');
+	Laya.interface('laya.ui.ISelect');
+	Laya.interface('laya.runtime.IMarket');
 	Laya.interface('laya.filters.IFilter');
 	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.resource.IDispose');
-	Laya.interface('laya.runtime.IMarket');
-	Laya.interface('laya.ui.IItem');
+	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.filters.IFilterAction');
-	Laya.interface('laya.ui.ISelect');
+	Laya.interface('laya.runtime.ICPlatformClass');
 	/**
 	*@private
 	*/
@@ -23143,7 +23141,7 @@ var Laya=window.Laya=(function(window,document){
 			this.bg2Arr=[];
 			this.groundArr=[];
 			this.speed=20;
-			this.jumpSpeed=30;
+			this.jumpSpeed=60;
 			this.topY=200;
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=20;
@@ -23184,7 +23182,7 @@ var Laya=window.Laya=(function(window,document){
 			for (i=0;i < this.bgCount;i++){
 				var ground=new GameBackGround();
 				ground.loadImage("res/game/"+"ground1.png",0,0,1344,153);
-				ground.x=1344 *i;
+				ground.x=(1344-2)*i;
 				ground.y=this.groundPosY;
 				ground.vx=-this.speed;
 				ground.width=1344;
@@ -23247,36 +23245,41 @@ var Laya=window.Laya=(function(window,document){
 				var go=this.bg1Arr[i];
 				go.vx=-this.speed;
 				if (this.isTop){
-					go.vy=this.role.vy;
+					go.vy=Math.abs(this.role.vy);
+					console.log(go.vy,this.role.vy);
 				}
 				else{
+					if (go.y > this.bg1PosY)
+						go.vy=-this.role.vy;
 				}
 				go.update();
-				console.log(go.vy,this.role.vy);
 				go=this.bg2Arr[i];
 				go.vx=-this.speed;
 				if (this.isTop){
-					go.vy=this.role.vy;
+					go.vy=Math.abs(this.role.vy);
 				}
 				else{
+					if (go.y > this.bg2PosY)
+						go.vy=-this.role.vy;
 				}
 				go.update();
 				go=this.groundArr[i];
 				if (this.isTop){
-					go.vy=this.role.vy;
+					go.vy=Math.abs(this.role.vy);
 				}
 				else{
+					if (go.y > this.groundPosY)
+						go.vy=-this.role.vy;
 				}
 				go.vx=-this.speed;
 				go.update();
 			}
 			for (i=0;i < this.bg1Arr.length;++i){
 				var go=this.bg1Arr[i];
-				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
-				if (go.y < this.bg1PosY){
+				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width
+					if (go.y < this.bg1PosY){
 					go.y=this.bg1PosY;
 					go.vy=0;
-					console.log("this.bg1PosY")
 				}
 				go=this.bg2Arr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
@@ -23285,7 +23288,7 @@ var Laya=window.Laya=(function(window,document){
 					go.vy=0;
 				}
 				go=this.groundArr[i];
-				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
+				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width-2;
 				if (go.y < this.groundPosY){
 					go.y=this.groundPosY;
 					go.vy=0;

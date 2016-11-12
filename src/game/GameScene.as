@@ -55,7 +55,7 @@ public class GameScene extends View
 		this.bg2Arr = [];
 		this.groundArr = [];
 		this.speed = 20;
-		this.jumpSpeed = 30;
+		this.jumpSpeed = 60;
 		this.topY = 200;
 		this.bg1PosY = -GameConstant.BG1_HEIGHT / 2 + 5;
 		this.bg2PosY = 20;
@@ -104,7 +104,7 @@ public class GameScene extends View
 		{
 			var ground:GameBackGround = new GameBackGround();
 			ground.loadImage(GameConstant.GAME_RES_PATH + "ground1.png", 0, 0, GameConstant.GROUND_WIDTH, GameConstant.GROUND_HEIGHT);
-			ground.x = GameConstant.GROUND_WIDTH * i;
+			ground.x = (GameConstant.GROUND_WIDTH - 2) * i;
 			ground.y = this.groundPosY;
 			ground.vx = -this.speed;
 			ground.width = GameConstant.GROUND_WIDTH;
@@ -182,38 +182,38 @@ public class GameScene extends View
 			go.vx = -this.speed;
 			if (this.isTop) 
 			{
-				go.vy = this.role.vy;
+				go.vy = Math.abs(this.role.vy);
+				trace(go.vy,  this.role.vy);
 			}
 			else 
 			{
-				//if (go.y > this.bg1PosY)
-					//go.vy = -this.role.vy;
+				if (go.y > this.bg1PosY)
+					go.vy = -this.role.vy;
 			}
 			go.update();
-			trace(go.vy,  this.role.vy);
 
 			go = this.bg2Arr[i];
 			go.vx = -this.speed;
 			if (this.isTop) 
 			{
-				go.vy = this.role.vy;
+				go.vy = Math.abs(this.role.vy);
 			}
 			else 
 			{
-				/*if (go.y > this.bg2PosY)
-					go.vy = -this.role.vy;*/
+				if (go.y > this.bg2PosY) 
+					go.vy = -this.role.vy;
 			}
 			go.update();
 			
 			go = this.groundArr[i];
 			if (this.isTop)
 			{
-				go.vy = this.role.vy;
+				go.vy = Math.abs(this.role.vy);
 			}
 			else 
 			{
-				/*if (go.y > this.groundPosY)
-					go.vy = -this.role.vy;*/
+				if (go.y > this.groundPosY)
+					go.vy = -this.role.vy;
 			}
 			go.vx = -this.speed;
 			go.update();
@@ -223,12 +223,11 @@ public class GameScene extends View
 		for (i = 0; i < this.bg1Arr.length; ++i) 
 		{
 			var go:GameBackGround = this.bg1Arr[i];
-			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width;
+			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width
 			if (go.y < this.bg1PosY)
 			{
 				go.y = this.bg1PosY;
 				go.vy = 0;
-				trace("this.bg1PosY")
 			}
 
 			go = this.bg2Arr[i];
@@ -240,13 +239,12 @@ public class GameScene extends View
 			}
 
 			go = this.groundArr[i];
-			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width;
+			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width - 2;
 			if (go.y < this.groundPosY) 
 			{
 				go.y = this.groundPosY;
 				go.vy = 0;
 			}
-
 		}
 	}
 	
