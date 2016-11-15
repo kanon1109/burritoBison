@@ -23144,12 +23144,12 @@ var Laya=window.Laya=(function(window,document){
 			this.groundArr=[];
 			this.speed=20;
 			this.jumpSpeed=30;
-			this.topY=100;
+			this.topY=200;
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=20;
+			this.groundPosY=Laya.stage.height-153;
 			this.frictionX=.9;
 			this.frictionY=.7;
-			this.groundPosY=Laya.stage.height-153;
 			this.initTouch();
 			this.initBg();
 			this.initRole();
@@ -23246,30 +23246,50 @@ var Laya=window.Laya=(function(window,document){
 			for (var i=0;i < this.bg1Arr.length;++i){
 				var go=this.bg1Arr[i];
 				go.vx=-this.speed;
-				if (this.isTop)go.vy=this.role.vy;
-				else go.vy=-this.role.vy;
+				if (this.isTop){
+					go.vy=this.role.vy;
+				}
+				else{
+				}
 				go.update();
+				console.log(go.vy,this.role.vy);
 				go=this.bg2Arr[i];
 				go.vx=-this.speed;
-				if (this.isTop)go.vy=this.role.vy;
-				else go.vy=-this.role.vy;
+				if (this.isTop){
+					go.vy=this.role.vy;
+				}
+				else{
+				}
 				go.update();
 				go=this.groundArr[i];
-				if (this.isTop)go.vy=this.role.vy;
-				else go.vy=-this.role.vy;
+				if (this.isTop){
+					go.vy=this.role.vy;
+				}
+				else{
+				}
 				go.vx=-this.speed;
 				go.update();
 			}
 			for (i=0;i < this.bg1Arr.length;++i){
 				var go=this.bg1Arr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
-				if (go.y < this.bg1PosY)go.y=this.bg1PosY;
+				if (go.y < this.bg1PosY){
+					go.y=this.bg1PosY;
+					go.vy=0;
+					console.log("this.bg1PosY")
+				}
 				go=this.bg2Arr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
-				if (go.y < this.bg2PosY)go.y=this.bg2PosY;
+				if (go.y < this.bg2PosY){
+					go.y=this.bg2PosY;
+					go.vy=0;
+				}
 				go=this.groundArr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
-				if (go.y < this.groundPosY)go.y=this.groundPosY;
+				if (go.y < this.groundPosY){
+					go.y=this.groundPosY;
+					go.vy=0;
+				}
 			}
 		}
 
@@ -23282,14 +23302,12 @@ var Laya=window.Laya=(function(window,document){
 				this.role.y=this.groundY;
 				this.speed *=this.frictionX;
 				this.role.vy=-this.role.vy *this.frictionY;
+				if (this.role.vy > 0 && this.role.vy <=1)
+					this.role.vy=0;
 			}
 			this.isTop=this.role.vy <=0 && this.role.y < this.topY;
 			if (this.isTop)this.role.y=this.topY;
 			if (Math.abs(this.speed)< 1)this.speed=0;
-			if (Math.abs(this.role.y-this.groundPosY)<=Math.abs(this.role.vy)&&
-				this.role.vy > 0 && this.role.vy < 1)
-			this.role.vy=0;
-			console.log(this.speed,this.role.vy);
 		}
 
 		/**
