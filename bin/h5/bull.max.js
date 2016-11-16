@@ -1,7 +1,6 @@
-var window = window || global;
-var document = document || (window.document = {});
+var document=document || {};var window=window || (global.document=document,global);
 /***********************************/
-/*http://www.layabox.com 2016/11/11*/
+/*http://www.layabox.com 2016/05/19*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -96,8 +95,11 @@ var Laya=window.Laya=(function(window,document){
 					if(fullName.indexOf('laya.')==0){
 						var paths=fullName.split('.');
 						miniName=miniName || paths[paths.length-1];
-						if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
-						Laya[miniName]=o;
+						if(miniName!="Image")
+						{
+							if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
+							Laya[miniName]=o;
+						}
 					}
 				}
 				else {
@@ -189,15 +191,15 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.ui.IItem');
-	Laya.interface('laya.ui.ISelect');
-	Laya.interface('laya.runtime.IMarket');
+	Laya.interface('laya.runtime.ICPlatformClass');
 	Laya.interface('laya.filters.IFilter');
 	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.resource.IDispose');
 	Laya.interface('laya.runtime.IConchNode');
+	Laya.interface('laya.resource.IDispose');
+	Laya.interface('laya.runtime.IMarket');
+	Laya.interface('laya.ui.IItem');
 	Laya.interface('laya.filters.IFilterAction');
-	Laya.interface('laya.runtime.ICPlatformClass');
+	Laya.interface('laya.ui.ISelect');
 	/**
 	*@private
 	*/
@@ -14936,21 +14938,42 @@ var Laya=window.Laya=(function(window,document){
 	//class game.obj.Role extends game.obj.GameObject
 	var Role=(function(_super){
 		function Role(){
-			this._gravity=0;
+			this.gravity=NaN;
+			this._speed=NaN;
+			this.frictionX=NaN;
+			this.frictionY=NaN;
+			this.topY=0;
+			this.minVy=NaN;
+			this._jumpSpeed=NaN;
+			this._isOutTop=false;
+			this._groundY=0;
 			Role.__super.call(this);
+			this.initData();
 			this.init();
 		}
 
 		__class(Role,'game.obj.Role',_super);
 		var __proto=Role.prototype;
+		/**
+		*初始化数据
+		*/
+		__proto.initData=function(){
+			this._speed=0;
+			this._jumpSpeed=60;
+			this._isOutTop=false;
+			this.gravity=.98;
+			this.topY=200;
+			this.minVy=5;
+			this.frictionX=.9;
+			this.frictionY=.7;
+		}
+
+		/**
+		*初始化
+		*/
 		__proto.init=function(){
 			this.loadImage("res/game/"+"role.png",0,0,0,0,Handler.create(this,this.loadCompleteHandler));
 			this.scaleX=-this.scaleX;
-		}
-
-		__proto.update=function(){
-			_super.prototype.update.call(this);
-			this.vy+=this._gravity;
 		}
 
 		__proto.loadCompleteHandler=function(tex){
@@ -14960,11 +14983,56 @@ var Laya=window.Laya=(function(window,document){
 			this.width=tex.height;
 		}
 
+		__proto.update=function(){
+			this.x+=this.vx;
+			if (!this._isOutTop)this.y+=this.vy;
+			this.vy+=this.gravity;
+			if (this.y > this._groundY){
+				this.y=this._groundY;
+				this.speed *=this.frictionX;
+				this.vy=-this.vy *this.frictionY;
+				if (Math.abs(this.vy)< this.minVy)this.vy=0;
+			}
+			if (Math.abs(this.speed)< 1)this.speed=0;
+			if (this.y < this.topY){
+				this.y=this.topY;
+				this._isOutTop=true;
+			}
+		}
+
 		/**
-		*重力加速度
+		*跳跃
 		*/
-		__getset(0,__proto,'gravity',function(){return this._gravity;},function(value){
-			this._gravity=value;
+		__proto.jump=function(){
+			this.vy=this.jumpSpeed;
+		}
+
+		/**
+		*移动速度
+		*/
+		__getset(0,__proto,'speed',function(){return this._speed;},function(value){
+			this._speed=value;
+		});
+
+		/**
+		*跳跃速度
+		*/
+		__getset(0,__proto,'jumpSpeed',function(){return this._jumpSpeed;},function(value){
+			this._jumpSpeed=value;
+		});
+
+		/**
+		*是否飞入顶部区域
+		*/
+		__getset(0,__proto,'isOutTop',function(){return this._isOutTop;},function(value){
+			this._isOutTop=value;
+		});
+
+		/**
+		*地板坐标
+		*/
+		__getset(0,__proto,'groundY',function(){return this._groundY;},function(value){
+			this._groundY=value;
 		});
 
 		return Role;
@@ -23110,20 +23178,13 @@ var Laya=window.Laya=(function(window,document){
 	var GameScene=(function(_super){
 		function GameScene(){
 			this.role=null;
-			this.groundY=0;
-			this.topY=0;
 			this.bg1Arr=null;
 			this.bg2Arr=null;
 			this.groundArr=null;
 			this.bg1PosY=NaN;
 			this.bg2PosY=NaN;
 			this.groundPosY=NaN;
-			this.speed=NaN;
-			this.jumpSpeed=NaN;
-			this.isTop=false;
 			this.bgCount=0;
-			this.frictionX=NaN;
-			this.frictionY=NaN;
 			GameScene.__super.call(this);
 			this.init();
 		}
@@ -23134,23 +23195,25 @@ var Laya=window.Laya=(function(window,document){
 		*初始化游戏
 		*/
 		__proto.init=function(){
+			this.initData();
+			this.initTouch();
+			this.initRole();
+			this.initBg();
+		}
+
+		/**
+		*初始化数据
+		*/
+		__proto.initData=function(){
 			this.size(1136,640);
 			this.bgCount=3;
 			this.timerLoop(1 / 60 *1000,this,this.gameLoop);
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
-			this.speed=20;
-			this.jumpSpeed=60;
-			this.topY=200;
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=20;
 			this.groundPosY=Laya.stage.height-153;
-			this.frictionX=.9;
-			this.frictionY=.7;
-			this.initTouch();
-			this.initBg();
-			this.initRole();
 		}
 
 		/**
@@ -23162,18 +23225,18 @@ var Laya=window.Laya=(function(window,document){
 				bg.loadImage("res/game/"+"bg1_1.png",0,0,1758,636);
 				bg.x=1758 *i;
 				bg.y=this.bg1PosY;
-				bg.vx=-this.speed;
+				bg.vx=-this.role.speed;
 				bg.width=1758;
 				bg.height=636;
 				Layer.GAME_BACKGROUND_LAYER.addChild(bg);
 				this.bg1Arr.push(bg);
 			}
 			for (i=0;i < this.bgCount;i++){
-				var bg=new GameBackGround();
+				bg=new GameBackGround();
 				bg.loadImage("res/game/"+"bg1_2.png",0,0,873,499);
 				bg.x=873 *i;
 				bg.y=this.bg2PosY;
-				bg.vx=-this.speed;
+				bg.vx=-this.role.speed;
 				bg.width=873;
 				bg.height=499;
 				Layer.GAME_BACKGROUND_LAYER.addChild(bg);
@@ -23184,28 +23247,29 @@ var Laya=window.Laya=(function(window,document){
 				ground.loadImage("res/game/"+"ground1.png",0,0,1344,153);
 				ground.x=(1344-2)*i;
 				ground.y=this.groundPosY;
-				ground.vx=-this.speed;
+				ground.vx=-this.role.speed;
 				ground.width=1344;
 				ground.height=153;
-				this.groundY=ground.y+20;
+				this.role.groundY=ground.y+20;
 				Layer.GAME_BACKGROUND_LAYER.addChild(ground);
 				this.groundArr.push(ground);
 			};
+			var go;
 			var length=this.bg1Arr.length;
-			for (var i=0;i < length;++i){
-				var go=this.bg1Arr[i];
+			for (i=0;i < length;++i){
+				go=this.bg1Arr[i];
 				if (i==0)go.prevBg=this.bg1Arr[length-1];
 				else go.prevBg=this.bg1Arr[i-1];
 			}
 			length=this.bg2Arr.length;
 			for (i=0;i < length;++i){
-				var go=this.bg2Arr[i];
+				go=this.bg2Arr[i];
 				if (i==0)go.prevBg=this.bg2Arr[length-1];
 				else go.prevBg=this.bg2Arr[i-1];
 			}
 			length=this.groundArr.length;
 			for (i=0;i < length;++i){
-				var go=this.groundArr[i];
+				go=this.groundArr[i];
 				if (i==0)go.prevBg=this.groundArr[length-1];
 				else go.prevBg=this.groundArr[i-1];
 			}
@@ -23219,8 +23283,10 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.mouseClickHander=function(){
-			this.speed+=10;
-			this.role.vy=this.jumpSpeed;
+			if (this.role){
+				this.role.speed=20;
+				this.role.jump();
+			}
 		}
 
 		/**
@@ -23231,8 +23297,8 @@ var Laya=window.Laya=(function(window,document){
 				this.role=new Role();
 				this.role.x=this.displayWidth / 2-200;
 				this.role.y=this.displayHeight / 2;
-				this.role.gravity=.98;
-				this.role.vy=this.jumpSpeed;
+				this.role.vx=0;
+				this.role.vy=0;
 				Layer.GAME_ROLE_LAYER.addChild(this.role);
 			}
 		}
@@ -23241,41 +23307,23 @@ var Laya=window.Laya=(function(window,document){
 		*更新地图
 		*/
 		__proto.updateBg=function(){
+			var go;
 			for (var i=0;i < this.bg1Arr.length;++i){
-				var go=this.bg1Arr[i];
-				go.vx=-this.speed;
-				if (this.isTop){
-					go.vy=Math.abs(this.role.vy);
-					console.log(go.vy,this.role.vy);
-				}
-				else{
-					if (go.y > this.bg1PosY)
-						go.vy=-this.role.vy;
-				}
+				go=this.bg1Arr[i];
+				go.vx=-this.role.speed;
+				if (this.role.isOutTop)go.vy=-this.role.vy *.9;
 				go.update();
 				go=this.bg2Arr[i];
-				go.vx=-this.speed;
-				if (this.isTop){
-					go.vy=Math.abs(this.role.vy);
-				}
-				else{
-					if (go.y > this.bg2PosY)
-						go.vy=-this.role.vy;
-				}
+				go.vx=-this.role.speed;
+				if (this.role.isOutTop)go.vy=-this.role.vy;
 				go.update();
 				go=this.groundArr[i];
-				if (this.isTop){
-					go.vy=Math.abs(this.role.vy);
-				}
-				else{
-					if (go.y > this.groundPosY)
-						go.vy=-this.role.vy;
-				}
-				go.vx=-this.speed;
+				if (this.role.isOutTop)go.vy=-this.role.vy;
+				go.vx=-this.role.speed;
 				go.update();
 			}
 			for (i=0;i < this.bg1Arr.length;++i){
-				var go=this.bg1Arr[i];
+				go=this.bg1Arr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width
 					if (go.y < this.bg1PosY){
 					go.y=this.bg1PosY;
@@ -23292,6 +23340,7 @@ var Laya=window.Laya=(function(window,document){
 				if (go.y < this.groundPosY){
 					go.y=this.groundPosY;
 					go.vy=0;
+					this.role.isOutTop=false;
 				}
 			}
 		}
@@ -23300,17 +23349,8 @@ var Laya=window.Laya=(function(window,document){
 		*更新角色
 		*/
 		__proto.updateRole=function(){
-			this.role.update();
-			if (this.role.y > this.groundY){
-				this.role.y=this.groundY;
-				this.speed *=this.frictionX;
-				this.role.vy=-this.role.vy *this.frictionY;
-				if (this.role.vy > 0 && this.role.vy <=1)
-					this.role.vy=0;
-			}
-			this.isTop=this.role.vy <=0 && this.role.y < this.topY;
-			if (this.isTop)this.role.y=this.topY;
-			if (Math.abs(this.speed)< 1)this.speed=0;
+			if (this.role)
+				this.role.update();
 		}
 
 		/**
