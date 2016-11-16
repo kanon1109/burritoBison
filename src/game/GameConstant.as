@@ -23,5 +23,12 @@ public class GameConstant
 	//地板高宽
 	public static const GROUND_WIDTH:int = 1344;
 	public static const GROUND_HEIGHT:int = 153;
+	
+	//云高宽
+	public static const CLOUD1_WIDTH:int = 2487;
+	public static const CLOUD1_HEIGHT:int = 887;
+	
+	public static const CLOUD2_WIDTH:int = 2218;
+	public static const CLOUD2_HEIGHT:int = 619;
 }
 }

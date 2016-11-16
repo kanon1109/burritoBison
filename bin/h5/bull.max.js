@@ -400,6 +400,10 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.BG2_HEIGHT=499;
 		GameConstant.GROUND_WIDTH=1344;
 		GameConstant.GROUND_HEIGHT=153;
+		GameConstant.CLOUD1_WIDTH=2487;
+		GameConstant.CLOUD1_HEIGHT=887;
+		GameConstant.CLOUD2_WIDTH=2218;
+		GameConstant.CLOUD2_HEIGHT=619;
 		return GameConstant;
 	})()
 
@@ -14944,7 +14948,6 @@ var Laya=window.Laya=(function(window,document){
 			this.frictionY=NaN;
 			this.topY=0;
 			this.minVy=NaN;
-			this._jumpSpeed=NaN;
 			this._isOutTop=false;
 			this._groundY=0;
 			Role.__super.call(this);
@@ -14959,7 +14962,6 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.initData=function(){
 			this._speed=0;
-			this._jumpSpeed=60;
 			this._isOutTop=false;
 			this.gravity=.98;
 			this.topY=200;
@@ -15003,23 +15005,9 @@ var Laya=window.Laya=(function(window,document){
 		/**
 		*跳跃
 		*/
-		__proto.jump=function(){
-			this.vy=this.jumpSpeed;
+		__proto.jump=function(speed){
+			this.vy=speed;
 		}
-
-		/**
-		*移动速度
-		*/
-		__getset(0,__proto,'speed',function(){return this._speed;},function(value){
-			this._speed=value;
-		});
-
-		/**
-		*跳跃速度
-		*/
-		__getset(0,__proto,'jumpSpeed',function(){return this._jumpSpeed;},function(value){
-			this._jumpSpeed=value;
-		});
 
 		/**
 		*是否飞入顶部区域
@@ -15033,6 +15021,13 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'groundY',function(){return this._groundY;},function(value){
 			this._groundY=value;
+		});
+
+		/**
+		*移动速度
+		*/
+		__getset(0,__proto,'speed',function(){return this._speed;},function(value){
+			this._speed=value;
 		});
 
 		return Role;
@@ -23172,6 +23167,7 @@ var Laya=window.Laya=(function(window,document){
 
 	/**
 	*...游戏场景层
+	*TODO 云层
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -23181,9 +23177,13 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1Arr=null;
 			this.bg2Arr=null;
 			this.groundArr=null;
+			this.cloud1Arr=null;
+			this.cloud2Arr=null;
 			this.bg1PosY=NaN;
 			this.bg2PosY=NaN;
 			this.groundPosY=NaN;
+			this.cloud1PosY=NaN;
+			this.cloud2PosY=NaN;
 			this.bgCount=0;
 			GameScene.__super.call(this);
 			this.init();
@@ -23199,6 +23199,7 @@ var Laya=window.Laya=(function(window,document){
 			this.initTouch();
 			this.initRole();
 			this.initBg();
+			this.initCloud();
 		}
 
 		/**
@@ -23211,67 +23212,90 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
+			this.cloud1Arr=[];
+			this.cloud2Arr=[];
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=20;
 			this.groundPosY=Laya.stage.height-153;
+			this.cloud1PosY=this.bg1PosY-887-500;
+			this.cloud2PosY=this.bg1PosY-619-300;
 		}
 
 		/**
 		*初始化背景
 		*/
 		__proto.initBg=function(){
-			for (var i=0;i < this.bgCount;i++){
+			this.createBg("bg1_1.png",
+			1758,
+			636,
+			this.bgCount,this.bg1PosY,
+			Layer.GAME_BACKGROUND_LAYER,this.bg1Arr);
+			this.createBg("bg1_2.png",
+			873,
+			499,
+			this.bgCount,this.bg2PosY,
+			Layer.GAME_BACKGROUND_LAYER,this.bg2Arr);
+			this.createBg("ground1.png",
+			1344,
+			153,
+			this.bgCount,this.groundPosY,
+			Layer.GAME_BACKGROUND_LAYER,this.groundArr);
+			this.layoutBg(this.bg1Arr);
+			this.layoutBg(this.bg2Arr);
+			this.layoutBg(this.groundArr);
+		}
+
+		/**
+		*初始化云
+		*/
+		__proto.initCloud=function(){
+			this.createBg("cloud1.png",
+			2487,
+			887,
+			this.bgCount,this.cloud1PosY,
+			Layer.GAME_BACKGROUND_LAYER,this.cloud1Arr);
+			this.createBg("cloud2.png",
+			2218,
+			619,
+			this.bgCount,this.cloud2PosY,
+			Layer.GAME_BACKGROUND_LAYER,this.cloud2Arr);
+			this.layoutBg(this.cloud1Arr);
+			this.layoutBg(this.cloud2Arr);
+		}
+
+		/**
+		*创建一个背景层
+		*@param name 名字
+		*@param width 宽度
+		*@param height 高度
+		*@param count 数量
+		*@param posY 初始y坐标
+		*@param parent 父节点
+		*@param arr 存放数组
+		*/
+		__proto.createBg=function(name,width,height,count,posY,parent,arr){
+			for (var i=0;i < count;i++){
 				var bg=new GameBackGround();
-				bg.loadImage("res/game/"+"bg1_1.png",0,0,1758,636);
-				bg.x=1758 *i;
-				bg.y=this.bg1PosY;
-				bg.vx=-this.role.speed;
-				bg.width=1758;
-				bg.height=636;
-				Layer.GAME_BACKGROUND_LAYER.addChild(bg);
-				this.bg1Arr.push(bg);
+				bg.loadImage("res/game/"+name,0,0,width,height);
+				bg.x=width *i;
+				bg.y=posY;
+				bg.width=width;
+				bg.height=height;
+				parent.addChild(bg);
+				arr.push(bg);
 			}
-			for (i=0;i < this.bgCount;i++){
-				bg=new GameBackGround();
-				bg.loadImage("res/game/"+"bg1_2.png",0,0,873,499);
-				bg.x=873 *i;
-				bg.y=this.bg2PosY;
-				bg.vx=-this.role.speed;
-				bg.width=873;
-				bg.height=499;
-				Layer.GAME_BACKGROUND_LAYER.addChild(bg);
-				this.bg2Arr.push(bg);
-			}
-			for (i=0;i < this.bgCount;i++){
-				var ground=new GameBackGround();
-				ground.loadImage("res/game/"+"ground1.png",0,0,1344,153);
-				ground.x=(1344-2)*i;
-				ground.y=this.groundPosY;
-				ground.vx=-this.role.speed;
-				ground.width=1344;
-				ground.height=153;
-				this.role.groundY=ground.y+20;
-				Layer.GAME_BACKGROUND_LAYER.addChild(ground);
-				this.groundArr.push(ground);
-			};
-			var go;
-			var length=this.bg1Arr.length;
-			for (i=0;i < length;++i){
-				go=this.bg1Arr[i];
-				if (i==0)go.prevBg=this.bg1Arr[length-1];
-				else go.prevBg=this.bg1Arr[i-1];
-			}
-			length=this.bg2Arr.length;
-			for (i=0;i < length;++i){
-				go=this.bg2Arr[i];
-				if (i==0)go.prevBg=this.bg2Arr[length-1];
-				else go.prevBg=this.bg2Arr[i-1];
-			}
-			length=this.groundArr.length;
-			for (i=0;i < length;++i){
-				go=this.groundArr[i];
-				if (i==0)go.prevBg=this.groundArr[length-1];
-				else go.prevBg=this.groundArr[i-1];
+		}
+
+		/**
+		*展开平铺布局地图
+		*@param arr 地图数据列表
+		*/
+		__proto.layoutBg=function(arr){
+			var length=arr.length;
+			for (var i=0;i < length;++i){
+				var go=arr[i];
+				if (i==0)go.prevBg=arr[length-1];
+				else go.prevBg=arr[i-1];
 			}
 		}
 
@@ -23284,8 +23308,8 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.mouseClickHander=function(){
 			if (this.role){
-				this.role.speed=20;
-				this.role.jump();
+				this.role.speed=60;
+				this.role.jump(60);
 			}
 		}
 
@@ -23299,50 +23323,57 @@ var Laya=window.Laya=(function(window,document){
 				this.role.y=this.displayHeight / 2;
 				this.role.vx=0;
 				this.role.vy=0;
+				this.role.groundY=this.groundPosY+20;
 				Layer.GAME_ROLE_LAYER.addChild(this.role);
 			}
 		}
 
 		/**
-		*更新地图
+		*更新单个一层地图位置
+		*@param arr 地图数组
+		*@param vx 横向速度
+		*@param vy 纵向速度
 		*/
-		__proto.updateBg=function(){
-			var go;
-			for (var i=0;i < this.bg1Arr.length;++i){
-				go=this.bg1Arr[i];
-				go.vx=-this.role.speed;
-				if (this.role.isOutTop)go.vy=-this.role.vy *.9;
-				go.update();
-				go=this.bg2Arr[i];
-				go.vx=-this.role.speed;
-				if (this.role.isOutTop)go.vy=-this.role.vy;
-				go.update();
-				go=this.groundArr[i];
-				if (this.role.isOutTop)go.vy=-this.role.vy;
-				go.vx=-this.role.speed;
+		__proto.updateBg=function(arr,vx,vy){
+			for (var i=0;i < arr.length;++i){
+				var go=arr[i];
+				go.vx=vx;
+				if (this.role.isOutTop)go.vy=vy;
 				go.update();
 			}
-			for (i=0;i < this.bg1Arr.length;++i){
-				go=this.bg1Arr[i];
+		}
+
+		/**
+		*单个一层背景滚动
+		*@param arr 存放背景的数字
+		*@param posY 地图起始位置
+		*/
+		__proto.scrollBg=function(arr,posY){
+			for (var i=0;i < arr.length;++i){
+				var go=arr[i];
 				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width
-					if (go.y < this.bg1PosY){
-					go.y=this.bg1PosY;
-					go.vy=0;
-				}
-				go=this.bg2Arr[i];
-				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
-				if (go.y < this.bg2PosY){
-					go.y=this.bg2PosY;
-					go.vy=0;
-				}
-				go=this.groundArr[i];
-				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width-2;
-				if (go.y < this.groundPosY){
-					go.y=this.groundPosY;
+					if (go.y < posY){
+					go.y=posY;
 					go.vy=0;
 					this.role.isOutTop=false;
 				}
 			}
+		}
+
+		/**
+		*更新所有背景图
+		*/
+		__proto.updateAllBg=function(){
+			this.updateBg(this.bg1Arr,-this.role.speed *.3,-this.role.vy *.9);
+			this.updateBg(this.bg2Arr,-this.role.speed,-this.role.vy);
+			this.updateBg(this.groundArr,-this.role.speed,-this.role.vy);
+			this.updateBg(this.cloud1Arr,-this.role.speed *1.5,-this.role.vy);
+			this.updateBg(this.cloud2Arr,-this.role.speed *.15,-this.role.vy);
+			this.scrollBg(this.bg1Arr,this.bg1PosY);
+			this.scrollBg(this.bg2Arr,this.bg2PosY);
+			this.scrollBg(this.groundArr,this.groundPosY);
+			this.scrollBg(this.cloud1Arr,this.cloud1PosY);
+			this.scrollBg(this.cloud2Arr,this.cloud2PosY);
 		}
 
 		/**
@@ -23357,7 +23388,7 @@ var Laya=window.Laya=(function(window,document){
 		*游戏主循环
 		*/
 		__proto.gameLoop=function(){
-			this.updateBg();
+			this.updateAllBg();
 			this.updateRole();
 		}
 
@@ -23880,7 +23911,7 @@ var Laya=window.Laya=(function(window,document){
 	})(TextInput)
 
 
-	Laya.__init([EventDispatcher,Browser,LoaderManager,LocalStorage,Timer,Render,View]);
+	Laya.__init([EventDispatcher,Render,View,Browser,LoaderManager,LocalStorage,Timer]);
 	new Main();
 
 })(window,document,Laya);

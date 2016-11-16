@@ -24,8 +24,6 @@ public class Role extends GameObject
 	//角色最小下落速度（小于这个速度不再弹起）
 	private var minVy:Number;
 	
-	//跳跃速度
-	private var _jumpSpeed:Number;
 	//是否飞入顶部区域
 	private var _isOutTop:Boolean;
 	//地板坐标
@@ -43,7 +41,6 @@ public class Role extends GameObject
 	private function initData():void
 	{
 		this._speed = 0;
-		this._jumpSpeed = 60;
 		this._isOutTop = false;
 		
 		this.gravity = .98;
@@ -97,20 +94,11 @@ public class Role extends GameObject
 	/**
 	 * 跳跃
 	 */
-	public function jump():void
+	public function jump(speed:Number):void
 	{
-		this.vy = this.jumpSpeed;
+		this.vy = speed;
 	}
-	
-	/**
-	 * 跳跃速度
-	 */
-	public function get jumpSpeed():Number {return _jumpSpeed; }
-	public function set jumpSpeed(value:Number):void 
-	{
-		_jumpSpeed = value;
-	}
-	
+
 	/**
 	 * 是否飞入顶部区域
 	 */
