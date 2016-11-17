@@ -5,16 +5,20 @@ import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
 import laya.ui.View;
+import laya.utils.Ease;
+import laya.utils.Handler;
+import laya.utils.Tween;
 /**
  * ...游戏场景层
- * TODO 云层
+ * TODO [云层]
+ * [限定最高高度]
+ * [人物在最顶部自动进入云层后加速下落]
  * @author Kanon
  */
 public class GameScene extends View 
 {
 	//角色
 	private var role:Role;
-
 	//存放背景数组
 	private var bg1Arr:Array;
 	private var bg2Arr:Array;
@@ -33,7 +37,7 @@ public class GameScene extends View
 
 	//滚屏背景图片的数量
 	private	var bgCount:int;
-
+	private var moveRangY:Number;
 	public function GameScene() 
 	{
 		super();
@@ -74,8 +78,9 @@ public class GameScene extends View
 		this.bg2PosY = 20;
 		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT;
 		
-		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 500;
-		this.cloud2PosY = this.bg1PosY - GameConstant.CLOUD2_HEIGHT - 300;
+		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
+		this.cloud2PosY = this.cloud1PosY + 430;
+		this.moveRangY =  -180 - this.cloud1PosY;
 	}
 	
 	/**
@@ -83,8 +88,11 @@ public class GameScene extends View
 	 */
 	private function initBg():void 
 	{
-		//TODO 背景滚屏
-		//TODO 异步处理背景高宽问题
+		var bg:Sprite = new Sprite();
+		bg.graphics.drawRect(0, 0, GameConstant.GAME_WIDTH, GameConstant.GAME_HEIGHT, "#BFF5F2");
+		Layer.GAME_BACKGROUND_LAYER.addChild(bg);
+		
+		//背景滚屏
 		this.createBg("bg1_1.png", 
 					GameConstant.BG1_WIDTH, 
 					GameConstant.BG1_HEIGHT, 
@@ -102,10 +110,6 @@ public class GameScene extends View
 					GameConstant.GROUND_HEIGHT, 
 					this.bgCount, this.groundPosY, 
 					Layer.GAME_BACKGROUND_LAYER, this.groundArr);
-					
-		this.layoutBg(this.bg1Arr);
-		this.layoutBg(this.bg2Arr);
-		this.layoutBg(this.groundArr);
 	}
 	
 	/**
@@ -117,16 +121,13 @@ public class GameScene extends View
 					GameConstant.CLOUD1_WIDTH, 
 					GameConstant.CLOUD1_HEIGHT, 
 					this.bgCount, this.cloud1PosY, 
-					Layer.GAME_BACKGROUND_LAYER, this.cloud1Arr);
-		
+					Layer.GAME_FRONTGROUND_LAYER, this.cloud1Arr);
+					
 		this.createBg("cloud2.png", 
 					GameConstant.CLOUD2_WIDTH, 
 					GameConstant.CLOUD2_HEIGHT, 
 					this.bgCount, this.cloud2PosY, 
 					Layer.GAME_BACKGROUND_LAYER, this.cloud2Arr);
-					
-		this.layoutBg(this.cloud1Arr);
-		this.layoutBg(this.cloud2Arr);
 	}
 	
 	/**
@@ -138,37 +139,32 @@ public class GameScene extends View
 	 * @param	posY	初始y坐标
 	 * @param	parent	父节点
 	 * @param	arr		存放数组
+	 * @param	scale	缩放
 	 */
-	private function createBg(name:String, width:int, height:int, count:int, posY:Number, parent:Sprite, arr:Array):void
+	private function createBg(name:String, width:int, height:int, count:int, posY:Number, parent:Sprite, arr:Array, scale:Number = 1):void
 	{
+		var bg:GameBackGround;
 		for (var i:int = 0; i < count; i++) 
 		{
-			var bg:GameBackGround = new GameBackGround();
+			bg = new GameBackGround();
 			bg.loadImage(GameConstant.GAME_RES_PATH + name, 0, 0, width, height);
 			bg.x = width * i;
 			bg.y = posY;
 			bg.width = width;
 			bg.height = height;
+			bg.scale(scale, scale);
 			parent.addChild(bg);
 			arr.push(bg);
 		}
-	}
-	
-	/**
-	 * 展开平铺布局地图
-	 * @param	arr		地图数据列表
-	 */
-	private function layoutBg(arr:Array):void
-	{
-		var length:int = arr.length;
-		for (var i:int = 0; i < length; ++i) 
+		
+		for (i = 0; i < count; ++i) 
 		{
-			var go:GameBackGround = arr[i];
-			if (i == 0) go.prevBg = arr[length - 1];
-			else go.prevBg = arr[i - 1];
+			bg = arr[i];
+			if (i == 0) bg.prevBg = arr[count - 1];
+			else bg.prevBg = arr[i - 1];
 		}
 	}
-	
+
 	/**
 	 * 初始化点击
 	 */
@@ -179,10 +175,10 @@ public class GameScene extends View
 	
 	private function mouseClickHander():void 
 	{
-		if (this.role)
+		if (this.role && !this.role.isOutTop)
 		{
 			this.role.speed = 60;
-			this.role.jump(60);
+			this.role.jump(80);
 		}
 	}
 	
@@ -215,7 +211,7 @@ public class GameScene extends View
 		{
 			var go:GameBackGround = arr[i];
 			go.vx = vx;
-			if (this.role.isOutTop) go.vy = vy;
+			if (this.role.isOnTop) go.vy = vy;
 			go.update();
 		}
 	}
@@ -230,14 +226,28 @@ public class GameScene extends View
 		for (var i:int = 0; i < arr.length; ++i) 
 		{
 			var go:GameBackGround = arr[i];
-			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width
+			if (go.x < -go.width) go.x = go.prevBg.x + go.prevBg.width;
 			if (go.y < posY)
 			{
 				go.y = posY;
 				go.vy = 0;
-				this.role.isOutTop = false;
+				this.role.isOnTop = false;
+			}
+			if (go.y > posY + this.moveRangY)
+			{
+				go.y = posY + this.moveRangY;
+				if (!this.role.isOutTop)
+				{
+					this.role.isOutTop = true;
+					Tween.to(this.role, {y: -this.role.height}, 200, null, Handler.create(this, roleMoveTopComplete));
+				}
 			}
 		}
+	}
+	
+	private function roleMoveTopComplete():void
+	{
+		this.role.jump(50);
 	}
 	
 	/**
@@ -249,7 +259,7 @@ public class GameScene extends View
 		this.updateBg(this.bg2Arr, -this.role.speed, -this.role.vy);
 		this.updateBg(this.groundArr, -this.role.speed, -this.role.vy);
 		this.updateBg(this.cloud1Arr, -this.role.speed * 1.5, -this.role.vy);
-		this.updateBg(this.cloud2Arr, -this.role.speed * .15, -this.role.vy);
+		this.updateBg(this.cloud2Arr, -this.role.speed * .1, -this.role.vy);
 		
 		//滚屏
 		this.scrollBg(this.bg1Arr, this.bg1PosY);
@@ -257,6 +267,7 @@ public class GameScene extends View
 		this.scrollBg(this.groundArr, this.groundPosY);
 		this.scrollBg(this.cloud1Arr, this.cloud1PosY);
 		this.scrollBg(this.cloud2Arr, this.cloud2PosY);
+		
 	}
 	
 	/**

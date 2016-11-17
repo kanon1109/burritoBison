@@ -10,7 +10,6 @@ public class GameObject extends Sprite
 	//速度
 	private var _vx:Number = 0;
 	private var _vy:Number = 0;
-
 	public function GameObject() 
 	{
 		

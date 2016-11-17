@@ -398,12 +398,12 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.BG1_HEIGHT=636;
 		GameConstant.BG2_WIDTH=873;
 		GameConstant.BG2_HEIGHT=499;
-		GameConstant.GROUND_WIDTH=1344;
+		GameConstant.GROUND_WIDTH=1340;
 		GameConstant.GROUND_HEIGHT=153;
 		GameConstant.CLOUD1_WIDTH=2487;
 		GameConstant.CLOUD1_HEIGHT=887;
-		GameConstant.CLOUD2_WIDTH=2218;
-		GameConstant.CLOUD2_HEIGHT=619;
+		GameConstant.CLOUD2_WIDTH=2131;
+		GameConstant.CLOUD2_HEIGHT=590;
 		return GameConstant;
 	})()
 
@@ -14949,6 +14949,7 @@ var Laya=window.Laya=(function(window,document){
 			this.topY=0;
 			this.minVy=NaN;
 			this._isOutTop=false;
+			this._isOnTop=false;
 			this._groundY=0;
 			Role.__super.call(this);
 			this.initData();
@@ -14961,7 +14962,7 @@ var Laya=window.Laya=(function(window,document){
 		*初始化数据
 		*/
 		__proto.initData=function(){
-			this._speed=0;
+			this._speed=20;
 			this._isOutTop=false;
 			this.gravity=.98;
 			this.topY=200;
@@ -14987,7 +14988,7 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.update=function(){
 			this.x+=this.vx;
-			if (!this._isOutTop)this.y+=this.vy;
+			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
 				this.y=this._groundY;
@@ -14997,8 +14998,11 @@ var Laya=window.Laya=(function(window,document){
 			}
 			if (Math.abs(this.speed)< 1)this.speed=0;
 			if (this.y < this.topY){
-				this.y=this.topY;
-				this._isOutTop=true;
+				if (!this._isOutTop)this.y=this.topY;
+				this._isOnTop=true;
+			}
+			else if (this.y > this.topY){
+				this._isOutTop=false;
 			}
 		}
 
@@ -15028,6 +15032,13 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'speed',function(){return this._speed;},function(value){
 			this._speed=value;
+		});
+
+		/**
+		*是否到滚屏位置
+		*/
+		__getset(0,__proto,'isOnTop',function(){return this._isOnTop;},function(value){
+			this._isOnTop=value;
 		});
 
 		return Role;
@@ -23167,7 +23178,9 @@ var Laya=window.Laya=(function(window,document){
 
 	/**
 	*...游戏场景层
-	*TODO 云层
+	*TODO [云层]
+	*[限定最高高度]
+	*人物在最顶部自动进入云层后加速下落
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -23185,6 +23198,7 @@ var Laya=window.Laya=(function(window,document){
 			this.cloud1PosY=NaN;
 			this.cloud2PosY=NaN;
 			this.bgCount=0;
+			this.moveRangY=NaN;
 			GameScene.__super.call(this);
 			this.init();
 		}
@@ -23217,14 +23231,18 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=20;
 			this.groundPosY=Laya.stage.height-153;
-			this.cloud1PosY=this.bg1PosY-887-500;
-			this.cloud2PosY=this.bg1PosY-619-300;
+			this.cloud1PosY=this.bg1PosY-887-300;
+			this.cloud2PosY=this.cloud1PosY+430;
+			this.moveRangY=-180-this.cloud1PosY;
 		}
 
 		/**
 		*初始化背景
 		*/
 		__proto.initBg=function(){
+			var bg=new Sprite();
+			bg.graphics.drawRect(0,0,1136,640,"#BFF5F2");
+			Layer.GAME_BACKGROUND_LAYER.addChild(bg);
 			this.createBg("bg1_1.png",
 			1758,
 			636,
@@ -23236,13 +23254,10 @@ var Laya=window.Laya=(function(window,document){
 			this.bgCount,this.bg2PosY,
 			Layer.GAME_BACKGROUND_LAYER,this.bg2Arr);
 			this.createBg("ground1.png",
-			1344,
+			1340,
 			153,
 			this.bgCount,this.groundPosY,
 			Layer.GAME_BACKGROUND_LAYER,this.groundArr);
-			this.layoutBg(this.bg1Arr);
-			this.layoutBg(this.bg2Arr);
-			this.layoutBg(this.groundArr);
 		}
 
 		/**
@@ -23253,14 +23268,12 @@ var Laya=window.Laya=(function(window,document){
 			2487,
 			887,
 			this.bgCount,this.cloud1PosY,
-			Layer.GAME_BACKGROUND_LAYER,this.cloud1Arr);
+			Layer.GAME_FRONTGROUND_LAYER,this.cloud1Arr);
 			this.createBg("cloud2.png",
-			2218,
-			619,
+			2131,
+			590,
 			this.bgCount,this.cloud2PosY,
 			Layer.GAME_BACKGROUND_LAYER,this.cloud2Arr);
-			this.layoutBg(this.cloud1Arr);
-			this.layoutBg(this.cloud2Arr);
 		}
 
 		/**
@@ -23272,30 +23285,26 @@ var Laya=window.Laya=(function(window,document){
 		*@param posY 初始y坐标
 		*@param parent 父节点
 		*@param arr 存放数组
+		*@param scale 缩放
 		*/
-		__proto.createBg=function(name,width,height,count,posY,parent,arr){
+		__proto.createBg=function(name,width,height,count,posY,parent,arr,scale){
+			(scale===void 0)&& (scale=1);
+			var bg;
 			for (var i=0;i < count;i++){
-				var bg=new GameBackGround();
+				bg=new GameBackGround();
 				bg.loadImage("res/game/"+name,0,0,width,height);
 				bg.x=width *i;
 				bg.y=posY;
 				bg.width=width;
 				bg.height=height;
+				bg.scale(scale,scale);
 				parent.addChild(bg);
 				arr.push(bg);
 			}
-		}
-
-		/**
-		*展开平铺布局地图
-		*@param arr 地图数据列表
-		*/
-		__proto.layoutBg=function(arr){
-			var length=arr.length;
-			for (var i=0;i < length;++i){
-				var go=arr[i];
-				if (i==0)go.prevBg=arr[length-1];
-				else go.prevBg=arr[i-1];
+			for (i=0;i < count;++i){
+				bg=arr[i];
+				if (i==0)bg.prevBg=arr[count-1];
+				else bg.prevBg=arr[i-1];
 			}
 		}
 
@@ -23307,9 +23316,9 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.mouseClickHander=function(){
-			if (this.role){
+			if (this.role && !this.role.isOutTop){
 				this.role.speed=60;
-				this.role.jump(60);
+				this.role.jump(80);
 			}
 		}
 
@@ -23338,7 +23347,7 @@ var Laya=window.Laya=(function(window,document){
 			for (var i=0;i < arr.length;++i){
 				var go=arr[i];
 				go.vx=vx;
-				if (this.role.isOutTop)go.vy=vy;
+				if (this.role.isOnTop)go.vy=vy;
 				go.update();
 			}
 		}
@@ -23351,13 +23360,24 @@ var Laya=window.Laya=(function(window,document){
 		__proto.scrollBg=function(arr,posY){
 			for (var i=0;i < arr.length;++i){
 				var go=arr[i];
-				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width
-					if (go.y < posY){
+				if (go.x <-go.width)go.x=go.prevBg.x+go.prevBg.width;
+				if (go.y < posY){
 					go.y=posY;
 					go.vy=0;
-					this.role.isOutTop=false;
+					this.role.isOnTop=false;
+				}
+				if (go.y > posY+this.moveRangY){
+					go.y=posY+this.moveRangY;
+					if (!this.role.isOutTop){
+						this.role.isOutTop=true;
+						Tween.to(this.role,{y:-this.role.height},200,null,Handler.create(this,this.roleMoveTopComplete));
+					}
 				}
 			}
+		}
+
+		__proto.roleMoveTopComplete=function(){
+			this.role.jump(50);
 		}
 
 		/**
@@ -23368,7 +23388,7 @@ var Laya=window.Laya=(function(window,document){
 			this.updateBg(this.bg2Arr,-this.role.speed,-this.role.vy);
 			this.updateBg(this.groundArr,-this.role.speed,-this.role.vy);
 			this.updateBg(this.cloud1Arr,-this.role.speed *1.5,-this.role.vy);
-			this.updateBg(this.cloud2Arr,-this.role.speed *.15,-this.role.vy);
+			this.updateBg(this.cloud2Arr,-this.role.speed *.1,-this.role.vy);
 			this.scrollBg(this.bg1Arr,this.bg1PosY);
 			this.scrollBg(this.bg2Arr,this.bg2PosY);
 			this.scrollBg(this.groundArr,this.groundPosY);

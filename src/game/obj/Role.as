@@ -1,7 +1,6 @@
 package game.obj 
 {
 import game.GameConstant;
-import laya.display.Sprite;
 import laya.resource.Texture;
 import laya.utils.Handler;
 /**
@@ -23,9 +22,10 @@ public class Role extends GameObject
 	private var topY:int;
 	//角色最小下落速度（小于这个速度不再弹起）
 	private var minVy:Number;
-	
 	//是否飞入顶部区域
 	private var _isOutTop:Boolean;
+	//是否到滚屏位置
+	private var _isOnTop:Boolean;
 	//地板坐标
 	private var _groundY:int;
 	public function Role() 
@@ -40,7 +40,7 @@ public class Role extends GameObject
 	 */
 	private function initData():void
 	{
-		this._speed = 0;
+		this._speed = 20;
 		this._isOutTop = false;
 		
 		this.gravity = .98;
@@ -71,12 +71,12 @@ public class Role extends GameObject
 	override public function update():void 
 	{
 		this.x += this.vx;
-		if (!this._isOutTop) this.y += this.vy;
+		if (!this._isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
 		if (this.y > this._groundY)
 		{
 			this.y = this._groundY;
-			this.speed *= this.frictionX;
+			this.speed *= this.                                              ;
 			this.vy = -this.vy * this.frictionY;
 			//下落速度过小则停下
 			if (Math.abs(this.vy) < this.minVy) this.vy = 0;
@@ -86,8 +86,12 @@ public class Role extends GameObject
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
-			this.y = this.topY;
-			this._isOutTop = true;
+			if (!this._isOutTop) this.y = this.topY;
+			this._isOnTop = true;
+		}
+		else if (this.y > this.topY)
+		{
+			this._isOutTop = false;
 		}
 	}
 
@@ -124,6 +128,15 @@ public class Role extends GameObject
 	public function set speed(value:Number):void 
 	{
 		_speed = value;
+	}
+	
+	/**
+	 * 是否到滚屏位置
+	 */
+	public function get isOnTop():Boolean {return _isOnTop;}
+	public function set isOnTop(value:Boolean):void 
+	{
+		_isOnTop = value;
 	}
 }
 }
