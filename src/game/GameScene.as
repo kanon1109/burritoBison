@@ -13,6 +13,8 @@ import laya.utils.Tween;
  * TODO [云层]
  * [限定最高高度]
  * [人物在最顶部自动进入云层后加速下落]
+ * 人物动作变化
+ * 敌人出现移动删除
  * @author Kanon
  */
 public class GameScene extends View 
@@ -37,7 +39,8 @@ public class GameScene extends View
 
 	//滚屏背景图片的数量
 	private	var bgCount:int;
-	private var moveRangY:Number;
+	//背景滚动的范围
+	private var bgMoveRangY:Number;
 	public function GameScene() 
 	{
 		super();
@@ -80,7 +83,7 @@ public class GameScene extends View
 		
 		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
 		this.cloud2PosY = this.cloud1PosY + 430;
-		this.moveRangY =  -180 - this.cloud1PosY;
+		this.bgMoveRangY =  -180 - this.cloud1PosY;
 	}
 	
 	/**
@@ -233,9 +236,9 @@ public class GameScene extends View
 				go.vy = 0;
 				this.role.isOnTop = false;
 			}
-			if (go.y > posY + this.moveRangY)
+			if (go.y > posY + this.bgMoveRangY)
 			{
-				go.y = posY + this.moveRangY;
+				go.y = posY + this.bgMoveRangY;
 				if (!this.role.isOutTop)
 				{
 					this.role.isOutTop = true;
@@ -284,11 +287,10 @@ public class GameScene extends View
 	 */
 	private function gameLoop():void 
 	{
-		//TODO
-		//角色循环
 		//背景循环
 		//前景循环
 		this.updateAllBg();
+		//角色循环
 		this.updateRole();
 	}
 

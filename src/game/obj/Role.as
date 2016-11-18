@@ -76,7 +76,7 @@ public class Role extends GameObject
 		if (this.y > this._groundY)
 		{
 			this.y = this._groundY;
-			this.speed *= this.                                              ;
+			this.speed *= this.frictionX;
 			this.vy = -this.vy * this.frictionY;
 			//下落速度过小则停下
 			if (Math.abs(this.vy) < this.minVy) this.vy = 0;
