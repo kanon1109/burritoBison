@@ -1,6 +1,7 @@
-var document=document || {};var window=window || (global.document=document,global);
+var window = window || global;
+var document = document || (window.document = {});
 /***********************************/
-/*http://www.layabox.com 2016/05/19*/
+/*http://www.layabox.com 2016/11/11*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -95,11 +96,8 @@ var Laya=window.Laya=(function(window,document){
 					if(fullName.indexOf('laya.')==0){
 						var paths=fullName.split('.');
 						miniName=miniName || paths[paths.length-1];
-						if(miniName!="Image")
-						{
-							if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
-							Laya[miniName]=o;
-						}
+						if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
+						Laya[miniName]=o;
 					}
 				}
 				else {
@@ -191,15 +189,15 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.runtime.ICPlatformClass');
+	Laya.interface('laya.ui.IItem');
+	Laya.interface('laya.ui.ISelect');
+	Laya.interface('laya.runtime.IMarket');
 	Laya.interface('laya.filters.IFilter');
 	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.resource.IDispose');
-	Laya.interface('laya.runtime.IMarket');
-	Laya.interface('laya.ui.IItem');
+	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.filters.IFilterAction');
-	Laya.interface('laya.ui.ISelect');
+	Laya.interface('laya.runtime.ICPlatformClass');
 	/**
 	*@private
 	*/
@@ -404,6 +402,8 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.CLOUD1_HEIGHT=887;
 		GameConstant.CLOUD2_WIDTH=2131;
 		GameConstant.CLOUD2_HEIGHT=590;
+		GameConstant.ROLE_WIDTH=133;
+		GameConstant.ROLE_HEIGHT=98;
 		return GameConstant;
 	})()
 
@@ -14951,6 +14951,11 @@ var Laya=window.Laya=(function(window,document){
 			this._isOutTop=false;
 			this._isOnTop=false;
 			this._groundY=0;
+			this.flyAni1=null;
+			this.flyAni2=null;
+			this.bounce1=null;
+			this.isFall=false;
+			this.isBounce=false;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -14969,21 +14974,33 @@ var Laya=window.Laya=(function(window,document){
 			this.minVy=5;
 			this.frictionX=.9;
 			this.frictionY=.7;
+			this.isFall=false;
+			this.isBounce=false;
+			this.pivotX=133 / 2;
+			this.pivotY=98 / 2;
+			this.width=133;
+			this.width=98;
 		}
 
 		/**
 		*初始化
 		*/
 		__proto.init=function(){
-			this.loadImage("res/game/"+"role.png",0,0,0,0,Handler.create(this,this.loadCompleteHandler));
+			this.flyAni1=this.createAni("roleFly1.json");
+			this.flyAni1.visible=false;
+			this.addChild(this.flyAni1);
+			this.flyAni2=this.createAni("roleFly2.json");
+			this.bounce1=this.createAni("roleBounce1.json");
+			this.addChild(this.bounce1);
+			this.bounce1.visible=false;
 			this.scaleX=-this.scaleX;
 		}
 
-		__proto.loadCompleteHandler=function(tex){
-			this.pivotX=tex.width / 2;
-			this.pivotY=tex.height / 2;
-			this.width=tex.width;
-			this.width=tex.height;
+		__proto.createAni=function(name){
+			var ani=new Animation();
+			ani.loadAtlas("res/game/"+name);
+			ani.interval=60;
+			return ani;
 		}
 
 		__proto.update=function(){
@@ -14991,6 +15008,7 @@ var Laya=window.Laya=(function(window,document){
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
+				this.isBounce=true;
 				this.y=this._groundY;
 				this.speed *=this.frictionX;
 				this.vy=-this.vy *this.frictionY;
@@ -15004,6 +15022,33 @@ var Laya=window.Laya=(function(window,document){
 			else if (this.y > this.topY){
 				this._isOutTop=false;
 			}
+			this.isFall=this.vy > 0;
+			this.updateAniState();
+		}
+
+		/**
+		*更新状态
+		*/
+		__proto.updateAniState=function(){
+			if (!this.flyAni1.visible && this.isFall && !this.isBounce){
+				this.bounce1.stop();
+				this.bounce1.visible=false;
+				this.flyAni1.visible=true;
+				this.flyAni1.play(0,false);
+			}
+			if (!this.bounce1.visible && this.isBounce){
+				this.flyAni1.stop();
+				this.flyAni1.visible=false;
+				this.bounce1.visible=true;
+				this.bounce1.play(0,false);
+				this.bounce1.on("complete",this,this.bounceComplete);
+			}
+		}
+
+		//弹起结束
+		__proto.bounceComplete=function(){
+			this.isBounce=false;
+			console.log("colp;ete")
 		}
 
 		/**
@@ -23180,7 +23225,9 @@ var Laya=window.Laya=(function(window,document){
 	*...游戏场景层
 	*TODO [云层]
 	*[限定最高高度]
-	*人物在最顶部自动进入云层后加速下落
+	*[人物在最顶部自动进入云层后加速下落]
+	*人物动作变化
+	*敌人出现移动删除
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -23198,7 +23245,7 @@ var Laya=window.Laya=(function(window,document){
 			this.cloud1PosY=NaN;
 			this.cloud2PosY=NaN;
 			this.bgCount=0;
-			this.moveRangY=NaN;
+			this.bgMoveRangY=NaN;
 			GameScene.__super.call(this);
 			this.init();
 		}
@@ -23233,7 +23280,7 @@ var Laya=window.Laya=(function(window,document){
 			this.groundPosY=Laya.stage.height-153;
 			this.cloud1PosY=this.bg1PosY-887-300;
 			this.cloud2PosY=this.cloud1PosY+430;
-			this.moveRangY=-180-this.cloud1PosY;
+			this.bgMoveRangY=-180-this.cloud1PosY;
 		}
 
 		/**
@@ -23366,8 +23413,8 @@ var Laya=window.Laya=(function(window,document){
 					go.vy=0;
 					this.role.isOnTop=false;
 				}
-				if (go.y > posY+this.moveRangY){
-					go.y=posY+this.moveRangY;
+				if (go.y > posY+this.bgMoveRangY){
+					go.y=posY+this.bgMoveRangY;
 					if (!this.role.isOutTop){
 						this.role.isOutTop=true;
 						Tween.to(this.role,{y:-this.role.height},200,null,Handler.create(this,this.roleMoveTopComplete));

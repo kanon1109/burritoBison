@@ -1,0 +1,138 @@
+{
+    "frames": {
+        "roleFly1_1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 106,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 106
+            },
+            "sourceSize": {
+                "w": 97,
+                "h": 106
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly1_2.png": {
+            "frame": {
+                "x": 0,
+                "y": 108,
+                "w": 101,
+                "h": 102,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 101,
+                "h": 102
+            },
+            "sourceSize": {
+                "w": 101,
+                "h": 102
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly1_3.png": {
+            "frame": {
+                "x": 99,
+                "y": 0,
+                "w": 133,
+                "h": 98,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 133,
+                "h": 98
+            },
+            "sourceSize": {
+                "w": 133,
+                "h": 98
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly1_4.png": {
+            "frame": {
+                "x": 0,
+                "y": 212,
+                "w": 156,
+                "h": 81,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 156,
+                "h": 81
+            },
+            "sourceSize": {
+                "w": 156,
+                "h": 81
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly1_5.png": {
+            "frame": {
+                "x": 103,
+                "y": 100,
+                "w": 157,
+                "h": 80,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 157,
+                "h": 80
+            },
+            "sourceSize": {
+                "w": 157,
+                "h": 80
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly1_6.png": {
+            "frame": {
+                "x": 158,
+                "y": 182,
+                "w": 157,
+                "h": 80,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 157,
+                "h": 80
+            },
+            "sourceSize": {
+                "w": 157,
+                "h": 80
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleFly1.png",
+        "prefix": ""
+    }
+}

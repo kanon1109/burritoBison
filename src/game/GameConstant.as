@@ -30,5 +30,9 @@ public class GameConstant
 	
 	public static const CLOUD2_WIDTH:int = 2131;
 	public static const CLOUD2_HEIGHT:int = 590;
+	
+	//角色高宽
+	public static const ROLE_WIDTH:int = 133;
+	public static const ROLE_HEIGHT:int = 98;
 }
 }

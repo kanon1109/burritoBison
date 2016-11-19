@@ -5,7 +5,6 @@ import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
 import laya.ui.View;
-import laya.utils.Ease;
 import laya.utils.Handler;
 import laya.utils.Tween;
 /**
@@ -62,6 +61,7 @@ public class GameScene extends View
 		this.initRole();
 		this.initBg();
 		this.initCloud();
+
 	}
 
 	/**
