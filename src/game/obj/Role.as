@@ -5,6 +5,7 @@ import config.MsgConstant;
 import laya.display.Animation;
 import laya.events.Event;
 import laya.resource.Texture;
+import laya.ui.Image;
 import laya.utils.Handler;
 import laya.utils.Tween;
 import support.NotificationCenter;
@@ -30,10 +31,7 @@ public class Role extends GameObject
 	private var minVx:Number;
 	//角色最小下落速度（小于这个速度不再弹起）
 	private var minVy:Number;
-	//是否飞入顶部区域
-	private var _isOutTop:Boolean;
-	//是否到滚屏位置
-	private var _isOnTop:Boolean;
+
 	//地板坐标
 	private var _groundY:int;
 	//动作动画
@@ -53,6 +51,16 @@ public class Role extends GameObject
 	private var bounceAni6:Animation;
 	private var failAni:Animation;
 	private var failRunAni:Animation;
+	//受伤
+	private var hurt1:Image;
+	private var hurt2:Image;
+	private var hurt3:Image;
+	private var hurt:Image;
+	//飞行动作的索引
+	private var flyIndex:int;
+	//受伤动作索引
+	private var hurtIndex:int;
+	private var hurtCount:int;
 	//是否在下落
 	private var isFall:Boolean;
 	//是否着地停下
@@ -64,8 +72,14 @@ public class Role extends GameObject
 	private var isBounceComplete:Boolean;
 	//是否在飞行
 	private var isFlying:Boolean;
-	//飞行动作的索引
-	private var flyIndex:int;
+	//是否飞入顶部区域
+	private var _isOutTop:Boolean;
+	//是否到滚屏位置
+	private var _isOnTop:Boolean;
+	//是否受伤
+	private var isHurt:Boolean;
+	//一次冲刺
+	private var swoopOnce:Boolean;
 	public function Role() 
 	{
 		super();
@@ -83,7 +97,7 @@ public class Role extends GameObject
 		
 		this.gravity = .98;
 		this.topY = 200;
-		this.minVx = 5;
+		this.minVx = 10;
 		this.minVy = 10;
 		this.frictionX = .9;
 		this.frictionY = .7;
@@ -92,7 +106,10 @@ public class Role extends GameObject
 		this.isFall = false;
 		this.isBounce = false;
 		this.isFlying = false;
+		this.swoopOnce = false;
 		this.flyIndex = 1;
+		this.hurtIndex = 1;
+		this.hurtCount = 3;
 		this.isBounceComplete = true;
 		
 		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
@@ -162,7 +179,18 @@ public class Role extends GameObject
 		this.failRunAni.y = -80;
 		this.failRunAni.visible = false;
 		this.addChild(this.failRunAni);
-
+		
+		this.hurt1 = new Image(GameConstant.GAME_RES_PATH + "roleHurt1.png");
+		this.hurt1.visible = false;
+		this.addChild(this.hurt1);
+		
+		this.hurt2 = new Image(GameConstant.GAME_RES_PATH + "roleHurt2.png");
+		this.hurt2.visible = false;
+		this.addChild(this.hurt2);
+		
+		this.hurt3 = new Image(GameConstant.GAME_RES_PATH + "roleHurt3.png");
+		this.hurt3.visible = false;
+		this.addChild(this.hurt3);
 		this.scaleX = -this.scaleX;
 	}
 	
@@ -189,9 +217,27 @@ public class Role extends GameObject
 			this.vy = -this.vy * this.frictionY;
 			//下落速度过小则停下
 			if (Math.abs(this.vy) < this.minVy)
+			{
 				this.vy = 0;
+			}
 			else
+			{
+				if (!this.swoopOnce)
+				{
+					//如果不处于一次强制冲刺时播放受伤动画。
+					//this.isHurt = Boolean(Random.randint(0, 1));
+					this.isHurt = true;
+					if (this.isHurt)
+					{
+						if (this.hurt) this.hurt.visible = false;
+						this.hurt = this["hurt" + this.hurtIndex];
+						this.hurtIndex++;
+						if (this.hurtIndex > this.hurtCount) this.hurtIndex = 1;
+					}
+				}
 				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
+			}
+			this.swoopOnce = false;
 		}
 		//速度过小停下
 		if (Math.abs(this.speed) < this.minVx) this.speed = 0;
@@ -222,7 +268,7 @@ public class Role extends GameObject
 	{
 		if (!this._isFail)
 		{
-			if (!this.isFlying && this.isFall && this.isBounceComplete)
+			if (!this.isFlying && !this.isHurt && this.isFall && this.isBounceComplete)
 			{
 				this.isFlying = true;
 				if (this.bounceAni)
@@ -230,23 +276,25 @@ public class Role extends GameObject
 					this.bounceAni.stop();
 					this.bounceAni.visible = false;
 				}
-				this.flyIndex = Random.randint(5, 6);
 				if (this.flyAni)
 				{
 					this.flyAni.visible = false;
 					this.flyAni.gotoAndStop(1);
 				}
+				if (this.hurt) this.hurt.visible = false;
+				this.flyIndex = Random.randint(5, 6);
 				this.flyAni = this["flyAni" + this.flyIndex];
 				this.flyAni.visible = true;
 				this.flyAni.play(0, false);
 			}
 			
-			if (this.isBounceComplete && this.isBounce)
+			if (this.isBounceComplete && !this.isHurt && this.isBounce)
 			{
 				this.isBounceComplete = false;
 				this.isFlying = false;
 				this.flyAni.stop();
 				this.flyAni.visible = false;
+				if (this.hurt) this.hurt.visible = false;
 				if (this.bounceAni)
 				{
 					this.bounceAni.visible = false;
@@ -257,16 +305,38 @@ public class Role extends GameObject
 				this.bounceAni.play(0, false);
 				this.bounceAni.on(Event.COMPLETE, this, bounceComplete);
 			}
+			
+			if (this.isHurt)
+			{
+				if (this.flyAni)
+				{
+					this.flyAni.stop();
+					this.flyAni.visible = false;
+				}
+				if (this.bounceAni)
+				{
+					this.bounceAni.stop();
+					this.bounceAni.visible = false;
+				}
+				this.hurt.visible = true;
+			}
 		}
 		else
 		{
 			if (!this.isFailRun)
 			{
 				this.isFailRun = true;
-				this.flyAni.stop();
-				this.bounceAni.stop();
-				this.flyAni.visible = false;
-				this.bounceAni.visible = false;
+				if (this.flyAni)
+				{
+					this.flyAni.stop();
+					this.flyAni.visible = false;
+				}
+				if (this.bounceAni)
+				{
+					this.bounceAni.stop();
+					this.bounceAni.visible = false;
+				}
+				if (this.hurt) this.hurt.visible = false;
 				this.failAni.visible = true;
 				this.failAni.y = 0;
 				this.timerOnce(400, this, function() {
@@ -302,6 +372,9 @@ public class Role extends GameObject
 	 */
 	public function swoop(speed:Number):void
 	{
+		this.isHurt = false;
+		this.swoopOnce = true;
+		//TODO 播放冲刺动画
 		this.vy = speed;
 	}
 

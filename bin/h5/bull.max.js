@@ -15261,8 +15261,6 @@ var Laya=window.Laya=(function(window,document){
 			this.topY=0;
 			this.minVx=NaN;
 			this.minVy=NaN;
-			this._isOutTop=false;
-			this._isOnTop=false;
 			this._groundY=0;
 			this.flyAni=null;
 			this.bounceAni=null;
@@ -15280,13 +15278,23 @@ var Laya=window.Laya=(function(window,document){
 			this.bounceAni6=null;
 			this.failAni=null;
 			this.failRunAni=null;
+			this.hurt1=null;
+			this.hurt2=null;
+			this.hurt3=null;
+			this.hurt=null;
+			this.flyIndex=0;
+			this.hurtIndex=0;
+			this.hurtCount=0;
 			this.isFall=false;
 			this._isFail=false;
 			this.isFailRun=false;
 			this.isBounce=false;
 			this.isBounceComplete=false;
 			this.isFlying=false;
-			this.flyIndex=0;
+			this._isOutTop=false;
+			this._isOnTop=false;
+			this.isHurt=false;
+			this.swoopOnce=false;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -15302,7 +15310,7 @@ var Laya=window.Laya=(function(window,document){
 			this._isOutTop=false;
 			this.gravity=.98;
 			this.topY=200;
-			this.minVx=5;
+			this.minVx=10;
 			this.minVy=10;
 			this.frictionX=.9;
 			this.frictionY=.7;
@@ -15311,7 +15319,10 @@ var Laya=window.Laya=(function(window,document){
 			this.isFall=false;
 			this.isBounce=false;
 			this.isFlying=false;
+			this.swoopOnce=false;
 			this.flyIndex=1;
+			this.hurtIndex=1;
+			this.hurtCount=3;
 			this.isBounceComplete=true;
 			this.pivotX=133 / 2;
 			this.pivotY=98 / 2;
@@ -15366,6 +15377,15 @@ var Laya=window.Laya=(function(window,document){
 			this.failRunAni.y=-80;
 			this.failRunAni.visible=false;
 			this.addChild(this.failRunAni);
+			this.hurt1=new Image("res/game/"+"roleHurt1.png");
+			this.hurt1.visible=false;
+			this.addChild(this.hurt1);
+			this.hurt2=new Image("res/game/"+"roleHurt2.png");
+			this.hurt2.visible=false;
+			this.addChild(this.hurt2);
+			this.hurt3=new Image("res/game/"+"roleHurt3.png");
+			this.hurt3.visible=false;
+			this.addChild(this.hurt3);
 			this.scaleX=-this.scaleX;
 		}
 
@@ -15386,10 +15406,22 @@ var Laya=window.Laya=(function(window,document){
 				this.y=this._groundY;
 				this.speed *=this.frictionX;
 				this.vy=-this.vy *this.frictionY;
-				if (Math.abs(this.vy)< this.minVy)
+				if (Math.abs(this.vy)< this.minVy){
 					this.vy=0;
-				else
-				NotificationCenter.getInstance().postNotification("roleBounce");
+				}
+				else{
+					if (!this.swoopOnce){
+						this.isHurt=true;
+						if (this.isHurt){
+							if (this.hurt)this.hurt.visible=false;
+							this.hurt=this["hurt"+this.hurtIndex];
+							this.hurtIndex++;
+							if (this.hurtIndex > this.hurtCount)this.hurtIndex=1;
+						}
+					}
+					NotificationCenter.getInstance().postNotification("roleBounce");
+				}
+				this.swoopOnce=false;
 			}
 			if (Math.abs(this.speed)< this.minVx)this.speed=0;
 			if (this.speed==0 && this.vy==0){
@@ -15411,26 +15443,28 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.updateAniState=function(){
 			if (!this._isFail){
-				if (!this.isFlying && this.isFall && this.isBounceComplete){
+				if (!this.isFlying && !this.isHurt && this.isFall && this.isBounceComplete){
 					this.isFlying=true;
 					if (this.bounceAni){
 						this.bounceAni.stop();
 						this.bounceAni.visible=false;
 					}
-					this.flyIndex=Random.randint(5,6);
 					if (this.flyAni){
 						this.flyAni.visible=false;
 						this.flyAni.gotoAndStop(1);
 					}
+					if (this.hurt)this.hurt.visible=false;
+					this.flyIndex=Random.randint(5,6);
 					this.flyAni=this["flyAni"+this.flyIndex];
 					this.flyAni.visible=true;
 					this.flyAni.play(0,false);
 				}
-				if (this.isBounceComplete && this.isBounce){
+				if (this.isBounceComplete && !this.isHurt && this.isBounce){
 					this.isBounceComplete=false;
 					this.isFlying=false;
 					this.flyAni.stop();
 					this.flyAni.visible=false;
+					if (this.hurt)this.hurt.visible=false;
 					if (this.bounceAni){
 						this.bounceAni.visible=false;
 						this.bounceAni.gotoAndStop(1);
@@ -15440,14 +15474,31 @@ var Laya=window.Laya=(function(window,document){
 					this.bounceAni.play(0,false);
 					this.bounceAni.on("complete",this,this.bounceComplete);
 				}
+				if (this.isHurt){
+					if (this.flyAni){
+						this.flyAni.stop();
+						this.flyAni.visible=false;
+					}
+					if (this.bounceAni){
+						this.bounceAni.stop();
+						this.bounceAni.visible=false;
+					}
+					this.hurt.visible=true;
+					Tween.to(this.hurt,{rotation:360 },800);
+				}
 			}
 			else{
 				if (!this.isFailRun){
 					this.isFailRun=true;
-					this.flyAni.stop();
-					this.bounceAni.stop();
-					this.flyAni.visible=false;
-					this.bounceAni.visible=false;
+					if (this.flyAni){
+						this.flyAni.stop();
+						this.flyAni.visible=false;
+					}
+					if (this.bounceAni){
+						this.bounceAni.stop();
+						this.bounceAni.visible=false;
+					}
+					if (this.hurt)this.hurt.visible=false;
 					this.failAni.visible=true;
 					this.failAni.y=0;
 					this.timerOnce(400,this,function(){
@@ -15480,6 +15531,8 @@ var Laya=window.Laya=(function(window,document){
 		*俯冲
 		*/
 		__proto.swoop=function(speed){
+			this.isHurt=false;
+			this.swoopOnce=true;
 			this.vy=speed;
 		}
 
