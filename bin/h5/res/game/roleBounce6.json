@@ -1,64 +1,85 @@
 {
     "frames": {
-        "roleFly5_1.png": {
+        "roleBounce1.png": {
             "frame": {
                 "x": 0,
                 "y": 0,
-                "w": 97,
+                "w": 108,
                 "h": 106,
                 "idx": 0
             },
             "spriteSourceSize": {
                 "x": 0,
                 "y": 0,
-                "w": 97,
+                "w": 108,
                 "h": 106
             },
             "sourceSize": {
-                "w": 97,
+                "w": 108,
                 "h": 106
             },
             "rotated": false,
             "trimed": true
         },
-        "roleFly5_2.png": {
+        "roleBounce2.png": {
             "frame": {
-                "x": 0,
-                "y": 108,
-                "w": 103,
-                "h": 132,
+                "x": 110,
+                "y": 0,
+                "w": 110,
+                "h": 104,
                 "idx": 0
             },
             "spriteSourceSize": {
                 "x": 0,
                 "y": 0,
-                "w": 103,
-                "h": 132
+                "w": 110,
+                "h": 104
             },
             "sourceSize": {
-                "w": 103,
-                "h": 132
+                "w": 110,
+                "h": 104
             },
             "rotated": false,
             "trimed": true
         },
-        "roleFly5_3.png": {
+        "roleBounce3.png": {
             "frame": {
-                "x": 105,
+                "x": 222,
                 "y": 0,
-                "w": 111,
-                "h": 134,
+                "w": 110,
+                "h": 102,
                 "idx": 0
             },
             "spriteSourceSize": {
                 "x": 0,
                 "y": 0,
-                "w": 111,
-                "h": 134
+                "w": 110,
+                "h": 102
             },
             "sourceSize": {
-                "w": 111,
-                "h": 134
+                "w": 110,
+                "h": 102
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce4.png": {
+            "frame": {
+                "x": 222,
+                "y": 104,
+                "w": 109,
+                "h": 106,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 109,
+                "h": 106
+            },
+            "sourceSize": {
+                "w": 109,
+                "h": 106
             },
             "rotated": false,
             "trimed": true
@@ -69,7 +90,7 @@
         "version": "0.1.0 alpha",
         "format": "json",
         "scale": 1,
-        "image": "roleFly5.png",
+        "image": "roleBounce6.png",
         "prefix": ""
     }
 }
