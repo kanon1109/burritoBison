@@ -9,8 +9,10 @@ public class Layer
 {
 	public static var GAME_LAYER:Sprite;
 	public static var GAME_ROLE_LAYER:Sprite;
-	public static var GAME_BACKGROUND_LAYER:Sprite;
-	public static var GAME_FRONTGROUND_LAYER:Sprite;
+	
+	public static var GAME_BG_COLOR_LAYER:Sprite;
+	public static var GAME_BG_LAYER:Sprite;
+	public static var GAME_FG_LAYER:Sprite;
 	public static var UI_LAYER:Sprite;
 	public static var POP_LAYER:Sprite;
 	public static function initLayer(parent:Sprite):void
@@ -23,13 +25,15 @@ public class Layer
 		parent.addChild(UI_LAYER);
 		parent.addChild(POP_LAYER);
 		
-		GAME_BACKGROUND_LAYER = new Sprite();
+		GAME_BG_COLOR_LAYER = new Sprite();
+		GAME_BG_LAYER = new Sprite();
 		GAME_ROLE_LAYER = new Sprite();
-		GAME_FRONTGROUND_LAYER = new Sprite();
+		GAME_FG_LAYER = new Sprite();
 		
-		GAME_LAYER.addChild(GAME_BACKGROUND_LAYER);
+		GAME_LAYER.addChild(GAME_BG_COLOR_LAYER);
+		GAME_LAYER.addChild(GAME_BG_LAYER);
 		GAME_LAYER.addChild(GAME_ROLE_LAYER);
-		GAME_LAYER.addChild(GAME_FRONTGROUND_LAYER);
+		GAME_LAYER.addChild(GAME_FG_LAYER);
 	}
 }
 }

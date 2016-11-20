@@ -381,13 +381,49 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*...
+	*@author Kanon
+	*/
+	//class common.Shake
+	var Shake=(function(){
+		function Shake(){}
+		__class(Shake,'common.Shake');
+		Shake.shake=function(target,delay,shakeDelta){
+			(delay===void 0)&& (delay=5);
+			(shakeDelta===void 0)&& (shakeDelta=5);
+			common.Shake.target=target;
+			common.Shake.delay=delay;
+			common.Shake.shakeDelta=shakeDelta;
+		}
+
+		Shake.update=function(){
+			if (common.Shake.target){
+				common.Shake.delay--;
+				if (common.Shake.delay > 0){
+					common.Shake.target.y+=common.Shake.shakeDelta *Random.randint(-1,1);
+				}
+				else{
+					common.Shake.target.y=0;
+					common.Shake.delay=0;
+				}
+			}
+		}
+
+		Shake.target=null
+		Shake.delay=0;
+		Shake.shakeDelta=NaN
+		return Shake;
+	})()
+
+
+	/**
 	*...游戏常量
 	*@author Kanon
 	*/
-	//class game.GameConstant
+	//class config.GameConstant
 	var GameConstant=(function(){
 		function GameConstant(){};
-		__class(GameConstant,'game.GameConstant');
+		__class(GameConstant,'config.GameConstant');
 		GameConstant.GAME_FRAME=60;
 		GameConstant.GAME_WIDTH=1136;
 		GameConstant.GAME_HEIGHT=640;
@@ -405,6 +441,19 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.ROLE_WIDTH=133;
 		GameConstant.ROLE_HEIGHT=98;
 		return GameConstant;
+	})()
+
+
+	/**
+	*...消息常量
+	*@author Kanon
+	*/
+	//class config.MsgConstant
+	var MsgConstant=(function(){
+		function MsgConstant(){};
+		__class(MsgConstant,'config.MsgConstant');
+		MsgConstant.ROLE_BOUNCE="roleBounce";
+		return MsgConstant;
 	})()
 
 
@@ -714,18 +763,21 @@ var Laya=window.Laya=(function(window,document){
 			parent.addChild(Layer.GAME_LAYER);
 			parent.addChild(Layer.UI_LAYER);
 			parent.addChild(Layer.POP_LAYER);
-			Layer.GAME_BACKGROUND_LAYER=new Sprite();
+			Layer.GAME_BG_COLOR_LAYER=new Sprite();
+			Layer.GAME_BG_LAYER=new Sprite();
 			Layer.GAME_ROLE_LAYER=new Sprite();
-			Layer.GAME_FRONTGROUND_LAYER=new Sprite();
-			Layer.GAME_LAYER.addChild(Layer.GAME_BACKGROUND_LAYER);
+			Layer.GAME_FG_LAYER=new Sprite();
+			Layer.GAME_LAYER.addChild(Layer.GAME_BG_COLOR_LAYER);
+			Layer.GAME_LAYER.addChild(Layer.GAME_BG_LAYER);
 			Layer.GAME_LAYER.addChild(Layer.GAME_ROLE_LAYER);
-			Layer.GAME_LAYER.addChild(Layer.GAME_FRONTGROUND_LAYER);
+			Layer.GAME_LAYER.addChild(Layer.GAME_FG_LAYER);
 		}
 
 		Layer.GAME_LAYER=null
 		Layer.GAME_ROLE_LAYER=null
-		Layer.GAME_BACKGROUND_LAYER=null
-		Layer.GAME_FRONTGROUND_LAYER=null
+		Layer.GAME_BG_COLOR_LAYER=null
+		Layer.GAME_BG_LAYER=null
+		Layer.GAME_FG_LAYER=null
 		Layer.UI_LAYER=null
 		Layer.POP_LAYER=null
 		return Layer;
@@ -743,6 +795,7 @@ var Laya=window.Laya=(function(window,document){
 			Laya.stage.scaleMode="showall";
 			Laya.stage.screenMode="horizontal";
 			Layer.initLayer(Laya.stage);
+			Stat.show(0,0);
 			this.initGame();
 		}
 
@@ -754,6 +807,174 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		return Main;
+	})()
+
+
+	/**
+	*...消息中心
+	*@author Kanon
+	*/
+	//class support.NotificationCenter
+	var NotificationCenter=(function(){
+		var Singletoner;
+		function NotificationCenter(singletoner){
+			this.callBackDict=new Dictionary();
+			this.callerDict=new Dictionary();
+			if (!singletoner)
+				throw new Error("只能用getInstance()来获取实例");
+		}
+
+		__class(NotificationCenter,'support.NotificationCenter');
+		var __proto=NotificationCenter.prototype;
+		/**
+		*添加观察者
+		*@param name 消息名称
+		*@param callBack 回调
+		*/
+		__proto.addObserver=function(name,callBack,caller){
+			var callBackVect;
+			var callerVect;
+			if (!this.callBackDict.get(name)){
+				callBackVect=[];
+				callerVect=[];
+				this.callBackDict.set(name,callBackVect);
+				this.callerDict.set(name,callerVect);
+			}
+			else{
+				callBackVect=this.callBackDict.get(name);
+				callerVect=this.callerDict.get(name);
+			}
+			callerVect.push(caller);
+			callBackVect.push(callBack);
+		}
+
+		/**
+		*发送消息
+		*@param name 消息名称
+		*@param params 消息参数
+		*/
+		__proto.postNotification=function(name,__rest){
+			var rest=[];for(var i=1,sz=arguments.length;i<sz;i++)rest.push(arguments[i]);
+			var callBackVect=this.callBackDict.get(name);
+			var thisObjVect=this.callerDict.get(name);
+			if (callBackVect){
+				var count=callBackVect.length;
+				for (var i=0;i < count;i++){
+					callBackVect[i].apply(thisObjVect[i],rest);
+				}
+			}
+		}
+
+		/**
+		*删除消息侦查者
+		*@param name 消息名称
+		*/
+		__proto.removeObserver=function(name){
+			this.callBackDict.remove(name);
+		}
+
+		/**
+		*删除所有消息侦查者
+		*/
+		__proto.removeObservers=function(){
+			this.callBackDict.clear();
+		}
+
+		NotificationCenter.getInstance=function(){
+			if (!NotificationCenter.instance)NotificationCenter.instance=new NotificationCenter(new Singletoner())
+				return NotificationCenter.instance;
+		}
+
+		NotificationCenter.instance=null
+		NotificationCenter.__init$=function(){
+			//class Singletoner
+			Singletoner=(function(){
+				function Singletoner(){};
+				__class(Singletoner,'');
+				return Singletoner;
+			})()
+		}
+
+		return NotificationCenter;
+	})()
+
+
+	//class utils.Random
+	var Random=(function(){
+		function Random(){};
+		__class(Random,'utils.Random');
+		Random.randrange=function(start,stop,step){
+			(step===void 0)&& (step=1);
+			if (step==0)
+				throw new Error('step 不能为 0');
+			var width=stop-start;
+			if (width==0)
+				throw new Error('没有可用的范围('+start+','+stop+')');
+			if (width < 0)
+				width=start-stop;
+			var n=Math.floor((width+step-1)/ step);
+			return Math.floor(Random.random()*n)*step+Math.min(start,stop);
+		}
+
+		Random.randint=function(a,b){
+			if (a > b)
+				a++;
+			else
+			b++;
+			return Random.randrange(a,b);
+		}
+
+		Random.randnum=function(a,b){
+			return Random.random()*(b-a)+a;
+		}
+
+		Random.shuffle=function(array){
+			array.sort(Random._randomCompare);
+			return array;
+		}
+
+		Random._randomCompare=function(a,b){
+			return (Random.random()>.5)? 1 :-1;
+		}
+
+		Random.choice=function(sequence){
+			if (!sequence.hasOwnProperty('length'))
+				throw new Error('无法对此对象执行此操作');
+			var index=Math.floor(Random.random()*sequence.length);
+			if ((typeof sequence=='string'))
+				return String(sequence).charAt(index);
+			else
+			return sequence[index];
+		}
+
+		Random.sample=function(sequence,num){
+			if (!sequence.hasOwnProperty('length'))
+				throw new Error('无法对此对象执行此操作');
+			var len=sequence.length;
+			if (num <=0 || len < num)
+				throw new Error('采样数量不够');
+			var selected=[];
+			var indices=[];
+			for (var i=0;i < num;i++){
+				var index=Math.floor(Random.random()*len);
+				while (indices.indexOf(index)>=0)
+				index=Math.floor(Random.random()*len);
+				selected.push(sequence[index]);
+				indices.push(index);
+			}
+			return selected;
+		}
+
+		Random.random=function(){
+			return Math.random();
+		}
+
+		Random.boolean=function(chance){
+			(chance===void 0)&& (chance=.5);
+			return (utils.Random.random()< chance)? true:false;
+		}
+
+		return Random;
 	})()
 
 
@@ -6395,6 +6616,96 @@ var Laya=window.Laya=(function(window,document){
 		Color._DEFAULT=Color._initDefault();
 		Color._COLODID=1;
 		return Color;
+	})()
+
+
+	/**
+	*<code>Dictionary</code> 是一个字典型的数据存取类。
+	*/
+	//class laya.utils.Dictionary
+	var Dictionary=(function(){
+		function Dictionary(){
+			this._values=[];
+			this._keys=[];
+		}
+
+		__class(Dictionary,'laya.utils.Dictionary');
+		var __proto=Dictionary.prototype;
+		/**
+		*给指定的键名设置值。
+		*@param key 键名。
+		*@param value 值。
+		*/
+		__proto.set=function(key,value){
+			var index=this.indexOf(key);
+			if (index >=0){
+				this._values[index]=value;
+				return;
+			}
+			this._keys.push(key);
+			this._values.push(value);
+		}
+
+		/**
+		*获取指定对象的键名索引。
+		*@param key 键名对象。
+		*@return 键名索引。
+		*/
+		__proto.indexOf=function(key){
+			var index=this._keys.indexOf(key);
+			if (index >=0)return index;
+			key=((typeof key=='string'))? Number(key):(((typeof key=='number'))? key.toString():key);
+			return this._keys.indexOf(key);
+		}
+
+		/**
+		*返回指定键名的值。
+		*@param key 键名对象。
+		*@return 指定键名的值。
+		*/
+		__proto.get=function(key){
+			var index=this.indexOf(key);
+			return index < 0 ? null :this._values[index];
+		}
+
+		/**
+		*移除指定键名的值。
+		*@param key 键名对象。
+		*@return 是否成功移除。
+		*/
+		__proto.remove=function(key){
+			var index=this.indexOf(key);
+			if (index >=0){
+				this._keys.splice(index,1);
+				this._values.splice(index,1);
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		*清除此对象的键名列表和键值列表。
+		*/
+		__proto.clear=function(){
+			this._values.length=0;
+			this._keys.length=0;
+		}
+
+		/**
+		*获取所有的子元素列表。
+		*/
+		__getset(0,__proto,'values',function(){
+			return this._values;
+		});
+
+		/**
+		*获取所有的子元素键名列表。
+		*/
+		__getset(0,__proto,'keys',function(){
+			return this._keys;
+		});
+
+		return Dictionary;
 	})()
 
 
@@ -14951,11 +15262,17 @@ var Laya=window.Laya=(function(window,document){
 			this._isOutTop=false;
 			this._isOnTop=false;
 			this._groundY=0;
+			this.flyAni=null;
+			this.bounce=null;
 			this.flyAni1=null;
 			this.flyAni2=null;
 			this.bounce1=null;
+			this.bounce2=null;
 			this.isFall=false;
 			this.isBounce=false;
+			this.isBounceComplete=false;
+			this.isFlying=false;
+			this.flyIndex=0;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -14976,6 +15293,9 @@ var Laya=window.Laya=(function(window,document){
 			this.frictionY=.7;
 			this.isFall=false;
 			this.isBounce=false;
+			this.isFlying=false;
+			this.flyIndex=1;
+			this.isBounceComplete=true;
 			this.pivotX=133 / 2;
 			this.pivotY=98 / 2;
 			this.width=133;
@@ -14990,9 +15310,14 @@ var Laya=window.Laya=(function(window,document){
 			this.flyAni1.visible=false;
 			this.addChild(this.flyAni1);
 			this.flyAni2=this.createAni("roleFly2.json");
+			this.flyAni2.visible=false;
+			this.addChild(this.flyAni2);
 			this.bounce1=this.createAni("roleBounce1.json");
-			this.addChild(this.bounce1);
 			this.bounce1.visible=false;
+			this.addChild(this.bounce1);
+			this.bounce2=this.createAni("roleBounce2.json");
+			this.bounce2.visible=false;
+			this.addChild(this.bounce2);
 			this.scaleX=-this.scaleX;
 		}
 
@@ -15008,11 +15333,16 @@ var Laya=window.Laya=(function(window,document){
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
-				this.isBounce=true;
-				this.y=this._groundY;
-				this.speed *=this.frictionX;
-				this.vy=-this.vy *this.frictionY;
-				if (Math.abs(this.vy)< this.minVy)this.vy=0;
+				if (Math.abs(this.vy)< this.minVy){
+					this.vy=0;
+				}
+				else{
+					this.isBounce=true;
+					this.y=this._groundY;
+					this.speed *=this.frictionX;
+					this.vy=-this.vy *this.frictionY;
+					NotificationCenter.getInstance().postNotification("roleBounce");
+				}
 			}
 			if (Math.abs(this.speed)< 1)this.speed=0;
 			if (this.y < this.topY){
@@ -15030,25 +15360,41 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
-			if (!this.flyAni1.visible && this.isFall && !this.isBounce){
-				this.bounce1.stop();
-				this.bounce1.visible=false;
-				this.flyAni1.visible=true;
-				this.flyAni1.play(0,false);
+			if (!this.isFlying && this.isFall && this.isBounceComplete){
+				this.isFlying=true;
+				if (this.bounce){
+					this.bounce.stop();
+					this.bounce.visible=false;
+				}
+				this.flyIndex=Random.randint(1,2);
+				if (this.flyAni){
+					this.flyAni.visible=false;
+					this.flyAni.gotoAndStop(1);
+				}
+				this.flyAni=this["flyAni"+this.flyIndex];
+				this.flyAni.visible=true;
+				this.flyAni.play(0,false);
 			}
-			if (!this.bounce1.visible && this.isBounce){
-				this.flyAni1.stop();
-				this.flyAni1.visible=false;
-				this.bounce1.visible=true;
-				this.bounce1.play(0,false);
-				this.bounce1.on("complete",this,this.bounceComplete);
+			if (this.isBounceComplete && this.isBounce){
+				this.isBounceComplete=false;
+				this.isFlying=false;
+				this.flyAni.stop();
+				this.flyAni.visible=false;
+				if (this.bounce){
+					this.bounce.visible=false;
+					this.bounce.gotoAndStop(1);
+				}
+				this.bounce=this["bounce"+this.flyIndex];
+				this.bounce.visible=true;
+				this.bounce.play(0,false);
+				this.bounce.on("complete",this,this.bounceComplete);
 			}
 		}
 
 		//弹起结束
 		__proto.bounceComplete=function(){
+			this.isBounceComplete=true;
 			this.isBounce=false;
-			console.log("colp;ete")
 		}
 
 		/**
@@ -22570,6 +22916,107 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
+	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
+	*
+	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
+	*<listing version="3.0">
+	*package
+	*{
+		*import laya.ui.HSlider;
+		*import laya.ui.VSlider;
+		*import laya.utils.Handler;
+		*public class VSlider_Example
+		*{
+			*private var vSlider:VSlider;
+			*public function VSlider_Example()
+			*{
+				*Laya.init(640,800);//设置游戏画布宽高。
+				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
+				*}
+			*private function onLoadComplete():void
+			*{
+				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+				*vSlider.min=0;//设置 vSlider 最低位置值。
+				*vSlider.max=10;//设置 vSlider 最高位置值。
+				*vSlider.value=2;//设置 vSlider 当前位置值。
+				*vSlider.tick=1;//设置 vSlider 刻度值。
+				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
+				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+				*}
+			*private function onChange(value:Number):void
+			*{
+				*trace("滑块的位置： value="+value);
+				*}
+			*}
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*Laya.init(640,800);//设置游戏画布宽高
+	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
+	*var vSlider;
+	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
+	*function onLoadComplete(){
+		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+		*vSlider.min=0;//设置 vSlider 最低位置值。
+		*vSlider.max=10;//设置 vSlider 最高位置值。
+		*vSlider.value=2;//设置 vSlider 当前位置值。
+		*vSlider.tick=1;//设置 vSlider 刻度值。
+		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
+		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+		*}
+	*function onChange(value){
+		*console.log("滑块的位置： value="+value);
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*import HSlider=laya.ui.HSlider;
+	*import VSlider=laya.ui.VSlider;
+	*import Handler=laya.utils.Handler;
+	*class VSlider_Example {
+		*private vSlider:VSlider;
+		*constructor(){
+			*Laya.init(640,800);//设置游戏画布宽高。
+			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
+			*}
+		*private onLoadComplete():void {
+			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+			*this.vSlider.min=0;//设置 vSlider 最低位置值。
+			*this.vSlider.max=10;//设置 vSlider 最高位置值。
+			*this.vSlider.value=2;//设置 vSlider 当前位置值。
+			*this.vSlider.tick=1;//设置 vSlider 刻度值。
+			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
+			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
+			*}
+		*private onChange(value:number):void {
+			*console.log("滑块的位置： value="+value);
+			*}
+		*}
+	*</listing>
+	*@see laya.ui.Slider
+	*/
+	//class laya.ui.VSlider extends laya.ui.Slider
+	var VSlider=(function(_super){
+		function VSlider(){VSlider.__super.call(this);;
+		};
+
+		__class(VSlider,'laya.ui.VSlider',_super);
+		return VSlider;
+	})(Slider)
+
+
+	/**
 	*<code>TextInput</code> 类用于创建显示对象以显示和输入文本。
 	*
 	*@example 以下示例代码，创建了一个 <code>TextInput</code> 实例。
@@ -22885,107 +23332,6 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
-	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
-	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
-	*
-	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
-	*<listing version="3.0">
-	*package
-	*{
-		*import laya.ui.HSlider;
-		*import laya.ui.VSlider;
-		*import laya.utils.Handler;
-		*public class VSlider_Example
-		*{
-			*private var vSlider:VSlider;
-			*public function VSlider_Example()
-			*{
-				*Laya.init(640,800);//设置游戏画布宽高。
-				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
-				*}
-			*private function onLoadComplete():void
-			*{
-				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-				*vSlider.min=0;//设置 vSlider 最低位置值。
-				*vSlider.max=10;//设置 vSlider 最高位置值。
-				*vSlider.value=2;//设置 vSlider 当前位置值。
-				*vSlider.tick=1;//设置 vSlider 刻度值。
-				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
-				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-				*}
-			*private function onChange(value:Number):void
-			*{
-				*trace("滑块的位置： value="+value);
-				*}
-			*}
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*Laya.init(640,800);//设置游戏画布宽高
-	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
-	*var vSlider;
-	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
-	*function onLoadComplete(){
-		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-		*vSlider.min=0;//设置 vSlider 最低位置值。
-		*vSlider.max=10;//设置 vSlider 最高位置值。
-		*vSlider.value=2;//设置 vSlider 当前位置值。
-		*vSlider.tick=1;//设置 vSlider 刻度值。
-		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
-		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-		*}
-	*function onChange(value){
-		*console.log("滑块的位置： value="+value);
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*import HSlider=laya.ui.HSlider;
-	*import VSlider=laya.ui.VSlider;
-	*import Handler=laya.utils.Handler;
-	*class VSlider_Example {
-		*private vSlider:VSlider;
-		*constructor(){
-			*Laya.init(640,800);//设置游戏画布宽高。
-			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
-			*}
-		*private onLoadComplete():void {
-			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-			*this.vSlider.min=0;//设置 vSlider 最低位置值。
-			*this.vSlider.max=10;//设置 vSlider 最高位置值。
-			*this.vSlider.value=2;//设置 vSlider 当前位置值。
-			*this.vSlider.tick=1;//设置 vSlider 刻度值。
-			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
-			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
-			*}
-		*private onChange(value:number):void {
-			*console.log("滑块的位置： value="+value);
-			*}
-		*}
-	*</listing>
-	*@see laya.ui.Slider
-	*/
-	//class laya.ui.VSlider extends laya.ui.Slider
-	var VSlider=(function(_super){
-		function VSlider(){VSlider.__super.call(this);;
-		};
-
-		__class(VSlider,'laya.ui.VSlider',_super);
-		return VSlider;
-	})(Slider)
-
-
-	/**
 	*@private
 	*/
 	//class laya.display.GraphicAnimation extends laya.display.FrameAnimation
@@ -23257,10 +23603,18 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.init=function(){
 			this.initData();
-			this.initTouch();
+			this.initEvent();
 			this.initRole();
 			this.initBg();
 			this.initCloud();
+		}
+
+		/**
+		*初始化事件
+		*/
+		__proto.initEvent=function(){
+			NotificationCenter.getInstance().addObserver("roleBounce",this.roleBounceHandler,this);
+			this.on("click",this,this.mouseClickHander);
 		}
 
 		/**
@@ -23287,24 +23641,24 @@ var Laya=window.Laya=(function(window,document){
 		*初始化背景
 		*/
 		__proto.initBg=function(){
-			var bg=new Sprite();
-			bg.graphics.drawRect(0,0,1136,640,"#BFF5F2");
-			Layer.GAME_BACKGROUND_LAYER.addChild(bg);
+			var bgColor=new Sprite();
+			bgColor.graphics.drawRect(0,0,1136,640,"#BFF5F2");
+			Layer.GAME_BG_COLOR_LAYER.addChild(bgColor);
 			this.createBg("bg1_1.png",
 			1758,
 			636,
 			this.bgCount,this.bg1PosY,
-			Layer.GAME_BACKGROUND_LAYER,this.bg1Arr);
+			Layer.GAME_BG_LAYER,this.bg1Arr);
 			this.createBg("bg1_2.png",
 			873,
 			499,
 			this.bgCount,this.bg2PosY,
-			Layer.GAME_BACKGROUND_LAYER,this.bg2Arr);
+			Layer.GAME_BG_LAYER,this.bg2Arr);
 			this.createBg("ground1.png",
 			1340,
 			153,
 			this.bgCount,this.groundPosY,
-			Layer.GAME_BACKGROUND_LAYER,this.groundArr);
+			Layer.GAME_BG_LAYER,this.groundArr);
 		}
 
 		/**
@@ -23315,12 +23669,12 @@ var Laya=window.Laya=(function(window,document){
 			2487,
 			887,
 			this.bgCount,this.cloud1PosY,
-			Layer.GAME_FRONTGROUND_LAYER,this.cloud1Arr);
+			Layer.GAME_FG_LAYER,this.cloud1Arr);
 			this.createBg("cloud2.png",
 			2131,
 			590,
 			this.bgCount,this.cloud2PosY,
-			Layer.GAME_BACKGROUND_LAYER,this.cloud2Arr);
+			Layer.GAME_BG_LAYER,this.cloud2Arr);
 		}
 
 		/**
@@ -23355,17 +23709,10 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
-		/**
-		*初始化点击
-		*/
-		__proto.initTouch=function(){
-			this.on("click",this,this.mouseClickHander);
-		}
-
 		__proto.mouseClickHander=function(){
 			if (this.role && !this.role.isOutTop){
-				this.role.speed=60;
-				this.role.jump(80);
+				this.role.speed=20;
+				this.role.jump(40);
 			}
 		}
 
@@ -23443,6 +23790,11 @@ var Laya=window.Laya=(function(window,document){
 			this.scrollBg(this.cloud2Arr,this.cloud2PosY);
 		}
 
+		//弹起
+		__proto.roleBounceHandler=function(){
+			Shake.shake(Layer.GAME_BG_LAYER);
+		}
+
 		/**
 		*更新角色
 		*/
@@ -23457,6 +23809,7 @@ var Laya=window.Laya=(function(window,document){
 		__proto.gameLoop=function(){
 			this.updateAllBg();
 			this.updateRole();
+			Shake.update();
 		}
 
 		return GameScene;
@@ -23978,7 +24331,7 @@ var Laya=window.Laya=(function(window,document){
 	})(TextInput)
 
 
-	Laya.__init([EventDispatcher,Render,View,Browser,LoaderManager,LocalStorage,Timer]);
+	Laya.__init([EventDispatcher,Render,View,NotificationCenter,Browser,LoaderManager,LocalStorage,Timer]);
 	new Main();
 
 })(window,document,Laya);

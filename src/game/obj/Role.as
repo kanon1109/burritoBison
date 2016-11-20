@@ -1,10 +1,13 @@
 package game.obj 
 {
-import game.GameConstant;
+import config.GameConstant;
+import config.MsgConstant;
 import laya.display.Animation;
 import laya.events.Event;
 import laya.resource.Texture;
 import laya.utils.Handler;
+import support.NotificationCenter;
+import utils.Random;
 /**
  * ...角色
  * 拥有外表动作
@@ -31,12 +34,18 @@ public class Role extends GameObject
 	//地板坐标
 	private var _groundY:int;
 	//动画
+	private var flyAni:Animation;
+	private var bounce:Animation;
 	private var flyAni1:Animation;
 	private var flyAni2:Animation;
 	private var bounce1:Animation;
+	private var bounce2:Animation;
 	//是否在下落
 	private var isFall:Boolean;
 	private var isBounce:Boolean;
+	private var isBounceComplete:Boolean;
+	private var isFlying:Boolean;
+	private var flyIndex:int;
 	public function Role() 
 	{
 		super();
@@ -59,11 +68,14 @@ public class Role extends GameObject
 		this.frictionY = .7;
 		this.isFall = false;
 		this.isBounce = false;
+		this.isFlying = false;
+		this.flyIndex = 1;
+		this.isBounceComplete = true;
 		
-		this.pivotX = GameConstant.ROLE_WIDTH / 2;
-		this.pivotY = GameConstant.ROLE_HEIGHT / 2;
-		this.width = GameConstant.ROLE_WIDTH;
-		this.width = GameConstant.ROLE_HEIGHT;
+		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
+		this.pivotY = config.GameConstant.ROLE_HEIGHT / 2;
+		this.width = config.GameConstant.ROLE_WIDTH;
+		this.width = config.GameConstant.ROLE_HEIGHT;
 	}
 	
 	/**
@@ -76,11 +88,16 @@ public class Role extends GameObject
 		this.addChild(this.flyAni1);
 		
 		this.flyAni2 = this.createAni("roleFly2.json");
-		
-		this.bounce1 = this.createAni("roleBounce1.json");
-		this.addChild(this.bounce1);
-		this.bounce1.visible = false;
+		this.flyAni2.visible = false;
+		this.addChild(this.flyAni2);
 
+		this.bounce1 = this.createAni("roleBounce1.json");
+		this.bounce1.visible = false;
+		this.addChild(this.bounce1);
+		
+		this.bounce2 = this.createAni("roleBounce2.json");
+		this.bounce2.visible = false;
+		this.addChild(this.bounce2);
 
 		this.scaleX = -this.scaleX;
 	}
@@ -88,7 +105,7 @@ public class Role extends GameObject
 	private function createAni(name:String):Animation 
 	{
 		var ani:Animation = new Animation();
-		ani.loadAtlas(GameConstant.GAME_RES_PATH + name);
+		ani.loadAtlas(config.GameConstant.GAME_RES_PATH + name);
 		ani.interval = 60;
 		return ani;
 	}
@@ -106,7 +123,10 @@ public class Role extends GameObject
 			this.speed *= this.frictionX;
 			this.vy = -this.vy * this.frictionY;
 			//下落速度过小则停下
-			if (Math.abs(this.vy) < this.minVy) this.vy = 0;
+			if (Math.abs(this.vy) < this.minVy)
+				this.vy = 0;
+			else
+				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
 		}
 		//速度过小停下
 		if (Math.abs(this.speed) < 1) this.speed = 0;
@@ -131,29 +151,48 @@ public class Role extends GameObject
 	 */
 	private function updateAniState():void
 	{
-		if (!this.flyAni1.visible && this.isFall && !this.isBounce)
+		if (!this.isFlying && this.isFall && this.isBounceComplete)
 		{
-			this.bounce1.stop();
-			this.bounce1.visible = false;
-			this.flyAni1.visible = true;
-			this.flyAni1.play(0, false);
+			this.isFlying = true;
+			if (this.bounce)
+			{
+				this.bounce.stop();
+				this.bounce.visible = false;
+			}
+			this.flyIndex = Random.randint(1, 2);
+			if (this.flyAni)
+			{
+				this.flyAni.visible = false;
+				this.flyAni.gotoAndStop(1);
+			}
+			this.flyAni = this["flyAni" + this.flyIndex];
+			this.flyAni.visible = true;
+			this.flyAni.play(0, false);
 		}
 		
-		if (!this.bounce1.visible && this.isBounce)
+		if (this.isBounceComplete && this.isBounce)
 		{
-			this.flyAni1.stop();
-			this.flyAni1.visible = false;
-			this.bounce1.visible = true;
-			this.bounce1.play(0, false);
-			this.bounce1.on(Event.COMPLETE, this, bounceComplete);
+			this.isBounceComplete = false;
+			this.isFlying = false;
+			this.flyAni.stop();
+			this.flyAni.visible = false;
+			if (this.bounce)
+			{
+				this.bounce.visible = false;
+				this.bounce.gotoAndStop(1);
+			}
+			this.bounce = this["bounce" + this.flyIndex];
+			this.bounce.visible = true;
+			this.bounce.play(0, false);
+			this.bounce.on(Event.COMPLETE, this, bounceComplete);
 		}
 	}
 	
 	//弹起结束
 	private function bounceComplete():void 
 	{
+		this.isBounceComplete = true;
 		this.isBounce = false;
-		trace("colp;ete")
 	}
 
 	/**

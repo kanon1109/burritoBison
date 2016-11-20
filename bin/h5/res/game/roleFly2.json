@@ -21,90 +21,6 @@
             "rotated": false,
             "trimed": true
         },
-        "roleFly2_10.png": {
-            "frame": {
-                "x": 0,
-                "y": 112,
-                "w": 147,
-                "h": 53,
-                "idx": 0
-            },
-            "spriteSourceSize": {
-                "x": 0,
-                "y": 0,
-                "w": 147,
-                "h": 53
-            },
-            "sourceSize": {
-                "w": 147,
-                "h": 53
-            },
-            "rotated": false,
-            "trimed": true
-        },
-        "roleFly2_11.png": {
-            "frame": {
-                "x": 97,
-                "y": 0,
-                "w": 145,
-                "h": 52,
-                "idx": 0
-            },
-            "spriteSourceSize": {
-                "x": 0,
-                "y": 0,
-                "w": 145,
-                "h": 52
-            },
-            "sourceSize": {
-                "w": 145,
-                "h": 52
-            },
-            "rotated": false,
-            "trimed": true
-        },
-        "roleFly2_12.png": {
-            "frame": {
-                "x": 244,
-                "y": 0,
-                "w": 127,
-                "h": 104,
-                "idx": 0
-            },
-            "spriteSourceSize": {
-                "x": 0,
-                "y": 0,
-                "w": 127,
-                "h": 104
-            },
-            "sourceSize": {
-                "w": 127,
-                "h": 104
-            },
-            "rotated": false,
-            "trimed": true
-        },
-        "roleFly2_13.png": {
-            "frame": {
-                "x": 149,
-                "y": 106,
-                "w": 125,
-                "h": 100,
-                "idx": 0
-            },
-            "spriteSourceSize": {
-                "x": 0,
-                "y": 0,
-                "w": 125,
-                "h": 100
-            },
-            "sourceSize": {
-                "w": 125,
-                "h": 100
-            },
-            "rotated": false,
-            "trimed": true
-        },
         "roleFly2_2.png": {
             "frame": {
                 "x": 0,
@@ -128,8 +44,8 @@
         },
         "roleFly2_3.png": {
             "frame": {
-                "x": 276,
-                "y": 106,
+                "x": 0,
+                "y": 288,
                 "w": 109,
                 "h": 122,
                 "idx": 0
@@ -149,8 +65,8 @@
         },
         "roleFly2_4.png": {
             "frame": {
-                "x": 105,
-                "y": 208,
+                "x": 97,
+                "y": 0,
                 "w": 97,
                 "h": 105,
                 "idx": 0
@@ -170,8 +86,8 @@
         },
         "roleFly2_5.png": {
             "frame": {
-                "x": 373,
-                "y": 0,
+                "x": 105,
+                "y": 167,
                 "w": 96,
                 "h": 97,
                 "idx": 0
@@ -191,8 +107,8 @@
         },
         "roleFly2_6.png": {
             "frame": {
-                "x": 204,
-                "y": 230,
+                "x": 196,
+                "y": 0,
                 "w": 113,
                 "h": 98,
                 "idx": 0
@@ -212,8 +128,8 @@
         },
         "roleFly2_7.png": {
             "frame": {
-                "x": 0,
-                "y": 315,
+                "x": 311,
+                "y": 0,
                 "w": 106,
                 "h": 124,
                 "idx": 0
@@ -233,8 +149,8 @@
         },
         "roleFly2_8.png": {
             "frame": {
-                "x": 319,
-                "y": 230,
+                "x": 111,
+                "y": 266,
                 "w": 131,
                 "h": 95,
                 "idx": 0
@@ -254,8 +170,8 @@
         },
         "roleFly2_9.png": {
             "frame": {
-                "x": 319,
-                "y": 327,
+                "x": 203,
+                "y": 126,
                 "w": 143,
                 "h": 74,
                 "idx": 0
@@ -269,6 +185,27 @@
             "sourceSize": {
                 "w": 143,
                 "h": 74
+            },
+            "rotated": false,
+            "trimed": true
+        },
+ 	"roleFly2_10.png": {
+            "frame": {
+                "x": 0,
+                "y": 112,
+                "w": 147,
+                "h": 53,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 53
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 53
             },
             "rotated": false,
             "trimed": true

@@ -1,5 +1,8 @@
 package game 
 {
+import common.Shake;
+import config.GameConstant;
+import config.MsgConstant;
 import game.obj.GameBackGround;
 import game.obj.Role;
 import laya.display.Sprite;
@@ -7,6 +10,7 @@ import laya.events.Event;
 import laya.ui.View;
 import laya.utils.Handler;
 import laya.utils.Tween;
+import support.NotificationCenter;
 /**
  * ...游戏场景层
  * TODO [云层]
@@ -57,11 +61,20 @@ public class GameScene extends View
 		//创建前景
 		//鼠标交互
 		this.initData();
-		this.initTouch();
+		this.initEvent();
 		this.initRole();
 		this.initBg();
 		this.initCloud();
 
+	}
+	
+	/**
+	 * 初始化事件
+	 */
+	private function initEvent():void 
+	{
+		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
+		this.on(Event.CLICK, this, mouseClickHander);
 	}
 
 	/**
@@ -90,29 +103,29 @@ public class GameScene extends View
 	 * 初始化背景
 	 */
 	private function initBg():void 
-	{
-		var bg:Sprite = new Sprite();
-		bg.graphics.drawRect(0, 0, GameConstant.GAME_WIDTH, GameConstant.GAME_HEIGHT, "#BFF5F2");
-		Layer.GAME_BACKGROUND_LAYER.addChild(bg);
+	{		
+		var bgColor:Sprite = new Sprite();
+		bgColor.graphics.drawRect(0, 0, GameConstant.GAME_WIDTH, GameConstant.GAME_HEIGHT, "#BFF5F2");
+		Layer.GAME_BG_COLOR_LAYER.addChild(bgColor);
 		
 		//背景滚屏
 		this.createBg("bg1_1.png", 
 					GameConstant.BG1_WIDTH, 
 					GameConstant.BG1_HEIGHT, 
 					this.bgCount, this.bg1PosY, 
-					Layer.GAME_BACKGROUND_LAYER, this.bg1Arr);
+					Layer.GAME_BG_LAYER, this.bg1Arr);
 		
 		this.createBg("bg1_2.png", 
 					GameConstant.BG2_WIDTH, 
 					GameConstant.BG2_HEIGHT, 
 					this.bgCount, this.bg2PosY, 
-					Layer.GAME_BACKGROUND_LAYER, this.bg2Arr);
+					Layer.GAME_BG_LAYER, this.bg2Arr);
 					
 		this.createBg("ground1.png", 
 					GameConstant.GROUND_WIDTH, 
 					GameConstant.GROUND_HEIGHT, 
 					this.bgCount, this.groundPosY, 
-					Layer.GAME_BACKGROUND_LAYER, this.groundArr);
+					Layer.GAME_BG_LAYER, this.groundArr);
 	}
 	
 	/**
@@ -124,13 +137,13 @@ public class GameScene extends View
 					GameConstant.CLOUD1_WIDTH, 
 					GameConstant.CLOUD1_HEIGHT, 
 					this.bgCount, this.cloud1PosY, 
-					Layer.GAME_FRONTGROUND_LAYER, this.cloud1Arr);
+					Layer.GAME_FG_LAYER, this.cloud1Arr);
 					
 		this.createBg("cloud2.png", 
 					GameConstant.CLOUD2_WIDTH, 
 					GameConstant.CLOUD2_HEIGHT, 
 					this.bgCount, this.cloud2PosY, 
-					Layer.GAME_BACKGROUND_LAYER, this.cloud2Arr);
+					Layer.GAME_BG_LAYER, this.cloud2Arr);
 	}
 	
 	/**
@@ -167,21 +180,13 @@ public class GameScene extends View
 			else bg.prevBg = arr[i - 1];
 		}
 	}
-
-	/**
-	 * 初始化点击
-	 */
-	private function initTouch():void
-	{
-		this.on(Event.CLICK, this, mouseClickHander);
-	}
 	
 	private function mouseClickHander():void 
 	{
 		if (this.role && !this.role.isOutTop)
 		{
-			this.role.speed = 60;
-			this.role.jump(80);
+			this.role.speed = 20;
+			this.role.jump(40);
 		}
 	}
 	
@@ -272,6 +277,12 @@ public class GameScene extends View
 		this.scrollBg(this.cloud2Arr, this.cloud2PosY);
 		
 	}
+		
+	//弹起
+	private function roleBounceHandler():void 
+	{
+		Shake.shake(Layer.GAME_BG_LAYER);
+	}
 	
 	/**
 	 * 更新角色
@@ -292,6 +303,8 @@ public class GameScene extends View
 		this.updateAllBg();
 		//角色循环
 		this.updateRole();
+		
+		Shake.update();
 	}
 
 }

@@ -1,4 +1,4 @@
-package game 
+package config 
 {
 /**
  * ...游戏常量

@@ -1,0 +1,75 @@
+{
+    "frames": {
+        "roleBounce1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 145,
+                "h": 52,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 145,
+                "h": 52
+            },
+            "sourceSize": {
+                "w": 145,
+                "h": 52
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce2.png": {
+            "frame": {
+                "x": 147,
+                "y": 0,
+                "w": 127,
+                "h": 104,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 127,
+                "h": 104
+            },
+            "sourceSize": {
+                "w": 127,
+                "h": 104
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce3.png": {
+            "frame": {
+                "x": 0,
+                "y": 54,
+                "w": 125,
+                "h": 100,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 125,
+                "h": 100
+            },
+            "sourceSize": {
+                "w": 125,
+                "h": 100
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleBounce2.png",
+        "prefix": ""
+    }
+}
