@@ -453,7 +453,7 @@ var Laya=window.Laya=(function(window,document){
 		function MsgConstant(){};
 		__class(MsgConstant,'config.MsgConstant');
 		MsgConstant.ROLE_BOUNCE="roleBounce";
-		MsgConstant.ROLE_FAIL_STAND="roleFailStand";
+		MsgConstant.ROLE_FAIL_RUN_COMPLETE="roleFailRunComplete";
 		return MsgConstant;
 	})()
 
@@ -15268,12 +15268,18 @@ var Laya=window.Laya=(function(window,document){
 			this.bounceAni=null;
 			this.flyAni1=null;
 			this.flyAni2=null;
+			this.flyAni3=null;
+			this.flyAni4=null;
+			this.flyAni5=null;
 			this.bounceAni1=null;
 			this.bounceAni2=null;
+			this.bounceAni3=null;
+			this.bounceAni4=null;
+			this.bounceAni5=null;
 			this.failAni=null;
 			this.failRunAni=null;
 			this.isFall=false;
-			this.isFail=false;
+			this._isFail=false;
 			this.isFailRun=false;
 			this.isBounce=false;
 			this.isBounceComplete=false;
@@ -15298,7 +15304,7 @@ var Laya=window.Laya=(function(window,document){
 			this.minVy=10;
 			this.frictionX=.9;
 			this.frictionY=.7;
-			this.isFail=false;
+			this._isFail=false;
 			this.isFailRun=false;
 			this.isFall=false;
 			this.isBounce=false;
@@ -15321,12 +15327,30 @@ var Laya=window.Laya=(function(window,document){
 			this.flyAni2=this.createAni("roleFly2.json");
 			this.flyAni2.visible=false;
 			this.addChild(this.flyAni2);
+			this.flyAni3=this.createAni("roleFly3.json");
+			this.flyAni3.visible=false;
+			this.addChild(this.flyAni3);
+			this.flyAni4=this.createAni("roleFly4.json");
+			this.flyAni4.visible=false;
+			this.addChild(this.flyAni4);
+			this.flyAni5=this.createAni("roleFly5.json");
+			this.flyAni5.visible=false;
+			this.addChild(this.flyAni5);
 			this.bounceAni1=this.createAni("roleBounce1.json");
 			this.bounceAni1.visible=false;
 			this.addChild(this.bounceAni1);
 			this.bounceAni2=this.createAni("roleBounce2.json");
 			this.bounceAni2.visible=false;
 			this.addChild(this.bounceAni2);
+			this.bounceAni3=this.createAni("roleBounce3.json");
+			this.bounceAni3.visible=false;
+			this.addChild(this.bounceAni3);
+			this.bounceAni4=this.createAni("roleBounce4.json");
+			this.bounceAni4.visible=false;
+			this.addChild(this.bounceAni4);
+			this.bounceAni5=this.createAni("roleBounce5.json");
+			this.bounceAni5.visible=false;
+			this.addChild(this.bounceAni5);
 			this.failAni=this.createAni("roleFail.json");
 			this.failAni.visible=false;
 			this.addChild(this.failAni);
@@ -15361,7 +15385,7 @@ var Laya=window.Laya=(function(window,document){
 			}
 			if (Math.abs(this.speed)< this.minVx)this.speed=0;
 			if (this.speed==0 && this.vy==0){
-				this.isFail=true;
+				this._isFail=true;
 			}
 			if (this.y < this.topY){
 				if (!this._isOutTop)this.y=this.topY;
@@ -15378,14 +15402,14 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
-			if (!this.isFail){
+			if (!this._isFail){
 				if (!this.isFlying && this.isFall && this.isBounceComplete){
 					this.isFlying=true;
 					if (this.bounceAni){
 						this.bounceAni.stop();
 						this.bounceAni.visible=false;
 					}
-					this.flyIndex=Random.randint(1,2);
+					this.flyIndex=Random.randint(1,5);
 					if (this.flyAni){
 						this.flyAni.visible=false;
 						this.flyAni.gotoAndStop(1);
@@ -15433,7 +15457,9 @@ var Laya=window.Laya=(function(window,document){
 			this.failAni.visible=false;
 			this.failRunAni.visible=true;
 			this.failRunAni.play(0,false);
-			NotificationCenter.getInstance().postNotification("roleFailStand");
+			Tween.to(this,{x:-100 },800,null,Handler.create(this,function(){
+				NotificationCenter.getInstance().postNotification("roleFailRunComplete");
+			}))
 		}
 
 		//弹起结束
@@ -15443,10 +15469,18 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
-		*跳跃
+		*俯冲
 		*/
-		__proto.jump=function(speed){
+		__proto.swoop=function(speed){
 			this.vy=speed;
+		}
+
+		/**
+		*是否允许加速俯冲
+		*@return
+		*/
+		__proto.canSwoop=function(){
+			return !this._isOutTop && !this._isFail;
 		}
 
 		/**
@@ -15456,6 +15490,10 @@ var Laya=window.Laya=(function(window,document){
 			this._isOutTop=value;
 		});
 
+		/**
+		*是否失败了
+		*/
+		__getset(0,__proto,'isFail',function(){return this._isFail;});
 		/**
 		*地板坐标
 		*/
@@ -23660,7 +23698,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.initEvent=function(){
 			NotificationCenter.getInstance().addObserver("roleBounce",this.roleBounceHandler,this);
-			NotificationCenter.getInstance().addObserver("roleFailStand",this.roleFailStandHandler,this);
+			NotificationCenter.getInstance().addObserver("roleFailRunComplete",this.roleFailRunCompleteHandler,this);
 			this.on("click",this,this.mouseClickHander);
 		}
 
@@ -23757,9 +23795,9 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.mouseClickHander=function(){
-			if (this.role && !this.role.isOutTop){
+			if (this.role && this.role.canSwoop()){
 				this.role.speed=20;
-				this.role.jump(40);
+				this.role.swoop(40);
 			}
 		}
 
@@ -23818,7 +23856,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.roleMoveTopComplete=function(){
-			this.role.jump(50);
+			this.role.swoop(50);
 		}
 
 		/**
@@ -23842,13 +23880,8 @@ var Laya=window.Laya=(function(window,document){
 			Shake.shake(Layer.GAME_BG_LAYER);
 		}
 
-		//角色站起来
-		__proto.roleFailStandHandler=function(){
-			Tween.to(this.role,{x:-100 },800,null,Handler.create(this,function(){
-				console.log("over");
-			}));
-		}
-
+		//角色跑了
+		__proto.roleFailRunCompleteHandler=function(){}
 		/**
 		*更新角色
 		*/

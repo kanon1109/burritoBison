@@ -41,14 +41,20 @@ public class Role extends GameObject
 	private var bounceAni:Animation;
 	private var flyAni1:Animation;
 	private var flyAni2:Animation;
+	private var flyAni3:Animation;
+	private var flyAni4:Animation;
+	private var flyAni5:Animation;
 	private var bounceAni1:Animation;
 	private var bounceAni2:Animation;
+	private var bounceAni3:Animation;
+	private var bounceAni4:Animation;
+	private var bounceAni5:Animation;
 	private var failAni:Animation;
 	private var failRunAni:Animation;
 	//是否在下落
 	private var isFall:Boolean;
 	//是否着地停下
-	private var isFail:Boolean;
+	private var _isFail:Boolean;
 	private var isFailRun:Boolean;
 	//是否在弹起
 	private var isBounce:Boolean;
@@ -79,7 +85,7 @@ public class Role extends GameObject
 		this.minVy = 10;
 		this.frictionX = .9;
 		this.frictionY = .7;
-		this.isFail = false;
+		this._isFail = false;
 		this.isFailRun = false;
 		this.isFall = false;
 		this.isBounce = false;
@@ -105,6 +111,18 @@ public class Role extends GameObject
 		this.flyAni2 = this.createAni("roleFly2.json");
 		this.flyAni2.visible = false;
 		this.addChild(this.flyAni2);
+		
+		this.flyAni3 = this.createAni("roleFly3.json");
+		this.flyAni3.visible = false;
+		this.addChild(this.flyAni3);
+		
+		this.flyAni4 = this.createAni("roleFly4.json");
+		this.flyAni4.visible = false;
+		this.addChild(this.flyAni4);
+		
+		this.flyAni5 = this.createAni("roleFly5.json");
+		this.flyAni5.visible = false;
+		this.addChild(this.flyAni5);
 
 		this.bounceAni1 = this.createAni("roleBounce1.json");
 		this.bounceAni1.visible = false;
@@ -113,6 +131,18 @@ public class Role extends GameObject
 		this.bounceAni2 = this.createAni("roleBounce2.json");
 		this.bounceAni2.visible = false;
 		this.addChild(this.bounceAni2);
+		
+		this.bounceAni3 = this.createAni("roleBounce3.json");
+		this.bounceAni3.visible = false;
+		this.addChild(this.bounceAni3);
+		
+		this.bounceAni4 = this.createAni("roleBounce4.json");
+		this.bounceAni4.visible = false;
+		this.addChild(this.bounceAni4);
+		
+		this.bounceAni5 = this.createAni("roleBounce5.json");
+		this.bounceAni5.visible = false;
+		this.addChild(this.bounceAni5);
 
 		this.failAni = this.createAni("roleFail.json");
 		this.failAni.visible = false;
@@ -157,7 +187,7 @@ public class Role extends GameObject
 		if (Math.abs(this.speed) < this.minVx) this.speed = 0;
 		if (this.speed == 0 && this.vy == 0)
 		{
-			this.isFail = true;
+			this._isFail = true;
 		}
 		//超过顶部范围
 		if (this.y < this.topY)
@@ -180,7 +210,7 @@ public class Role extends GameObject
 	 */
 	private function updateAniState():void
 	{
-		if (!this.isFail)
+		if (!this._isFail)
 		{
 			if (!this.isFlying && this.isFall && this.isBounceComplete)
 			{
@@ -190,7 +220,7 @@ public class Role extends GameObject
 					this.bounceAni.stop();
 					this.bounceAni.visible = false;
 				}
-				this.flyIndex = Random.randint(1, 2);
+				this.flyIndex = Random.randint(1, 5);
 				if (this.flyAni)
 				{
 					this.flyAni.visible = false;
@@ -245,7 +275,9 @@ public class Role extends GameObject
 		this.failAni.visible = false;
 		this.failRunAni.visible = true;
 		this.failRunAni.play(0, false);
-		NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_FAIL_STAND);
+		Tween.to(this, { x: -100 }, 800, null, Handler.create(this, function() {
+			NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_FAIL_RUN_COMPLETE);
+		}))
 	}
 	
 	//弹起结束
@@ -256,9 +288,9 @@ public class Role extends GameObject
 	}
 
 	/**
-	 * 跳跃
+	 * 俯冲
 	 */
-	public function jump(speed:Number):void
+	public function swoop(speed:Number):void
 	{
 		this.vy = speed;
 	}
@@ -266,7 +298,7 @@ public class Role extends GameObject
 	/**
 	 * 是否飞入顶部区域
 	 */
-	public function get isOutTop():Boolean {return _isOutTop;}
+	public function get isOutTop():Boolean { return _isOutTop; }
 	public function set isOutTop(value:Boolean):void 
 	{
 		_isOutTop = value;
@@ -275,7 +307,7 @@ public class Role extends GameObject
 	/**
 	 * 地板坐标
 	 */
-	public function get groundY():int {return _groundY; }
+	public function get groundY():int { return _groundY; }
 	public function set groundY(value:int):void 
 	{
 		_groundY = value;
@@ -284,7 +316,7 @@ public class Role extends GameObject
 	/**
 	 * 移动速度
 	 */
-	public function get speed():Number {return _speed;}
+	public function get speed():Number { return _speed; }
 	public function set speed(value:Number):void 
 	{
 		_speed = value;
@@ -293,10 +325,25 @@ public class Role extends GameObject
 	/**
 	 * 是否到滚屏位置
 	 */
-	public function get isOnTop():Boolean {return _isOnTop;}
+	public function get isOnTop():Boolean { return _isOnTop; }
 	public function set isOnTop(value:Boolean):void 
 	{
 		_isOnTop = value;
+	}
+	
+	/**
+	 * 是否失败了
+	 */
+	public function get isFail():Boolean { return _isFail; }
+	
+	
+	/**
+	 * 是否允许加速俯冲
+	 * @return
+	 */
+	public function canSwoop():Boolean
+	{
+		return !this._isOutTop && !this._isFail;
 	}
 }
 }

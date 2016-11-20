@@ -1,0 +1,96 @@
+{
+    "frames": {
+        "roleFly4_1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 106,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 106
+            },
+            "sourceSize": {
+                "w": 97,
+                "h": 106
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly4_2.png": {
+            "frame": {
+                "x": 0,
+                "y": 108,
+                "w": 97,
+                "h": 106,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 106
+            },
+            "sourceSize": {
+                "w": 97,
+                "h": 106
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly4_3.png": {
+            "frame": {
+                "x": 99,
+                "y": 0,
+                "w": 97,
+                "h": 132,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 132
+            },
+            "sourceSize": {
+                "w": 97,
+                "h": 132
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly4_4.png": {
+            "frame": {
+                "x": 99,
+                "y": 134,
+                "w": 97,
+                "h": 125,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 97,
+                "h": 125
+            },
+            "sourceSize": {
+                "w": 97,
+                "h": 125
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleFly4.png",
+        "prefix": ""
+    }
+}

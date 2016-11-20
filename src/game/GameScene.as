@@ -75,7 +75,7 @@ public class GameScene extends View
 	private function initEvent():void 
 	{
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
-		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_STAND, roleFailStandHandler, this);
+		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_RUN_COMPLETE, roleFailRunCompleteHandler, this);
 		this.on(Event.CLICK, this, mouseClickHander);
 	}
 
@@ -185,10 +185,10 @@ public class GameScene extends View
 	
 	private function mouseClickHander():void 
 	{
-		if (this.role && !this.role.isOutTop)
+		if (this.role && this.role.canSwoop())
 		{
 			this.role.speed = 20;
-			this.role.jump(40);
+			this.role.swoop(40);
 		}
 	}
 	
@@ -257,7 +257,7 @@ public class GameScene extends View
 	
 	private function roleMoveTopComplete():void
 	{
-		this.role.jump(50);
+		this.role.swoop(50);
 	}
 	
 	/**
@@ -286,12 +286,11 @@ public class GameScene extends View
 		Shake.shake(Layer.GAME_BG_LAYER);
 	}
 	
-	//角色站起来
-	private function roleFailStandHandler():void 
+	//角色跑了
+	private function roleFailRunCompleteHandler():void 
 	{
-		Tween.to(this.role, { x: -100 }, 800, null, Handler.create(this, function(){
-			trace("over");
-		}));
+		//TODO 重置 
+		//重玩
 	}
 	
 	/**

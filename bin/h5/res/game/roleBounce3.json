@@ -1,0 +1,117 @@
+{
+    "frames": {
+        "roleBounce1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 133,
+                "h": 138,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 133,
+                "h": 138
+            },
+            "sourceSize": {
+                "w": 133,
+                "h": 138
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce2.png": {
+            "frame": {
+                "x": 0,
+                "y": 140,
+                "w": 138,
+                "h": 137,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 138,
+                "h": 137
+            },
+            "sourceSize": {
+                "w": 138,
+                "h": 137
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce3.png": {
+            "frame": {
+                "x": 135,
+                "y": 0,
+                "w": 133,
+                "h": 117,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 133,
+                "h": 117
+            },
+            "sourceSize": {
+                "w": 133,
+                "h": 117
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce4.png": {
+            "frame": {
+                "x": 140,
+                "y": 119,
+                "w": 130,
+                "h": 110,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 130,
+                "h": 110
+            },
+            "sourceSize": {
+                "w": 130,
+                "h": 110
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleBounce5.png": {
+            "frame": {
+                "x": 140,
+                "y": 231,
+                "w": 115,
+                "h": 97,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 97
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 97
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleBounce3.png",
+        "prefix": ""
+    }
+}

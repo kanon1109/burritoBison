@@ -1,0 +1,75 @@
+{
+    "frames": {
+        "roleFly3_1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 138,
+                "h": 110,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 138,
+                "h": 110
+            },
+            "sourceSize": {
+                "w": 138,
+                "h": 110
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly3_2.png": {
+            "frame": {
+                "x": 140,
+                "y": 0,
+                "w": 133,
+                "h": 110,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 133,
+                "h": 110
+            },
+            "sourceSize": {
+                "w": 133,
+                "h": 110
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly3_3.png": {
+            "frame": {
+                "x": 0,
+                "y": 112,
+                "w": 131,
+                "h": 114,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 131,
+                "h": 114
+            },
+            "sourceSize": {
+                "w": 131,
+                "h": 114
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleFly3.png",
+        "prefix": ""
+    }
+}
