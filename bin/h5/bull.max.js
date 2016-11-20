@@ -15271,11 +15271,13 @@ var Laya=window.Laya=(function(window,document){
 			this.flyAni3=null;
 			this.flyAni4=null;
 			this.flyAni5=null;
+			this.flyAni6=null;
 			this.bounceAni1=null;
 			this.bounceAni2=null;
 			this.bounceAni3=null;
 			this.bounceAni4=null;
 			this.bounceAni5=null;
+			this.bounceAni6=null;
 			this.failAni=null;
 			this.failRunAni=null;
 			this.isFall=false;
@@ -15336,6 +15338,9 @@ var Laya=window.Laya=(function(window,document){
 			this.flyAni5=this.createAni("roleFly5.json");
 			this.flyAni5.visible=false;
 			this.addChild(this.flyAni5);
+			this.flyAni6=this.createAni("roleFly6.json");
+			this.flyAni6.visible=false;
+			this.addChild(this.flyAni6);
 			this.bounceAni1=this.createAni("roleBounce1.json");
 			this.bounceAni1.visible=false;
 			this.addChild(this.bounceAni1);
@@ -15351,6 +15356,9 @@ var Laya=window.Laya=(function(window,document){
 			this.bounceAni5=this.createAni("roleBounce5.json");
 			this.bounceAni5.visible=false;
 			this.addChild(this.bounceAni5);
+			this.bounceAni6=this.createAni("roleBounce6.json");
+			this.bounceAni6.visible=false;
+			this.addChild(this.bounceAni6);
 			this.failAni=this.createAni("roleFail.json");
 			this.failAni.visible=false;
 			this.addChild(this.failAni);
@@ -15409,7 +15417,7 @@ var Laya=window.Laya=(function(window,document){
 						this.bounceAni.stop();
 						this.bounceAni.visible=false;
 					}
-					this.flyIndex=Random.randint(1,5);
+					this.flyIndex=Random.randint(5,6);
 					if (this.flyAni){
 						this.flyAni.visible=false;
 						this.flyAni.gotoAndStop(1);

@@ -44,11 +44,13 @@ public class Role extends GameObject
 	private var flyAni3:Animation;
 	private var flyAni4:Animation;
 	private var flyAni5:Animation;
+	private var flyAni6:Animation;
 	private var bounceAni1:Animation;
 	private var bounceAni2:Animation;
 	private var bounceAni3:Animation;
 	private var bounceAni4:Animation;
 	private var bounceAni5:Animation;
+	private var bounceAni6:Animation;
 	private var failAni:Animation;
 	private var failRunAni:Animation;
 	//是否在下落
@@ -123,6 +125,10 @@ public class Role extends GameObject
 		this.flyAni5 = this.createAni("roleFly5.json");
 		this.flyAni5.visible = false;
 		this.addChild(this.flyAni5);
+		
+		this.flyAni6 = this.createAni("roleFly6.json");
+		this.flyAni6.visible = false;
+		this.addChild(this.flyAni6);
 
 		this.bounceAni1 = this.createAni("roleBounce1.json");
 		this.bounceAni1.visible = false;
@@ -143,6 +149,10 @@ public class Role extends GameObject
 		this.bounceAni5 = this.createAni("roleBounce5.json");
 		this.bounceAni5.visible = false;
 		this.addChild(this.bounceAni5);
+		
+		this.bounceAni6 = this.createAni("roleBounce6.json");
+		this.bounceAni6.visible = false;
+		this.addChild(this.bounceAni6);
 
 		this.failAni = this.createAni("roleFail.json");
 		this.failAni.visible = false;
@@ -220,7 +230,7 @@ public class Role extends GameObject
 					this.bounceAni.stop();
 					this.bounceAni.visible = false;
 				}
-				this.flyIndex = Random.randint(1, 5);
+				this.flyIndex = Random.randint(5, 6);
 				if (this.flyAni)
 				{
 					this.flyAni.visible = false;
