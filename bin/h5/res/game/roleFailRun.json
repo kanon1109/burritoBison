@@ -1,0 +1,495 @@
+{
+    "frames": {
+        "roleRun1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 181,
+                "h": 113,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 181,
+                "h": 113
+            },
+            "sourceSize": {
+                "w": 182,
+                "h": 113
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun10.png": {
+            "frame": {
+                "x": 183,
+                "y": 0,
+                "w": 147,
+                "h": 118,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 118
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 118
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun11.png": {
+            "frame": {
+                "x": 0,
+                "y": 115,
+                "w": 122,
+                "h": 125,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 122,
+                "h": 125
+            },
+            "sourceSize": {
+                "w": 122,
+                "h": 125
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun12.png": {
+            "frame": {
+                "x": 332,
+                "y": 0,
+                "w": 96,
+                "h": 119,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 96,
+                "h": 119
+            },
+            "sourceSize": {
+                "w": 96,
+                "h": 119
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun13.png": {
+            "frame": {
+                "x": 124,
+                "y": 120,
+                "w": 145,
+                "h": 127,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 145,
+                "h": 127
+            },
+            "sourceSize": {
+                "w": 145,
+                "h": 127
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun14.png": {
+            "frame": {
+                "x": 430,
+                "y": 0,
+                "w": 181,
+                "h": 117,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 181,
+                "h": 117
+            },
+            "sourceSize": {
+                "w": 182,
+                "h": 117
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun15.png": {
+            "frame": {
+                "x": 430,
+                "y": 119,
+                "w": 200,
+                "h": 109,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 200,
+                "h": 109
+            },
+            "sourceSize": {
+                "w": 200,
+                "h": 109
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun16.png": {
+            "frame": {
+                "x": 271,
+                "y": 230,
+                "w": 183,
+                "h": 117,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 183,
+                "h": 117
+            },
+            "sourceSize": {
+                "w": 183,
+                "h": 117
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun17.png": {
+            "frame": {
+                "x": 0,
+                "y": 249,
+                "w": 145,
+                "h": 119,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 145,
+                "h": 119
+            },
+            "sourceSize": {
+                "w": 145,
+                "h": 119
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun18.png": {
+            "frame": {
+                "x": 147,
+                "y": 249,
+                "w": 96,
+                "h": 120,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 96,
+                "h": 120
+            },
+            "sourceSize": {
+                "w": 96,
+                "h": 120
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun19.png": {
+            "frame": {
+                "x": 0,
+                "y": 370,
+                "w": 123,
+                "h": 131,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 123,
+                "h": 131
+            },
+            "sourceSize": {
+                "w": 123,
+                "h": 131
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun2.png": {
+            "frame": {
+                "x": 456,
+                "y": 230,
+                "w": 200,
+                "h": 109,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 200,
+                "h": 109
+            },
+            "sourceSize": {
+                "w": 200,
+                "h": 109
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun20.png": {
+            "frame": {
+                "x": 456,
+                "y": 341,
+                "w": 128,
+                "h": 131,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 128,
+                "h": 131
+            },
+            "sourceSize": {
+                "w": 128,
+                "h": 131
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun21.png": {
+            "frame": {
+                "x": 245,
+                "y": 349,
+                "w": 147,
+                "h": 124,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 124
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 124
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun22.png": {
+            "frame": {
+                "x": 394,
+                "y": 474,
+                "w": 161,
+                "h": 111,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 161,
+                "h": 111
+            },
+            "sourceSize": {
+                "w": 161,
+                "h": 111
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun23.png": {
+            "frame": {
+                "x": 557,
+                "y": 474,
+                "w": 147,
+                "h": 118,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 118
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 118
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun3.png": {
+            "frame": {
+                "x": 125,
+                "y": 475,
+                "w": 183,
+                "h": 117,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 183,
+                "h": 117
+            },
+            "sourceSize": {
+                "w": 183,
+                "h": 117
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun4.png": {
+            "frame": {
+                "x": 586,
+                "y": 341,
+                "w": 145,
+                "h": 119,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 145,
+                "h": 119
+            },
+            "sourceSize": {
+                "w": 145,
+                "h": 119
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun5.png": {
+            "frame": {
+                "x": 632,
+                "y": 0,
+                "w": 96,
+                "h": 120,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 96,
+                "h": 120
+            },
+            "sourceSize": {
+                "w": 96,
+                "h": 120
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun6.png": {
+            "frame": {
+                "x": 0,
+                "y": 503,
+                "w": 123,
+                "h": 131,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 123,
+                "h": 131
+            },
+            "sourceSize": {
+                "w": 123,
+                "h": 131
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun7.png": {
+            "frame": {
+                "x": 310,
+                "y": 587,
+                "w": 128,
+                "h": 131,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 128,
+                "h": 131
+            },
+            "sourceSize": {
+                "w": 128,
+                "h": 131
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun8.png": {
+            "frame": {
+                "x": 125,
+                "y": 594,
+                "w": 147,
+                "h": 124,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 124
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 124
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleRun9.png": {
+            "frame": {
+                "x": 440,
+                "y": 594,
+                "w": 161,
+                "h": 111,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 161,
+                "h": 111
+            },
+            "sourceSize": {
+                "w": 161,
+                "h": 111
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleFailRun.png",
+        "prefix": ""
+    }
+}

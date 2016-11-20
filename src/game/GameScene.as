@@ -18,6 +18,7 @@ import support.NotificationCenter;
  * [人物在最顶部自动进入云层后加速下落]
  * 人物动作变化
  * 敌人出现移动删除
+ * 角色失败停下动作
  * @author Kanon
  */
 public class GameScene extends View 
@@ -74,6 +75,7 @@ public class GameScene extends View
 	private function initEvent():void 
 	{
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
+		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_STAND, roleFailStandHandler, this);
 		this.on(Event.CLICK, this, mouseClickHander);
 	}
 
@@ -284,6 +286,14 @@ public class GameScene extends View
 		Shake.shake(Layer.GAME_BG_LAYER);
 	}
 	
+	//角色站起来
+	private function roleFailStandHandler():void 
+	{
+		Tween.to(this.role, { x: -100 }, 800, null, Handler.create(this, function(){
+			trace("over");
+		}));
+	}
+	
 	/**
 	 * 更新角色
 	 */
@@ -303,7 +313,7 @@ public class GameScene extends View
 		this.updateAllBg();
 		//角色循环
 		this.updateRole();
-		
+		//震动
 		Shake.update();
 	}
 

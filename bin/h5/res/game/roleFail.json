@@ -1,0 +1,432 @@
+{
+    "frames": {
+        "roleFail1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 137,
+                "h": 83,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 137,
+                "h": 83
+            },
+            "sourceSize": {
+                "w": 137,
+                "h": 83
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail2.png": {
+            "frame": {
+                "x": 230,
+                "y": 148,
+                "w": 147,
+                "h": 82,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 147,
+                "h": 82
+            },
+            "sourceSize": {
+                "w": 147,
+                "h": 82
+            },
+            "rotated": false,
+            "trimed": true
+        },
+		"roleFail3.png": {
+            "frame": {
+                "x": 234,
+                "y": 232,
+                "w": 129,
+                "h": 85,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 129,
+                "h": 85
+            },
+            "sourceSize": {
+                "w": 129,
+                "h": 85
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail4.png": {
+            "frame": {
+                "x": 365,
+                "y": 297,
+                "w": 136,
+                "h": 129,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 136,
+                "h": 129
+            },
+            "sourceSize": {
+                "w": 136,
+                "h": 129
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail5.png": {
+            "frame": {
+                "x": 495,
+                "y": 148,
+                "w": 116,
+                "h": 143,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 116,
+                "h": 143
+            },
+            "sourceSize": {
+                "w": 116,
+                "h": 143
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail6.png": {
+            "frame": {
+                "x": 234,
+                "y": 319,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail7.png": {
+            "frame": {
+                "x": 503,
+                "y": 293,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail8.png": {
+            "frame": {
+                "x": 347,
+                "y": 428,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail9.png": {
+            "frame": {
+                "x": 234,
+                "y": 467,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+		"roleFail10.png": {
+            "frame": {
+                "x": 139,
+                "y": 0,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail11.png": {
+            "frame": {
+                "x": 0,
+                "y": 85,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail12.png": {
+            "frame": {
+                "x": 256,
+                "y": 0,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail13.png": {
+            "frame": {
+                "x": 373,
+                "y": 0,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail14.png": {
+            "frame": {
+                "x": 486,
+                "y": 0,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail15.png": {
+            "frame": {
+                "x": 117,
+                "y": 148,
+                "w": 111,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 111,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 111,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail16.png": {
+            "frame": {
+                "x": 0,
+                "y": 233,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail17.png": {
+            "frame": {
+                "x": 0,
+                "y": 381,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail18.png": {
+            "frame": {
+                "x": 117,
+                "y": 296,
+                "w": 115,
+                "h": 146,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 146
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 146
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail19.png": {
+            "frame": {
+                "x": 117,
+                "y": 444,
+                "w": 115,
+                "h": 147,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 115,
+                "h": 147
+            },
+            "sourceSize": {
+                "w": 115,
+                "h": 147
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFail20.png": {
+            "frame": {
+                "x": 379,
+                "y": 148,
+                "w": 114,
+                "h": 147,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 114,
+                "h": 147
+            },
+            "sourceSize": {
+                "w": 114,
+                "h": 147
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "roleFail.png",
+        "prefix": ""
+    }
+}

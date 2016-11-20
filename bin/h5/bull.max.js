@@ -453,6 +453,7 @@ var Laya=window.Laya=(function(window,document){
 		function MsgConstant(){};
 		__class(MsgConstant,'config.MsgConstant');
 		MsgConstant.ROLE_BOUNCE="roleBounce";
+		MsgConstant.ROLE_FAIL_STAND="roleFailStand";
 		return MsgConstant;
 	})()
 
@@ -15258,17 +15259,22 @@ var Laya=window.Laya=(function(window,document){
 			this.frictionX=NaN;
 			this.frictionY=NaN;
 			this.topY=0;
+			this.minVx=NaN;
 			this.minVy=NaN;
 			this._isOutTop=false;
 			this._isOnTop=false;
 			this._groundY=0;
 			this.flyAni=null;
-			this.bounce=null;
+			this.bounceAni=null;
 			this.flyAni1=null;
 			this.flyAni2=null;
-			this.bounce1=null;
-			this.bounce2=null;
+			this.bounceAni1=null;
+			this.bounceAni2=null;
+			this.failAni=null;
+			this.failRunAni=null;
 			this.isFall=false;
+			this.isFail=false;
+			this.isFailRun=false;
 			this.isBounce=false;
 			this.isBounceComplete=false;
 			this.isFlying=false;
@@ -15288,9 +15294,12 @@ var Laya=window.Laya=(function(window,document){
 			this._isOutTop=false;
 			this.gravity=.98;
 			this.topY=200;
-			this.minVy=5;
+			this.minVx=5;
+			this.minVy=10;
 			this.frictionX=.9;
 			this.frictionY=.7;
+			this.isFail=false;
+			this.isFailRun=false;
 			this.isFall=false;
 			this.isBounce=false;
 			this.isFlying=false;
@@ -15312,12 +15321,19 @@ var Laya=window.Laya=(function(window,document){
 			this.flyAni2=this.createAni("roleFly2.json");
 			this.flyAni2.visible=false;
 			this.addChild(this.flyAni2);
-			this.bounce1=this.createAni("roleBounce1.json");
-			this.bounce1.visible=false;
-			this.addChild(this.bounce1);
-			this.bounce2=this.createAni("roleBounce2.json");
-			this.bounce2.visible=false;
-			this.addChild(this.bounce2);
+			this.bounceAni1=this.createAni("roleBounce1.json");
+			this.bounceAni1.visible=false;
+			this.addChild(this.bounceAni1);
+			this.bounceAni2=this.createAni("roleBounce2.json");
+			this.bounceAni2.visible=false;
+			this.addChild(this.bounceAni2);
+			this.failAni=this.createAni("roleFail.json");
+			this.failAni.visible=false;
+			this.addChild(this.failAni);
+			this.failRunAni=this.createAni("roleFailRun.json");
+			this.failRunAni.y=-80;
+			this.failRunAni.visible=false;
+			this.addChild(this.failRunAni);
 			this.scaleX=-this.scaleX;
 		}
 
@@ -15325,6 +15341,7 @@ var Laya=window.Laya=(function(window,document){
 			var ani=new Animation();
 			ani.loadAtlas("res/game/"+name);
 			ani.interval=60;
+			ani.stop();
 			return ani;
 		}
 
@@ -15333,18 +15350,19 @@ var Laya=window.Laya=(function(window,document){
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
-				if (Math.abs(this.vy)< this.minVy){
+				this.isBounce=true;
+				this.y=this._groundY;
+				this.speed *=this.frictionX;
+				this.vy=-this.vy *this.frictionY;
+				if (Math.abs(this.vy)< this.minVy)
 					this.vy=0;
-				}
-				else{
-					this.isBounce=true;
-					this.y=this._groundY;
-					this.speed *=this.frictionX;
-					this.vy=-this.vy *this.frictionY;
-					NotificationCenter.getInstance().postNotification("roleBounce");
-				}
+				else
+				NotificationCenter.getInstance().postNotification("roleBounce");
 			}
-			if (Math.abs(this.speed)< 1)this.speed=0;
+			if (Math.abs(this.speed)< this.minVx)this.speed=0;
+			if (this.speed==0 && this.vy==0){
+				this.isFail=true;
+			}
 			if (this.y < this.topY){
 				if (!this._isOutTop)this.y=this.topY;
 				this._isOnTop=true;
@@ -15360,35 +15378,62 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
-			if (!this.isFlying && this.isFall && this.isBounceComplete){
-				this.isFlying=true;
-				if (this.bounce){
-					this.bounce.stop();
-					this.bounce.visible=false;
+			if (!this.isFail){
+				if (!this.isFlying && this.isFall && this.isBounceComplete){
+					this.isFlying=true;
+					if (this.bounceAni){
+						this.bounceAni.stop();
+						this.bounceAni.visible=false;
+					}
+					this.flyIndex=Random.randint(1,2);
+					if (this.flyAni){
+						this.flyAni.visible=false;
+						this.flyAni.gotoAndStop(1);
+					}
+					this.flyAni=this["flyAni"+this.flyIndex];
+					this.flyAni.visible=true;
+					this.flyAni.play(0,false);
 				}
-				this.flyIndex=Random.randint(1,2);
-				if (this.flyAni){
+				if (this.isBounceComplete && this.isBounce){
+					this.isBounceComplete=false;
+					this.isFlying=false;
+					this.flyAni.stop();
 					this.flyAni.visible=false;
-					this.flyAni.gotoAndStop(1);
+					if (this.bounceAni){
+						this.bounceAni.visible=false;
+						this.bounceAni.gotoAndStop(1);
+					}
+					this.bounceAni=this["bounceAni"+this.flyIndex];
+					this.bounceAni.visible=true;
+					this.bounceAni.play(0,false);
+					this.bounceAni.on("complete",this,this.bounceComplete);
 				}
-				this.flyAni=this["flyAni"+this.flyIndex];
-				this.flyAni.visible=true;
-				this.flyAni.play(0,false);
 			}
-			if (this.isBounceComplete && this.isBounce){
-				this.isBounceComplete=false;
-				this.isFlying=false;
-				this.flyAni.stop();
-				this.flyAni.visible=false;
-				if (this.bounce){
-					this.bounce.visible=false;
-					this.bounce.gotoAndStop(1);
+			else{
+				if (!this.isFailRun){
+					this.isFailRun=true;
+					this.flyAni.stop();
+					this.bounceAni.stop();
+					this.flyAni.visible=false;
+					this.bounceAni.visible=false;
+					this.failAni.visible=true;
+					this.failAni.y=0;
+					this.timerOnce(400,this,function(){
+						this.failAni.play(0,false);
+					});
+					this.timerOnce(580,this,function(){
+						this.failAni.y=-80;
+					});
+					this.failAni.on("complete",this,this.failComplete);
 				}
-				this.bounce=this["bounce"+this.flyIndex];
-				this.bounce.visible=true;
-				this.bounce.play(0,false);
-				this.bounce.on("complete",this,this.bounceComplete);
 			}
+		}
+
+		__proto.failComplete=function(){
+			this.failAni.visible=false;
+			this.failRunAni.visible=true;
+			this.failRunAni.play(0,false);
+			NotificationCenter.getInstance().postNotification("roleFailStand");
 		}
 
 		//弹起结束
@@ -23574,6 +23619,7 @@ var Laya=window.Laya=(function(window,document){
 	*[人物在最顶部自动进入云层后加速下落]
 	*人物动作变化
 	*敌人出现移动删除
+	*角色失败停下动作
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -23614,6 +23660,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.initEvent=function(){
 			NotificationCenter.getInstance().addObserver("roleBounce",this.roleBounceHandler,this);
+			NotificationCenter.getInstance().addObserver("roleFailStand",this.roleFailStandHandler,this);
 			this.on("click",this,this.mouseClickHander);
 		}
 
@@ -23793,6 +23840,13 @@ var Laya=window.Laya=(function(window,document){
 		//弹起
 		__proto.roleBounceHandler=function(){
 			Shake.shake(Layer.GAME_BG_LAYER);
+		}
+
+		//角色站起来
+		__proto.roleFailStandHandler=function(){
+			Tween.to(this.role,{x:-100 },800,null,Handler.create(this,function(){
+				console.log("over");
+			}));
 		}
 
 		/**
