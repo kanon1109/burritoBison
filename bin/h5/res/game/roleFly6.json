@@ -4,6 +4,48 @@
             "frame": {
                 "x": 0,
                 "y": 0,
+                "w": 120,
+                "h": 137,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 120,
+                "h": 137
+            },
+            "sourceSize": {
+                "w": 120,
+                "h": 137
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly6_2.png": {
+            "frame": {
+                "x": 122,
+                "y": 0,
+                "w": 126,
+                "h": 135,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 126,
+                "h": 135
+            },
+            "sourceSize": {
+                "w": 126,
+                "h": 135
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "roleFly6_3.png": {
+            "frame": {
+                "x": 122,
+                "y": 137,
                 "w": 97,
                 "h": 106,
                 "idx": 0
@@ -21,10 +63,10 @@
             "rotated": false,
             "trimed": true
         },
-        "roleFly6_2.png": {
+        "roleFly6_4.png": {
             "frame": {
-                "x": 99,
-                "y": 0,
+                "x": 0,
+                "y": 139,
                 "w": 96,
                 "h": 120,
                 "idx": 0
