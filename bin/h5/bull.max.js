@@ -15306,14 +15306,13 @@ var Laya=window.Laya=(function(window,document){
 		*初始化数据
 		*/
 		__proto.initData=function(){
-			this._speed=20;
 			this._isOutTop=false;
 			this.gravity=.98;
 			this.topY=200;
 			this.minVx=10;
 			this.minVy=10;
 			this.frictionX=.9;
-			this.frictionY=.7;
+			this.frictionY=.8;
 			this._isFail=false;
 			this.isFailRun=false;
 			this.isFall=false;
@@ -15379,12 +15378,27 @@ var Laya=window.Laya=(function(window,document){
 			this.addChild(this.failRunAni);
 			this.hurt1=new Image("res/game/"+"roleHurt1.png");
 			this.hurt1.visible=false;
+			this.hurt1.width=111;
+			this.hurt1.height=100;
+			this.hurt1.pivot(this.hurt1.width / 2,this.hurt1.height / 2);
+			this.hurt1.x=this.hurt1.width / 2;
+			this.hurt1.y=this.hurt1.height / 2;
 			this.addChild(this.hurt1);
 			this.hurt2=new Image("res/game/"+"roleHurt2.png");
 			this.hurt2.visible=false;
+			this.hurt2.width=128;
+			this.hurt2.height=92;
+			this.hurt2.pivot(this.hurt2.width / 2,this.hurt2.height / 2);
+			this.hurt2.x=this.hurt2.width / 2;
+			this.hurt2.y=this.hurt2.height / 2;
 			this.addChild(this.hurt2);
 			this.hurt3=new Image("res/game/"+"roleHurt3.png");
 			this.hurt3.visible=false;
+			this.hurt3.width=109;
+			this.hurt3.height=119;
+			this.hurt3.pivot(this.hurt3.width / 2,this.hurt3.height / 2);
+			this.hurt3.x=this.hurt3.width / 2;
+			this.hurt3.y=this.hurt3.height / 2;
 			this.addChild(this.hurt3);
 			this.scaleX=-this.scaleX;
 		}
@@ -15398,33 +15412,29 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.update=function(){
-			this.x+=this.vx;
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
 				this.isBounce=true;
 				this.y=this._groundY;
-				this.speed *=this.frictionX;
+				this.vx *=this.frictionX;
 				this.vy=-this.vy *this.frictionY;
-				if (Math.abs(this.vy)< this.minVy){
-					this.vy=0;
-				}
-				else{
-					if (!this.swoopOnce){
-						this.isHurt=true;
-						if (this.isHurt){
-							if (this.hurt)this.hurt.visible=false;
-							this.hurt=this["hurt"+this.hurtIndex];
-							this.hurtIndex++;
-							if (this.hurtIndex > this.hurtCount)this.hurtIndex=1;
-						}
+				if (!this.swoopOnce){
+					this.isHurt=true;
+					if (this.isHurt){
+						if (this.hurt)this.hurt.visible=false;
+						this.hurt=this["hurt"+this.hurtIndex];
+						this.hurt.rotation=0;
+						this.hurtIndex++;
+						if (this.hurtIndex > this.hurtCount)this.hurtIndex=1;
 					}
-					NotificationCenter.getInstance().postNotification("roleBounce");
 				}
+				NotificationCenter.getInstance().postNotification("roleBounce");
 				this.swoopOnce=false;
 			}
-			if (Math.abs(this.speed)< this.minVx)this.speed=0;
-			if (this.speed==0 && this.vy==0){
+			if (Math.abs(this.vx)< this.minVx){
+				this.vx=0;
+				this.vy=0;
 				this._isFail=true;
 			}
 			if (this.y < this.topY){
@@ -15434,6 +15444,8 @@ var Laya=window.Laya=(function(window,document){
 			else if (this.y > this.topY){
 				this._isOutTop=false;
 			}
+			if (this.isHurt && this.hurt)
+				this.hurt.rotation-=this.vx / 2;
 			this.isFall=this.vy > 0;
 			this.updateAniState();
 		}
@@ -15484,7 +15496,6 @@ var Laya=window.Laya=(function(window,document){
 						this.bounceAni.visible=false;
 					}
 					this.hurt.visible=true;
-					Tween.to(this.hurt,{rotation:360 },800);
 				}
 			}
 			else{
@@ -15560,13 +15571,6 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'groundY',function(){return this._groundY;},function(value){
 			this._groundY=value;
-		});
-
-		/**
-		*移动速度
-		*/
-		__getset(0,__proto,'speed',function(){return this._speed;},function(value){
-			this._speed=value;
 		});
 
 		/**
@@ -23857,7 +23861,7 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.mouseClickHander=function(){
 			if (this.role && this.role.canSwoop()){
-				this.role.speed=20;
+				this.role.vx=20;
 				this.role.swoop(40);
 			}
 		}
@@ -23870,7 +23874,7 @@ var Laya=window.Laya=(function(window,document){
 				this.role=new Role();
 				this.role.x=this.displayWidth / 2-200;
 				this.role.y=this.displayHeight / 2;
-				this.role.vx=0;
+				this.role.vx=20;
 				this.role.vy=0;
 				this.role.groundY=this.groundPosY+20;
 				Layer.GAME_ROLE_LAYER.addChild(this.role);
@@ -23924,11 +23928,11 @@ var Laya=window.Laya=(function(window,document){
 		*更新所有背景图
 		*/
 		__proto.updateAllBg=function(){
-			this.updateBg(this.bg1Arr,-this.role.speed *.3,-this.role.vy *.9);
-			this.updateBg(this.bg2Arr,-this.role.speed,-this.role.vy);
-			this.updateBg(this.groundArr,-this.role.speed,-this.role.vy);
-			this.updateBg(this.cloud1Arr,-this.role.speed *1.5,-this.role.vy);
-			this.updateBg(this.cloud2Arr,-this.role.speed *.1,-this.role.vy);
+			this.updateBg(this.bg1Arr,-this.role.vx *.3,-this.role.vy *.9);
+			this.updateBg(this.bg2Arr,-this.role.vx,-this.role.vy);
+			this.updateBg(this.groundArr,-this.role.vx,-this.role.vy);
+			this.updateBg(this.cloud1Arr,-this.role.vx *1.5,-this.role.vy);
+			this.updateBg(this.cloud2Arr,-this.role.vx *.1,-this.role.vy);
 			this.scrollBg(this.bg1Arr,this.bg1PosY);
 			this.scrollBg(this.bg2Arr,this.bg2PosY);
 			this.scrollBg(this.groundArr,this.groundPosY);

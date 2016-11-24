@@ -92,7 +92,6 @@ public class Role extends GameObject
 	 */
 	private function initData():void
 	{
-		this._speed = 20;
 		this._isOutTop = false;
 		
 		this.gravity = .98;
@@ -100,7 +99,7 @@ public class Role extends GameObject
 		this.minVx = 10;
 		this.minVy = 10;
 		this.frictionX = .9;
-		this.frictionY = .7;
+		this.frictionY = .8;
 		this._isFail = false;
 		this.isFailRun = false;
 		this.isFall = false;
@@ -182,14 +181,29 @@ public class Role extends GameObject
 		
 		this.hurt1 = new Image(GameConstant.GAME_RES_PATH + "roleHurt1.png");
 		this.hurt1.visible = false;
+		this.hurt1.width = 111;
+		this.hurt1.height = 100;
+		this.hurt1.pivot(this.hurt1.width / 2, this.hurt1.height / 2);
+		this.hurt1.x = this.hurt1.width / 2;
+		this.hurt1.y = this.hurt1.height / 2;
 		this.addChild(this.hurt1);
 		
 		this.hurt2 = new Image(GameConstant.GAME_RES_PATH + "roleHurt2.png");
 		this.hurt2.visible = false;
+		this.hurt2.width = 128;
+		this.hurt2.height = 92;
+		this.hurt2.pivot(this.hurt2.width / 2, this.hurt2.height / 2);
+		this.hurt2.x = this.hurt2.width / 2;
+		this.hurt2.y = this.hurt2.height / 2;
 		this.addChild(this.hurt2);
 		
 		this.hurt3 = new Image(GameConstant.GAME_RES_PATH + "roleHurt3.png");
 		this.hurt3.visible = false;
+		this.hurt3.width = 109;
+		this.hurt3.height = 119;
+		this.hurt3.pivot(this.hurt3.width / 2, this.hurt3.height / 2);
+		this.hurt3.x = this.hurt3.width / 2;
+		this.hurt3.y = this.hurt3.height / 2;
 		this.addChild(this.hurt3);
 		this.scaleX = -this.scaleX;
 	}
@@ -205,7 +219,6 @@ public class Role extends GameObject
 	
 	override public function update():void 
 	{
-		this.x += this.vx;
 		if (!this._isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
 		if (this.y > this._groundY)
@@ -213,38 +226,33 @@ public class Role extends GameObject
 			//弹起
 			this.isBounce = true;
 			this.y = this._groundY;
-			this.speed *= this.frictionX;
+			this.vx *= this.frictionX;
 			this.vy = -this.vy * this.frictionY;
-			//下落速度过小则停下
-			if (Math.abs(this.vy) < this.minVy)
+			if (!this.swoopOnce)
 			{
-				this.vy = 0;
-			}
-			else
-			{
-				if (!this.swoopOnce)
+				//如果不处于一次强制冲刺时播放受伤动画。
+				//this.isHurt = Boolean(Random.randint(0, 1));
+				this.isHurt = true;
+				if (this.isHurt)
 				{
-					//如果不处于一次强制冲刺时播放受伤动画。
-					//this.isHurt = Boolean(Random.randint(0, 1));
-					this.isHurt = true;
-					if (this.isHurt)
-					{
-						if (this.hurt) this.hurt.visible = false;
-						this.hurt = this["hurt" + this.hurtIndex];
-						this.hurtIndex++;
-						if (this.hurtIndex > this.hurtCount) this.hurtIndex = 1;
-					}
+					if (this.hurt) this.hurt.visible = false;
+					this.hurt = this["hurt" + this.hurtIndex];
+					this.hurt.rotation = 0;
+					this.hurtIndex++;
+					if (this.hurtIndex > this.hurtCount) this.hurtIndex = 1;
 				}
-				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
 			}
+			NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
 			this.swoopOnce = false;
 		}
 		//速度过小停下
-		if (Math.abs(this.speed) < this.minVx) this.speed = 0;
-		if (this.speed == 0 && this.vy == 0)
+		if (Math.abs(this.vx) < this.minVx) 
 		{
+			this.vx = 0;
+			this.vy = 0;
 			this._isFail = true;
 		}
+
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
@@ -256,6 +264,8 @@ public class Role extends GameObject
 			this._isOutTop = false;
 		}
 		
+		if (this.isHurt && this.hurt)
+			this.hurt.rotation -= this.vx / 2;
 		//下落
 		this.isFall = this.vy > 0;
 		this.updateAniState();
@@ -395,16 +405,7 @@ public class Role extends GameObject
 	{
 		_groundY = value;
 	}
-	
-	/**
-	 * 移动速度
-	 */
-	public function get speed():Number { return _speed; }
-	public function set speed(value:Number):void 
-	{
-		_speed = value;
-	}
-	
+
 	/**
 	 * 是否到滚屏位置
 	 */

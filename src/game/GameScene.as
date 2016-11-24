@@ -187,7 +187,7 @@ public class GameScene extends View
 	{
 		if (this.role && this.role.canSwoop())
 		{
-			this.role.speed = 20;
+			this.role.vx = 20;
 			this.role.swoop(40);
 		}
 	}
@@ -202,7 +202,7 @@ public class GameScene extends View
 			this.role = new Role();
 			this.role.x = this.displayWidth / 2 - 200;
 			this.role.y = this.displayHeight / 2;
-			this.role.vx = 0;
+			this.role.vx = 20;
 			this.role.vy = 0;
 			this.role.groundY = this.groundPosY + 20;
 			Layer.GAME_ROLE_LAYER.addChild(this.role);
@@ -265,11 +265,11 @@ public class GameScene extends View
 	 */
 	private function updateAllBg():void
 	{
-		this.updateBg(this.bg1Arr, -this.role.speed * .3, -this.role.vy * .9);
-		this.updateBg(this.bg2Arr, -this.role.speed, -this.role.vy);
-		this.updateBg(this.groundArr, -this.role.speed, -this.role.vy);
-		this.updateBg(this.cloud1Arr, -this.role.speed * 1.5, -this.role.vy);
-		this.updateBg(this.cloud2Arr, -this.role.speed * .1, -this.role.vy);
+		this.updateBg(this.bg1Arr, -this.role.vx * .3, -this.role.vy * .9);
+		this.updateBg(this.bg2Arr, -this.role.vx, -this.role.vy);
+		this.updateBg(this.groundArr, -this.role.vx, -this.role.vy);
+		this.updateBg(this.cloud1Arr, -this.role.vx * 1.5, -this.role.vy);
+		this.updateBg(this.cloud2Arr, -this.role.vx * .1, -this.role.vy);
 		
 		//滚屏
 		this.scrollBg(this.bg1Arr, this.bg1PosY);
