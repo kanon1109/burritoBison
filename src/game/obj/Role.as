@@ -53,6 +53,7 @@ public class Role extends GameObject
 	private var failAni:Animation;
 	private var failRunAni:Animation;
 	private var startAni:Animation;
+	private var startRushAni:Animation;
 	//受伤
 	private var hurt1:Image;
 	private var hurt2:Image;
@@ -85,6 +86,7 @@ public class Role extends GameObject
 	private var swoopOnce:Boolean;
 	
 	private var _isStart:Boolean;
+	private var isStartRush:Boolean;
 	public function Role() 
 	{
 		super();
@@ -115,6 +117,7 @@ public class Role extends GameObject
 		this.hurtCount = 3;
 		this.isBounceComplete = true;
 		this._isStart = false;
+		this.isStartRush = false;
 		
 		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
 		this.pivotY = config.GameConstant.ROLE_HEIGHT / 2;
@@ -133,9 +136,12 @@ public class Role extends GameObject
 
 		this.startAni = this.createAni("roleStart.json");
 		this.startAni.play();
-		//this.startAni.visible = false;
 		this.addChild(this.startAni);
 
+		this.startRushAni = this.createAni("roleFly6.json");
+		this.startRushAni.visible = false;
+		this.addChild(this.startRushAni);
+		
 		this.flyAni1 = this.createAni("roleFly1.json");
 		this.flyAni1.visible = false;
 		this.addChild(this.flyAni1);
@@ -282,9 +288,10 @@ public class Role extends GameObject
 		}
 		
 		if (this.isHurt && this.hurt)
-			this.hurt.rotation -= this.vx / 2;
+			this.hurt.rotation -= this.vx / 3;
 		//下落
 		this.isFall = this.vy > 0;
+		if (this.isFail) this.isStartRush = false;
 		this.updateAniState();
 	}
 	
@@ -293,15 +300,22 @@ public class Role extends GameObject
 	 */
 	private function updateAniState():void
 	{
-		if (this.isStart)
-		{
-			this.stopStart();
-		}
 		if (!this._isFail)
 		{
+			if (this.isStart)
+			{
+				this.stopStart();
+				if (!this.isStartRush)
+				{
+					this.isStartRush = true;
+					this.startRushAni.visible = true;
+					this.startRushAni.play(0, false);
+				}
+			}
+			
 			if (!this.isHurt)
 			{
-				if (!this.isFlying && !this.isFall && this.isBounceComplete)
+				if (!this.isFlying && !this.isFall && this.isBounceComplete && !this.isStartRush)
 				{
 					this.fly.visible = true;
 				}
@@ -310,6 +324,7 @@ public class Role extends GameObject
 				{
 					this.isFlying = true;
 					this.stopBounce();
+					this.stopStartRush();
 					this.stopFly();
 					this.stopHurt();
 					this.fly.visible = false;
@@ -382,6 +397,18 @@ public class Role extends GameObject
 		{
 			this.failAni.gotoAndStop(1);
 			this.failAni.visible = false;
+		}
+	}
+	
+	/**
+	 * 停止开始冲刺动作
+	 */
+	private function stopStartRush():void
+	{
+		if (this.startRushAni)
+		{
+			this.startRushAni.gotoAndStop(1);
+			this.startRushAni.visible = false;
 		}
 	}
 	

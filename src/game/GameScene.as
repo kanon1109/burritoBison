@@ -207,7 +207,7 @@ public class GameScene extends View
 			else
 			{
 				this.role.isStart = true;
-				this.role.vx = 20;
+				this.role.vx = 50;
 				this.role.vy = -40;
 			}
 		}

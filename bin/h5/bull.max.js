@@ -15282,6 +15282,7 @@ var Laya=window.Laya=(function(window,document){
 			this.failAni=null;
 			this.failRunAni=null;
 			this.startAni=null;
+			this.startRushAni=null;
 			this.hurt1=null;
 			this.hurt2=null;
 			this.hurt3=null;
@@ -15301,6 +15302,7 @@ var Laya=window.Laya=(function(window,document){
 			this.isHurt=false;
 			this.swoopOnce=false;
 			this._isStart=false;
+			this.isStartRush=false;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -15330,6 +15332,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurtCount=3;
 			this.isBounceComplete=true;
 			this._isStart=false;
+			this.isStartRush=false;
 			this.pivotX=133 / 2;
 			this.pivotY=98 / 2;
 			this.width=133;
@@ -15346,6 +15349,9 @@ var Laya=window.Laya=(function(window,document){
 			this.startAni=this.createAni("roleStart.json");
 			this.startAni.play();
 			this.addChild(this.startAni);
+			this.startRushAni=this.createAni("roleFly6.json");
+			this.startRushAni.visible=false;
+			this.addChild(this.startRushAni);
 			this.flyAni1=this.createAni("roleFly1.json");
 			this.flyAni1.visible=false;
 			this.addChild(this.flyAni1);
@@ -15460,8 +15466,9 @@ var Laya=window.Laya=(function(window,document){
 				this._isOutTop=false;
 			}
 			if (this.isHurt && this.hurt)
-				this.hurt.rotation-=this.vx / 2;
+				this.hurt.rotation-=this.vx / 3;
 			this.isFall=this.vy > 0;
+			if (this.isFail)this.isStartRush=false;
 			this.updateAniState();
 		}
 
@@ -15469,17 +15476,23 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
-			if (this.isStart){
-				this.stopStart();
-			}
 			if (!this._isFail){
+				if (this.isStart){
+					this.stopStart();
+					if (!this.isStartRush){
+						this.isStartRush=true;
+						this.startRushAni.visible=true;
+						this.startRushAni.play(0,false);
+					}
+				}
 				if (!this.isHurt){
-					if (!this.isFlying && !this.isFall && this.isBounceComplete){
+					if (!this.isFlying && !this.isFall && this.isBounceComplete && !this.isStartRush){
 						this.fly.visible=true;
 					}
 					if (!this.isFlying && this.isFall && this.isBounceComplete){
 						this.isFlying=true;
 						this.stopBounce();
+						this.stopStartRush();
 						this.stopFly();
 						this.stopHurt();
 						this.fly.visible=false;
@@ -15542,6 +15555,16 @@ var Laya=window.Laya=(function(window,document){
 			if (this.failAni){
 				this.failAni.gotoAndStop(1);
 				this.failAni.visible=false;
+			}
+		}
+
+		/**
+		*停止开始冲刺动作
+		*/
+		__proto.stopStartRush=function(){
+			if (this.startRushAni){
+				this.startRushAni.gotoAndStop(1);
+				this.startRushAni.visible=false;
 			}
 		}
 
@@ -23945,7 +23968,7 @@ var Laya=window.Laya=(function(window,document){
 				}
 				else{
 					this.role.isStart=true;
-					this.role.vx=20;
+					this.role.vx=50;
 					this.role.vy=-40;
 				}
 			}
