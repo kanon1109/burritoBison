@@ -13,6 +13,7 @@ import utils.Random;
 /**
  * ...角色
  * 拥有外表动作
+ * 
  * @author Kanon
  */
 public class Role extends GameObject 
@@ -51,11 +52,13 @@ public class Role extends GameObject
 	private var bounceAni6:Animation;
 	private var failAni:Animation;
 	private var failRunAni:Animation;
+	private var startAni:Animation;
 	//受伤
 	private var hurt1:Image;
 	private var hurt2:Image;
 	private var hurt3:Image;
 	private var hurt:Image;
+	private var fly:Image;
 	//飞行动作的索引
 	private var flyIndex:int;
 	//受伤动作索引
@@ -80,6 +83,8 @@ public class Role extends GameObject
 	private var isHurt:Boolean;
 	//一次冲刺
 	private var swoopOnce:Boolean;
+	
+	private var _isStart:Boolean;
 	public function Role() 
 	{
 		super();
@@ -93,7 +98,6 @@ public class Role extends GameObject
 	private function initData():void
 	{
 		this._isOutTop = false;
-		
 		this.gravity = .98;
 		this.topY = 200;
 		this.minVx = 10;
@@ -110,6 +114,7 @@ public class Role extends GameObject
 		this.hurtIndex = 1;
 		this.hurtCount = 3;
 		this.isBounceComplete = true;
+		this._isStart = false;
 		
 		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
 		this.pivotY = config.GameConstant.ROLE_HEIGHT / 2;
@@ -122,6 +127,15 @@ public class Role extends GameObject
 	 */
 	private function init():void
 	{
+		this.fly = new Image(GameConstant.GAME_RES_PATH + "roleFly.png");
+		this.fly.visible = false;
+		this.addChild(this.fly);
+
+		this.startAni = this.createAni("roleStart.json");
+		this.startAni.play();
+		//this.startAni.visible = false;
+		this.addChild(this.startAni);
+
 		this.flyAni1 = this.createAni("roleFly1.json");
 		this.flyAni1.visible = false;
 		this.addChild(this.flyAni1);
@@ -175,7 +189,7 @@ public class Role extends GameObject
 		this.addChild(this.failAni);
 		
 		this.failRunAni = this.createAni("roleFailRun.json");
-		this.failRunAni.y = -80;
+		this.failRunAni.y = this.failAni.y - 50;
 		this.failRunAni.visible = false;
 		this.addChild(this.failRunAni);
 		
@@ -208,6 +222,7 @@ public class Role extends GameObject
 		this.scaleX = -this.scaleX;
 	}
 	
+	
 	private function createAni(name:String):Animation 
 	{
 		var ani:Animation = new Animation();
@@ -219,6 +234,7 @@ public class Role extends GameObject
 	
 	override public function update():void 
 	{
+		if (!this.isStart) return;
 		if (!this._isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
 		if (this.y > this._groundY)
@@ -242,7 +258,9 @@ public class Role extends GameObject
 					if (this.hurtIndex > this.hurtCount) this.hurtIndex = 1;
 				}
 			}
-			NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
+			//最后一次停下不需要震动
+			if (Math.abs(this.vx) >= this.minVx)
+				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
 			this.swoopOnce = false;
 		}
 		//速度过小停下
@@ -252,7 +270,6 @@ public class Role extends GameObject
 			this.vy = 0;
 			this._isFail = true;
 		}
-
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
@@ -276,58 +293,51 @@ public class Role extends GameObject
 	 */
 	private function updateAniState():void
 	{
+		if (this.isStart)
+		{
+			this.stopStart();
+		}
 		if (!this._isFail)
 		{
-			if (!this.isFlying && !this.isHurt && this.isFall && this.isBounceComplete)
+			if (!this.isHurt)
 			{
-				this.isFlying = true;
-				if (this.bounceAni)
+				if (!this.isFlying && !this.isFall && this.isBounceComplete)
 				{
-					this.bounceAni.stop();
-					this.bounceAni.visible = false;
+					this.fly.visible = true;
 				}
-				if (this.flyAni)
+				
+				if (!this.isFlying && this.isFall && this.isBounceComplete)
 				{
-					this.flyAni.visible = false;
-					this.flyAni.gotoAndStop(1);
+					this.isFlying = true;
+					this.stopBounce();
+					this.stopFly();
+					this.stopHurt();
+					this.fly.visible = false;
+					this.flyIndex = Random.randint(5, 6);
+					this.flyAni = this["flyAni" + this.flyIndex];
+					this.flyAni.visible = true;
+					this.flyAni.play(0, false);
 				}
-				if (this.hurt) this.hurt.visible = false;
-				this.flyIndex = Random.randint(5, 6);
-				this.flyAni = this["flyAni" + this.flyIndex];
-				this.flyAni.visible = true;
-				this.flyAni.play(0, false);
+				
+				if (this.isBounceComplete && this.isBounce)
+				{
+					this.isBounceComplete = false;
+					this.isFlying = false;
+					this.stopFly();
+					this.stopHurt();
+					this.stopBounce();
+					this.bounceAni = this["bounceAni" + this.flyIndex];
+					this.bounceAni.visible = true;
+					this.bounceAni.play(0, false);
+					this.bounceAni.on(Event.COMPLETE, this, bounceComplete);
+				}
 			}
-			
-			if (this.isBounceComplete && !this.isHurt && this.isBounce)
+			else
 			{
-				this.isBounceComplete = false;
-				this.isFlying = false;
-				this.flyAni.stop();
-				this.flyAni.visible = false;
-				if (this.hurt) this.hurt.visible = false;
-				if (this.bounceAni)
-				{
-					this.bounceAni.visible = false;
-					this.bounceAni.gotoAndStop(1);
-				}
-				this.bounceAni = this["bounceAni" + this.flyIndex];
-				this.bounceAni.visible = true;
-				this.bounceAni.play(0, false);
-				this.bounceAni.on(Event.COMPLETE, this, bounceComplete);
-			}
-			
-			if (this.isHurt)
-			{
-				if (this.flyAni)
-				{
-					this.flyAni.stop();
-					this.flyAni.visible = false;
-				}
-				if (this.bounceAni)
-				{
-					this.bounceAni.stop();
-					this.bounceAni.visible = false;
-				}
+				//受伤动作
+				this.stopFly();
+				this.stopBounce();
+				this.fly.visible = false;
 				this.hurt.visible = true;
 			}
 		}
@@ -336,17 +346,10 @@ public class Role extends GameObject
 			if (!this.isFailRun)
 			{
 				this.isFailRun = true;
-				if (this.flyAni)
-				{
-					this.flyAni.stop();
-					this.flyAni.visible = false;
-				}
-				if (this.bounceAni)
-				{
-					this.bounceAni.stop();
-					this.bounceAni.visible = false;
-				}
-				if (this.hurt) this.hurt.visible = false;
+				this.stopFly();
+				this.stopBounce();
+				this.stopHurt();
+				
 				this.failAni.visible = true;
 				this.failAni.y = 0;
 				this.timerOnce(400, this, function() {
@@ -362,12 +365,81 @@ public class Role extends GameObject
 	
 	private function failComplete():void 
 	{
-		this.failAni.visible = false;
+		this.stopFail();
 		this.failRunAni.visible = true;
 		this.failRunAni.play(0, false);
 		Tween.to(this, { x: -100 }, 800, null, Handler.create(this, function() {
 			NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_FAIL_RUN_COMPLETE);
 		}))
+	}
+	
+	/**
+	 * 停止失败动作
+	 */
+	private function stopFail():void
+	{
+		if (this.failAni)
+		{
+			this.failAni.gotoAndStop(1);
+			this.failAni.visible = false;
+		}
+	}
+	
+	/**
+	 * 停止失败跑步动作
+	 */
+	private function stopFailRun():void
+	{
+		if (this.failRunAni)
+		{
+			this.failRunAni.gotoAndStop(1);
+			this.failRunAni.visible = false;
+		}
+	}
+	
+	/**
+	 * 停止飞行动画
+	 */
+	private function stopFly():void
+	{
+		if (this.flyAni)
+		{
+			this.flyAni.gotoAndStop(1);
+			this.flyAni.visible = false;
+		}
+	}
+	
+	/**
+	 * 停止弹起动画
+	 */
+	private function stopBounce():void
+	{
+		if (this.bounceAni)
+		{
+			this.bounceAni.gotoAndStop(1);
+			this.bounceAni.visible = false;
+		}
+	}
+	
+	/**
+	 * 停止受伤动作
+	 */
+	private function stopHurt():void
+	{
+		if (this.hurt)
+			this.hurt.visible = false;
+	}
+	
+	/**
+	 * 停止开始动作
+	 */
+	private function stopStart():void
+	{
+		if (this.startAni)
+		{
+			this.startAni.gotoAndStop(1);
+			this.startAni.visible = false;
+		}
 	}
 	
 	//弹起结束
@@ -420,6 +492,14 @@ public class Role extends GameObject
 	 */
 	public function get isFail():Boolean { return _isFail; }
 	
+	/**
+	 * 是否开始
+	 */
+	public function get isStart():Boolean {return _isStart;}
+	public function set isStart(value:Boolean):void 
+	{
+		_isStart = value;
+	}
 	
 	/**
 	 * 是否允许加速俯冲

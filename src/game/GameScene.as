@@ -7,18 +7,24 @@ import game.obj.GameBackGround;
 import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
+import laya.ui.Image;
 import laya.ui.View;
 import laya.utils.Handler;
 import laya.utils.Tween;
 import support.NotificationCenter;
 /**
  * ...游戏场景层
- * TODO [云层]
+ * TODO
+ * [云层]
  * [限定最高高度]
  * [人物在最顶部自动进入云层后加速下落]
- * 人物动作变化
+ * [根据下落速度调整震动大小]
+ * [角色失败停下动作]
+ * 角色起始动作
+ * 重置角色位置速度
  * 敌人出现移动删除
- * 角色失败停下动作
+ * 人物动作变化
+ * 地图高宽需要配置
  * @author Kanon
  */
 public class GameScene extends View 
@@ -40,7 +46,8 @@ public class GameScene extends View
 	//初始化云的位置
 	private var cloud1PosY:Number;
 	private var cloud2PosY:Number;
-
+	//起始舞台图片
+	private var startStageImg:Image;
 	//滚屏背景图片的数量
 	private	var bgCount:int;
 	//背景滚动的范围
@@ -93,8 +100,8 @@ public class GameScene extends View
 		this.cloud1Arr = [];
 		this.cloud2Arr = [];
 		this.bg1PosY = -GameConstant.BG1_HEIGHT / 2 + 5;
-		this.bg2PosY = 20;
-		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT;
+		this.bg2PosY = 15;
+		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT + 20;
 		
 		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
 		this.cloud2PosY = this.cloud1PosY + 430;
@@ -128,6 +135,11 @@ public class GameScene extends View
 					GameConstant.GROUND_HEIGHT, 
 					this.bgCount, this.groundPosY, 
 					Layer.GAME_BG_LAYER, this.groundArr);
+					
+		this.startStageImg = new Image(GameConstant.GAME_RES_PATH + "startStage.png");
+		this.startStageImg.x = 150;
+		this.startStageImg.y = this.groundPosY - 136;
+		Layer.GAME_FG_LAYER.addChild(this.startStageImg);
 	}
 	
 	/**
@@ -187,8 +199,17 @@ public class GameScene extends View
 	{
 		if (this.role && this.role.canSwoop())
 		{
-			this.role.vx = 20;
-			this.role.swoop(40);
+			if (this.role.isStart)
+			{
+				this.role.vx = 20;
+				this.role.swoop(40);
+			}
+			else
+			{
+				this.role.isStart = true;
+				this.role.vx = 20;
+				this.role.vy = -40;
+			}
 		}
 	}
 	
@@ -200,9 +221,9 @@ public class GameScene extends View
 		if (!this.role)
 		{
 			this.role = new Role();
-			this.role.x = this.displayWidth / 2 - 200;
-			this.role.y = this.displayHeight / 2;
-			this.role.vx = 20;
+			this.role.x = 250;
+			this.role.y = this.displayHeight / 2 + 50;
+			this.role.vx = 0;
 			this.role.vy = 0;
 			this.role.groundY = this.groundPosY + 20;
 			Layer.GAME_ROLE_LAYER.addChild(this.role);
@@ -278,6 +299,8 @@ public class GameScene extends View
 		this.scrollBg(this.cloud1Arr, this.cloud1PosY);
 		this.scrollBg(this.cloud2Arr, this.cloud2PosY);
 		
+		this.startStageImg.x -= this.role.vx;
+		if (this.role.isOnTop) this.startStageImg.y -= this.role.vy;
 	}
 		
 	//弹起

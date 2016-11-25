@@ -17,8 +17,8 @@ public class GameConstant
 	public static const BG1_WIDTH:int = 1758;
 	public static const BG1_HEIGHT:int = 636;
 	//第二层背景高宽
-	public static const BG2_WIDTH:int = 873;
-	public static const BG2_HEIGHT:int = 499;
+	public static const BG2_WIDTH:int = 1747;
+	public static const BG2_HEIGHT:int = 574;
 	
 	//地板高宽
 	public static const GROUND_WIDTH:int = 1340;

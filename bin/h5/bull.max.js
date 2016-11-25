@@ -1,7 +1,6 @@
-var window = window || global;
-var document = document || (window.document = {});
+var document=document || {};var window=window || (global.document=document,global);
 /***********************************/
-/*http://www.layabox.com 2016/11/11*/
+/*http://www.layabox.com 2016/05/19*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -96,8 +95,11 @@ var Laya=window.Laya=(function(window,document){
 					if(fullName.indexOf('laya.')==0){
 						var paths=fullName.split('.');
 						miniName=miniName || paths[paths.length-1];
-						if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
-						Laya[miniName]=o;
+						if(miniName!="Image")
+						{
+							if(Laya[miniName]) console.log("Warning!,this class["+miniName+"] already exist:",Laya[miniName]);
+							Laya[miniName]=o;
+						}
 					}
 				}
 				else {
@@ -190,14 +192,14 @@ var Laya=window.Laya=(function(window,document){
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
 	Laya.interface('laya.ui.IItem');
-	Laya.interface('laya.ui.ISelect');
-	Laya.interface('laya.runtime.IMarket');
-	Laya.interface('laya.filters.IFilter');
-	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.resource.IDispose');
-	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.filters.IFilterAction');
 	Laya.interface('laya.runtime.ICPlatformClass');
+	Laya.interface('laya.filters.IFilter');
+	Laya.interface('laya.ui.ISelect');
+	Laya.interface('laya.resource.IDispose');
+	Laya.interface('laya.runtime.IConchNode');
+	Laya.interface('laya.runtime.IMarket');
+	Laya.interface('laya.display.ILayout');
 	/**
 	*@private
 	*/
@@ -430,8 +432,8 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.GAME_RES_PATH="res/game/";
 		GameConstant.BG1_WIDTH=1758;
 		GameConstant.BG1_HEIGHT=636;
-		GameConstant.BG2_WIDTH=873;
-		GameConstant.BG2_HEIGHT=499;
+		GameConstant.BG2_WIDTH=1747;
+		GameConstant.BG2_HEIGHT=574;
 		GameConstant.GROUND_WIDTH=1340;
 		GameConstant.GROUND_HEIGHT=153;
 		GameConstant.CLOUD1_WIDTH=2487;
@@ -15249,6 +15251,7 @@ var Laya=window.Laya=(function(window,document){
 	/**
 	*...角色
 	*拥有外表动作
+	*
 	*@author Kanon
 	*/
 	//class game.obj.Role extends game.obj.GameObject
@@ -15278,10 +15281,12 @@ var Laya=window.Laya=(function(window,document){
 			this.bounceAni6=null;
 			this.failAni=null;
 			this.failRunAni=null;
+			this.startAni=null;
 			this.hurt1=null;
 			this.hurt2=null;
 			this.hurt3=null;
 			this.hurt=null;
+			this.fly=null;
 			this.flyIndex=0;
 			this.hurtIndex=0;
 			this.hurtCount=0;
@@ -15295,6 +15300,7 @@ var Laya=window.Laya=(function(window,document){
 			this._isOnTop=false;
 			this.isHurt=false;
 			this.swoopOnce=false;
+			this._isStart=false;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -15323,6 +15329,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurtIndex=1;
 			this.hurtCount=3;
 			this.isBounceComplete=true;
+			this._isStart=false;
 			this.pivotX=133 / 2;
 			this.pivotY=98 / 2;
 			this.width=133;
@@ -15333,6 +15340,12 @@ var Laya=window.Laya=(function(window,document){
 		*初始化
 		*/
 		__proto.init=function(){
+			this.fly=new Image("res/game/"+"roleFly.png");
+			this.fly.visible=false;
+			this.addChild(this.fly);
+			this.startAni=this.createAni("roleStart.json");
+			this.startAni.play();
+			this.addChild(this.startAni);
 			this.flyAni1=this.createAni("roleFly1.json");
 			this.flyAni1.visible=false;
 			this.addChild(this.flyAni1);
@@ -15373,7 +15386,7 @@ var Laya=window.Laya=(function(window,document){
 			this.failAni.visible=false;
 			this.addChild(this.failAni);
 			this.failRunAni=this.createAni("roleFailRun.json");
-			this.failRunAni.y=-80;
+			this.failRunAni.y=this.failAni.y-50;
 			this.failRunAni.visible=false;
 			this.addChild(this.failRunAni);
 			this.hurt1=new Image("res/game/"+"roleHurt1.png");
@@ -15412,6 +15425,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.update=function(){
+			if (!this.isStart)return;
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY){
@@ -15429,7 +15443,8 @@ var Laya=window.Laya=(function(window,document){
 						if (this.hurtIndex > this.hurtCount)this.hurtIndex=1;
 					}
 				}
-				NotificationCenter.getInstance().postNotification("roleBounce");
+				if (Math.abs(this.vx)>=this.minVx)
+					NotificationCenter.getInstance().postNotification("roleBounce");
 				this.swoopOnce=false;
 			}
 			if (Math.abs(this.vx)< this.minVx){
@@ -15454,62 +15469,50 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
+			if (this.isStart){
+				this.stopStart();
+			}
 			if (!this._isFail){
-				if (!this.isFlying && !this.isHurt && this.isFall && this.isBounceComplete){
-					this.isFlying=true;
-					if (this.bounceAni){
-						this.bounceAni.stop();
-						this.bounceAni.visible=false;
+				if (!this.isHurt){
+					if (!this.isFlying && !this.isFall && this.isBounceComplete){
+						this.fly.visible=true;
 					}
-					if (this.flyAni){
-						this.flyAni.visible=false;
-						this.flyAni.gotoAndStop(1);
+					if (!this.isFlying && this.isFall && this.isBounceComplete){
+						this.isFlying=true;
+						this.stopBounce();
+						this.stopFly();
+						this.stopHurt();
+						this.fly.visible=false;
+						this.flyIndex=Random.randint(5,6);
+						this.flyAni=this["flyAni"+this.flyIndex];
+						this.flyAni.visible=true;
+						this.flyAni.play(0,false);
 					}
-					if (this.hurt)this.hurt.visible=false;
-					this.flyIndex=Random.randint(5,6);
-					this.flyAni=this["flyAni"+this.flyIndex];
-					this.flyAni.visible=true;
-					this.flyAni.play(0,false);
+					if (this.isBounceComplete && this.isBounce){
+						this.isBounceComplete=false;
+						this.isFlying=false;
+						this.stopFly();
+						this.stopHurt();
+						this.stopBounce();
+						this.bounceAni=this["bounceAni"+this.flyIndex];
+						this.bounceAni.visible=true;
+						this.bounceAni.play(0,false);
+						this.bounceAni.on("complete",this,this.bounceComplete);
+					}
 				}
-				if (this.isBounceComplete && !this.isHurt && this.isBounce){
-					this.isBounceComplete=false;
-					this.isFlying=false;
-					this.flyAni.stop();
-					this.flyAni.visible=false;
-					if (this.hurt)this.hurt.visible=false;
-					if (this.bounceAni){
-						this.bounceAni.visible=false;
-						this.bounceAni.gotoAndStop(1);
-					}
-					this.bounceAni=this["bounceAni"+this.flyIndex];
-					this.bounceAni.visible=true;
-					this.bounceAni.play(0,false);
-					this.bounceAni.on("complete",this,this.bounceComplete);
-				}
-				if (this.isHurt){
-					if (this.flyAni){
-						this.flyAni.stop();
-						this.flyAni.visible=false;
-					}
-					if (this.bounceAni){
-						this.bounceAni.stop();
-						this.bounceAni.visible=false;
-					}
+				else{
+					this.stopFly();
+					this.stopBounce();
+					this.fly.visible=false;
 					this.hurt.visible=true;
 				}
 			}
 			else{
 				if (!this.isFailRun){
 					this.isFailRun=true;
-					if (this.flyAni){
-						this.flyAni.stop();
-						this.flyAni.visible=false;
-					}
-					if (this.bounceAni){
-						this.bounceAni.stop();
-						this.bounceAni.visible=false;
-					}
-					if (this.hurt)this.hurt.visible=false;
+					this.stopFly();
+					this.stopBounce();
+					this.stopHurt();
 					this.failAni.visible=true;
 					this.failAni.y=0;
 					this.timerOnce(400,this,function(){
@@ -15524,12 +15527,70 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.failComplete=function(){
-			this.failAni.visible=false;
+			this.stopFail();
 			this.failRunAni.visible=true;
 			this.failRunAni.play(0,false);
 			Tween.to(this,{x:-100 },800,null,Handler.create(this,function(){
 				NotificationCenter.getInstance().postNotification("roleFailRunComplete");
 			}))
+		}
+
+		/**
+		*停止失败动作
+		*/
+		__proto.stopFail=function(){
+			if (this.failAni){
+				this.failAni.gotoAndStop(1);
+				this.failAni.visible=false;
+			}
+		}
+
+		/**
+		*停止失败跑步动作
+		*/
+		__proto.stopFailRun=function(){
+			if (this.failRunAni){
+				this.failRunAni.gotoAndStop(1);
+				this.failRunAni.visible=false;
+			}
+		}
+
+		/**
+		*停止飞行动画
+		*/
+		__proto.stopFly=function(){
+			if (this.flyAni){
+				this.flyAni.gotoAndStop(1);
+				this.flyAni.visible=false;
+			}
+		}
+
+		/**
+		*停止弹起动画
+		*/
+		__proto.stopBounce=function(){
+			if (this.bounceAni){
+				this.bounceAni.gotoAndStop(1);
+				this.bounceAni.visible=false;
+			}
+		}
+
+		/**
+		*停止受伤动作
+		*/
+		__proto.stopHurt=function(){
+			if (this.hurt)
+				this.hurt.visible=false;
+		}
+
+		/**
+		*停止开始动作
+		*/
+		__proto.stopStart=function(){
+			if (this.startAni){
+				this.startAni.gotoAndStop(1);
+				this.startAni.visible=false;
+			}
 		}
 
 		//弹起结束
@@ -15578,6 +15639,13 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'isOnTop',function(){return this._isOnTop;},function(value){
 			this._isOnTop=value;
+		});
+
+		/**
+		*是否开始
+		*/
+		__getset(0,__proto,'isStart',function(){return this._isStart;},function(value){
+			this._isStart=value;
 		});
 
 		return Role;
@@ -23717,12 +23785,17 @@ var Laya=window.Laya=(function(window,document){
 
 	/**
 	*...游戏场景层
-	*TODO [云层]
+	*TODO
+	*[云层]
 	*[限定最高高度]
 	*[人物在最顶部自动进入云层后加速下落]
-	*人物动作变化
+	*[根据下落速度调整震动大小]
+	*[角色失败停下动作]
+	*角色起始动作
+	*重置角色位置速度
 	*敌人出现移动删除
-	*角色失败停下动作
+	*人物动作变化
+	*地图高宽需要配置
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -23739,6 +23812,7 @@ var Laya=window.Laya=(function(window,document){
 			this.groundPosY=NaN;
 			this.cloud1PosY=NaN;
 			this.cloud2PosY=NaN;
+			this.startStageImg=null;
 			this.bgCount=0;
 			this.bgMoveRangY=NaN;
 			GameScene.__super.call(this);
@@ -23780,8 +23854,8 @@ var Laya=window.Laya=(function(window,document){
 			this.cloud1Arr=[];
 			this.cloud2Arr=[];
 			this.bg1PosY=-636 / 2+5;
-			this.bg2PosY=20;
-			this.groundPosY=Laya.stage.height-153;
+			this.bg2PosY=15;
+			this.groundPosY=Laya.stage.height-153+20;
 			this.cloud1PosY=this.bg1PosY-887-300;
 			this.cloud2PosY=this.cloud1PosY+430;
 			this.bgMoveRangY=-180-this.cloud1PosY;
@@ -23800,8 +23874,8 @@ var Laya=window.Laya=(function(window,document){
 			this.bgCount,this.bg1PosY,
 			Layer.GAME_BG_LAYER,this.bg1Arr);
 			this.createBg("bg1_2.png",
-			873,
-			499,
+			1747,
+			574,
 			this.bgCount,this.bg2PosY,
 			Layer.GAME_BG_LAYER,this.bg2Arr);
 			this.createBg("ground1.png",
@@ -23809,6 +23883,10 @@ var Laya=window.Laya=(function(window,document){
 			153,
 			this.bgCount,this.groundPosY,
 			Layer.GAME_BG_LAYER,this.groundArr);
+			this.startStageImg=new Image("res/game/"+"startStage.png");
+			this.startStageImg.x=150;
+			this.startStageImg.y=this.groundPosY-136;
+			Layer.GAME_FG_LAYER.addChild(this.startStageImg);
 		}
 
 		/**
@@ -23861,8 +23939,15 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.mouseClickHander=function(){
 			if (this.role && this.role.canSwoop()){
-				this.role.vx=20;
-				this.role.swoop(40);
+				if (this.role.isStart){
+					this.role.vx=20;
+					this.role.swoop(40);
+				}
+				else{
+					this.role.isStart=true;
+					this.role.vx=20;
+					this.role.vy=-40;
+				}
 			}
 		}
 
@@ -23872,9 +23957,9 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initRole=function(){
 			if (!this.role){
 				this.role=new Role();
-				this.role.x=this.displayWidth / 2-200;
-				this.role.y=this.displayHeight / 2;
-				this.role.vx=20;
+				this.role.x=250;
+				this.role.y=this.displayHeight / 2+50;
+				this.role.vx=0;
 				this.role.vy=0;
 				this.role.groundY=this.groundPosY+20;
 				Layer.GAME_ROLE_LAYER.addChild(this.role);
@@ -23938,6 +24023,8 @@ var Laya=window.Laya=(function(window,document){
 			this.scrollBg(this.groundArr,this.groundPosY);
 			this.scrollBg(this.cloud1Arr,this.cloud1PosY);
 			this.scrollBg(this.cloud2Arr,this.cloud2PosY);
+			this.startStageImg.x-=this.role.vx;
+			if (this.role.isOnTop)this.startStageImg.y-=this.role.vy;
 		}
 
 		//弹起
