@@ -9,17 +9,19 @@ import utils.Random;
 public class Shake 
 {
 	private static var target:Sprite;
-	private static var delay:uint;
+	private static var delay:int;
 	private static var shakeDelta:Number;
+	private static var targetY:Number;
 	public function Shake() 
 	{
 		
 	}
 	
 	
-	public static function shake(target:Sprite, delay:uint = 5, shakeDelta:Number = 5):void
+	public static function shake(target:Sprite, delay:int = 5, shakeDelta:Number = 5):void
 	{
 		Shake.target = target;
+		Shake.targetY = target.y;
 		Shake.delay = delay;
 		Shake.shakeDelta = shakeDelta;
 	}
@@ -30,13 +32,14 @@ public class Shake
 		if (Shake.target)
 		{
 			Shake.delay--;
+			trace(Shake.delay)
 			if (Shake.delay > 0)
 			{
 				Shake.target.y += Shake.shakeDelta * Random.randint(-1, 1);
 			}
 			else
 			{
-				Shake.target.y = 0;
+				Shake.target.y = Shake.targetY;
 				Shake.delay = 0;
 			}
 		}

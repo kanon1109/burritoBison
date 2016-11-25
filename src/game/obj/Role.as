@@ -1,10 +1,10 @@
 package game.obj 
 {
+import common.Shake;
 import config.GameConstant;
 import config.MsgConstant;
 import laya.display.Animation;
 import laya.events.Event;
-import laya.resource.Texture;
 import laya.ui.Image;
 import laya.utils.Handler;
 import laya.utils.Tween;
@@ -53,7 +53,6 @@ public class Role extends GameObject
 	private var failAni:Animation;
 	private var failRunAni:Animation;
 	private var startAni:Animation;
-	private var startRushAni:Animation;
 	//受伤
 	private var hurt1:Image;
 	private var hurt2:Image;
@@ -102,8 +101,8 @@ public class Role extends GameObject
 		this._isOutTop = false;
 		this.gravity = .98;
 		this.topY = 200;
-		this.minVx = 10;
-		this.minVy = 10;
+		this.minVx = 20;
+		this.minVy = 20;
 		this.frictionX = .9;
 		this.frictionY = .8;
 		this._isFail = false;
@@ -137,10 +136,6 @@ public class Role extends GameObject
 		this.startAni = this.createAni("roleStart.json");
 		this.startAni.play();
 		this.addChild(this.startAni);
-
-		this.startRushAni = this.createAni("roleFly6.json");
-		this.startRushAni.visible = false;
-		this.addChild(this.startRushAni);
 		
 		this.flyAni1 = this.createAni("roleFly1.json");
 		this.flyAni1.visible = false;
@@ -228,7 +223,11 @@ public class Role extends GameObject
 		this.scaleX = -this.scaleX;
 	}
 	
-	
+	/**
+	 * 创建动画
+	 * @param	name	动画名
+	 * @return
+	 */
 	private function createAni(name:String):Animation 
 	{
 		var ani:Animation = new Animation();
@@ -243,12 +242,11 @@ public class Role extends GameObject
 		if (!this.isStart) return;
 		if (!this._isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
-		if (this.y > this._groundY)
+		if (this.y > this._groundY && !this._isFail)
 		{
 			//弹起
 			this.isBounce = true;
 			this.y = this._groundY;
-			this.vx *= this.frictionX;
 			this.vy = -this.vy * this.frictionY;
 			if (!this.swoopOnce)
 			{
@@ -263,19 +261,27 @@ public class Role extends GameObject
 					this.hurtIndex++;
 					if (this.hurtIndex > this.hurtCount) this.hurtIndex = 1;
 				}
+				this.vx *= this.frictionX;
+				//速度过小停下
+				if (Math.abs(this.vx) < this.minVx && Math.abs(this.vy) < this.minVy) 
+				{
+					this._isFail = true;
+					this.vx = 0;
+					this.vy = 0;
+					Shake.shake(this, 5);
+				}
 			}
 			//最后一次停下不需要震动
-			if (Math.abs(this.vx) >= this.minVx)
+			if (!this._isFail)
+			{
+				var shakeDelta:int = 7;
+				if (this.swoopOnce) shakeDelta = 15;
+				Shake.shake(Layer.GAME_BG_LAYER, 5, shakeDelta);
 				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
+			}
 			this.swoopOnce = false;
 		}
-		//速度过小停下
-		if (Math.abs(this.vx) < this.minVx) 
-		{
-			this.vx = 0;
-			this.vy = 0;
-			this._isFail = true;
-		}
+		
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
@@ -308,8 +314,7 @@ public class Role extends GameObject
 				if (!this.isStartRush)
 				{
 					this.isStartRush = true;
-					this.startRushAni.visible = true;
-					this.startRushAni.play(0, false);
+					this.showFlyAni(6);
 				}
 			}
 			
@@ -324,14 +329,11 @@ public class Role extends GameObject
 				{
 					this.isFlying = true;
 					this.stopBounce();
-					this.stopStartRush();
 					this.stopFly();
 					this.stopHurt();
 					this.fly.visible = false;
-					this.flyIndex = Random.randint(5, 6);
-					this.flyAni = this["flyAni" + this.flyIndex];
-					this.flyAni.visible = true;
-					this.flyAni.play(0, false);
+					this.flyIndex = Random.randint(1, 6);
+					this.showFlyAni(this.flyIndex);
 				}
 				
 				if (this.isBounceComplete && this.isBounce)
@@ -358,13 +360,14 @@ public class Role extends GameObject
 		}
 		else
 		{
+			//停下失败
 			if (!this.isFailRun)
 			{
 				this.isFailRun = true;
 				this.stopFly();
 				this.stopBounce();
 				this.stopHurt();
-				
+
 				this.failAni.visible = true;
 				this.failAni.y = 0;
 				this.timerOnce(400, this, function() {
@@ -389,6 +392,17 @@ public class Role extends GameObject
 	}
 	
 	/**
+	 * 显示飞行动作
+	 * @param	index	动作索引
+	 */
+	private function showFlyAni(index:int):void
+	{
+		this.flyAni = this["flyAni" + index];
+		this.flyAni.visible = true;
+		this.flyAni.play(0, false);
+	}
+	
+	/**
 	 * 停止失败动作
 	 */
 	private function stopFail():void
@@ -397,18 +411,6 @@ public class Role extends GameObject
 		{
 			this.failAni.gotoAndStop(1);
 			this.failAni.visible = false;
-		}
-	}
-	
-	/**
-	 * 停止开始冲刺动作
-	 */
-	private function stopStartRush():void
-	{
-		if (this.startRushAni)
-		{
-			this.startRushAni.gotoAndStop(1);
-			this.startRushAni.visible = false;
 		}
 	}
 	

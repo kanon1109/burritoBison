@@ -9,6 +9,7 @@ import laya.display.Sprite;
 import laya.events.Event;
 import laya.ui.Image;
 import laya.ui.View;
+import laya.utils.Ease;
 import laya.utils.Handler;
 import laya.utils.Tween;
 import support.NotificationCenter;
@@ -52,6 +53,10 @@ public class GameScene extends View
 	private	var bgCount:int;
 	//背景滚动的范围
 	private var bgMoveRangY:Number;
+	//起始速度仪表
+	private var powerMete:PowerMete;
+	//是否开始
+	private var canStart:Boolean;
 	public function GameScene() 
 	{
 		super();
@@ -73,7 +78,22 @@ public class GameScene extends View
 		this.initRole();
 		this.initBg();
 		this.initCloud();
-
+		this.initPowerMete();
+	}
+	
+	private function initPowerMete():void 
+	{
+		if (!this.powerMete)
+		{
+			this.powerMete = new PowerMete();
+			Layer.GAME_LAYER.addChild(this.powerMete);
+			this.powerMete.x = this.startStageImg.x + 333;
+		}
+		this.powerMete.y = -300;
+		Tween.to(this.powerMete, { y: -50}, 600, Ease.circOut, Handler.create(this, function() { 
+			this.powerMete.start();
+			this.canStart = true;
+		} ) );
 	}
 	
 	/**
@@ -102,10 +122,10 @@ public class GameScene extends View
 		this.bg1PosY = -GameConstant.BG1_HEIGHT / 2 + 5;
 		this.bg2PosY = 15;
 		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT + 20;
-		
 		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
 		this.cloud2PosY = this.cloud1PosY + 430;
 		this.bgMoveRangY =  -180 - this.cloud1PosY;
+		this.canStart = false;
 	}
 	
 	/**
@@ -197,17 +217,19 @@ public class GameScene extends View
 	
 	private function mouseClickHander():void 
 	{
+		if (!this.canStart) return;
+		this.powerMete.stop();
+		Tween.to(this.powerMete, { y: -300}, 600, Ease.circOut, null, 800);
 		if (this.role && this.role.canSwoop())
 		{
 			if (this.role.isStart)
 			{
-				this.role.vx = 20;
 				this.role.swoop(40);
 			}
 			else
 			{
 				this.role.isStart = true;
-				this.role.vx = 50;
+				this.role.vx = 40;
 				this.role.vy = -40;
 			}
 		}
@@ -306,7 +328,6 @@ public class GameScene extends View
 	//弹起
 	private function roleBounceHandler():void 
 	{
-		Shake.shake(Layer.GAME_BG_LAYER);
 	}
 	
 	//角色跑了

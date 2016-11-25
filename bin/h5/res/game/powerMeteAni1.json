@@ -1,0 +1,54 @@
+{
+    "frames": {
+        "PowerMete1Ani1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 149,
+                "h": 73,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 149,
+                "h": 73
+            },
+            "sourceSize": {
+                "w": 149,
+                "h": 73
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "PowerMete1Ani2.png": {
+            "frame": {
+                "x": 0,
+                "y": 75,
+                "w": 149,
+                "h": 73,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 149,
+                "h": 73
+            },
+            "sourceSize": {
+                "w": 149,
+                "h": 73
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "powerMeteAni1.png",
+        "prefix": ""
+    }
+}
