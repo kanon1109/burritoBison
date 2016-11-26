@@ -13607,6 +13607,20 @@ var Laya=window.Laya=(function(window,document){
 		__proto.stop=function(){
 			if (this.tw1)Tween.clear(this.tw1);
 			if (this.tw2)Tween.clear(this.tw2);
+			if (this.isMax()){
+				this.pointer.rotation=90;
+				this.ani1.play();
+				this.ani1.visible=true;
+			}
+		}
+
+		/**
+		*是否是最大值
+		*@return
+		*/
+		__proto.isMax=function(){
+			console.log(this.pointer.rotation);
+			return this.pointer.rotation >=80 && this.pointer.rotation <=100;
 		}
 
 		return PowerMete;
@@ -23949,10 +23963,12 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.initPowerMete=function(){
-			this.powerMete=new PowerMete();
-			this.powerMete.x=this.startStageImg.x+333;
+			if (!this.powerMete){
+				this.powerMete=new PowerMete();
+				Layer.GAME_LAYER.addChild(this.powerMete);
+				this.powerMete.x=this.startStageImg.x+333;
+			}
 			this.powerMete.y=-300;
-			Layer.GAME_LAYER.addChild(this.powerMete);
 			Tween.to(this.powerMete,{y:-50},600,Ease.circOut,Handler.create(this,function(){
 				this.powerMete.start();
 				this.canStart=true;
@@ -23965,7 +23981,7 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initEvent=function(){
 			NotificationCenter.getInstance().addObserver("roleBounce",this.roleBounceHandler,this);
 			NotificationCenter.getInstance().addObserver("roleFailRunComplete",this.roleFailRunCompleteHandler,this);
-			this.on("click",this,this.mouseClickHander);
+			this.on("mousedown",this,this.mouseDownHander);
 		}
 
 		/**
@@ -23983,10 +23999,10 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=15;
 			this.groundPosY=Laya.stage.height-153+20;
-			this.canStart=false;
 			this.cloud1PosY=this.bg1PosY-887-300;
 			this.cloud2PosY=this.cloud1PosY+430;
 			this.bgMoveRangY=-180-this.cloud1PosY;
+			this.canStart=false;
 		}
 
 		/**
@@ -24065,18 +24081,24 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
-		__proto.mouseClickHander=function(){
+		__proto.mouseDownHander=function(){
 			if (!this.canStart)return;
-			this.powerMete.stop();
-			Tween.to(this.powerMete,{y:-300},600,Ease.circOut,null,800);
 			if (this.role && this.role.canSwoop()){
 				if (this.role.isStart){
 					this.role.swoop(40);
 				}
 				else{
+					this.powerMete.stop();
+					Tween.to(this.powerMete,{y:-300 },600,Ease.circOut,null,800);
+					if (this.powerMete.isMax()){
+						this.role.vx=80;
+						this.role.vy=-45;
+					}
+					else{
+						this.role.vx=40;
+						this.role.vy=-40;
+					}
 					this.role.isStart=true;
-					this.role.vx=40;
-					this.role.vy=-40;
 				}
 			}
 		}

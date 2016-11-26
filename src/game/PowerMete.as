@@ -101,6 +101,22 @@ public class PowerMete extends Sprite
 	{
 		if (this.tw1) Tween.clear(this.tw1);
 		if (this.tw2) Tween.clear(this.tw2);
+		if (this.isMax())
+		{
+			this.pointer.rotation = 90;
+			this.ani1.play();
+			this.ani1.visible = true;
+		}
+	}
+	
+	/**
+	 * 是否是最大值
+	 * @return
+	 */
+	public function isMax():Boolean
+	{
+		trace(this.pointer.rotation);
+		return this.pointer.rotation >= 80 && this.pointer.rotation <= 100;
 	}
 }
 }

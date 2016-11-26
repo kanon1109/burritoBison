@@ -103,7 +103,7 @@ public class GameScene extends View
 	{
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_RUN_COMPLETE, roleFailRunCompleteHandler, this);
-		this.on(Event.CLICK, this, mouseClickHander);
+		this.on(Event.MOUSE_DOWN, this, mouseDownHander);
 	}
 
 	/**
@@ -215,11 +215,9 @@ public class GameScene extends View
 		}
 	}
 	
-	private function mouseClickHander():void 
+	private function mouseDownHander():void 
 	{
 		if (!this.canStart) return;
-		this.powerMete.stop();
-		Tween.to(this.powerMete, { y: -300}, 600, Ease.circOut, null, 800);
 		if (this.role && this.role.canSwoop())
 		{
 			if (this.role.isStart)
@@ -228,9 +226,19 @@ public class GameScene extends View
 			}
 			else
 			{
+				this.powerMete.stop();
+				Tween.to(this.powerMete, { y: -300 }, 600, Ease.circOut, null, 800);
+				if (this.powerMete.isMax())
+				{
+					this.role.vx = 80;
+					this.role.vy = -45;
+				}
+				else
+				{
+					this.role.vx = 40;
+					this.role.vy = -40;
+				}
 				this.role.isStart = true;
-				this.role.vx = 40;
-				this.role.vy = -40;
 			}
 		}
 	}
