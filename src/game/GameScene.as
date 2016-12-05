@@ -76,9 +76,20 @@ public class GameScene extends View
 		this.initData();
 		this.initEvent();
 		this.initRole();
+		this.initBoss();
 		this.initBg();
 		this.initCloud();
 		this.initPowerMete();
+	}
+	
+	private function initBoss():void 
+	{
+		/*var boss:MovieClip = new MovieClip();
+		boss.load(GameConstant.GAME_SWF_PATH + "t.swf");
+		boss.width = 20;
+		boss.height = 20;
+		this.addChild(boss);*/
+		
 	}
 	
 	private function initPowerMete():void 
@@ -156,7 +167,7 @@ public class GameScene extends View
 					this.bgCount, this.groundPosY, 
 					Layer.GAME_BG_LAYER, this.groundArr);
 					
-		this.startStageImg = new Image(GameConstant.GAME_RES_PATH + "startStage.png");
+		this.startStageImg = new Image(GameConstant.GAME_IMG_PATH + "startStage.png");
 		this.startStageImg.x = 150;
 		this.startStageImg.y = this.groundPosY - 136;
 		Layer.GAME_FG_LAYER.addChild(this.startStageImg);
@@ -197,7 +208,8 @@ public class GameScene extends View
 		for (var i:int = 0; i < count; i++) 
 		{
 			bg = new GameBackGround();
-			bg.loadImage(GameConstant.GAME_RES_PATH + name, 0, 0, width, height);
+			trace(GameConstant.GAME_IMG_PATH + name);
+			bg.loadImage(GameConstant.GAME_IMG_PATH + name, 0, 0, width, height);
 			bg.x = width * i;
 			bg.y = posY;
 			bg.width = width;

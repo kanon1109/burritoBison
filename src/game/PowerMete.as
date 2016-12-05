@@ -35,17 +35,17 @@ public class PowerMete extends Sprite
 		{
 			case 1:
 				//底板
-				var image:Image = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_1.png");
+				var image:Image = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_1.png");
 				this.addChild(image);
 				
 				//颜色板
-				image = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_7.png");
+				image = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_7.png");
 				image.x = 14;
 				image.y = 148;
 				this.addChild(image);
 				
 				this.ani1 = new Animation();
-				this.ani1.loadAtlas(config.GameConstant.GAME_RES_PATH + "powerMeteAni1.json");
+				this.ani1.loadAtlas(config.GameConstant.GAME_ATLAS_PATH + "powerMeteAni1.json");
 				this.ani1.x = image.x;
 				this.ani1.y = image.y;
 				this.ani1.interval = 60;
@@ -53,13 +53,13 @@ public class PowerMete extends Sprite
 				this.addChild(this.ani1);
 				
 				//头像地板
-				image = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_4.png");
+				image = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_4.png");
 				image.x = 63;
 				image.y = 148;
 				this.addChild(image);
 				
 				//指针
-				this.pointer = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_3.png");
+				this.pointer = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_3.png");
 				this.pointer.x = 89;
 				this.pointer.y = 152;
 				this.pointer.pivotX = 7.75;
@@ -68,13 +68,13 @@ public class PowerMete extends Sprite
 				this.addChild(this.pointer);
 				
 				//头像
-				image = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_2.png");
+				image = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_2.png");
 				image.x = 69;
 				image.y = 134;
 
 				this.addChild(image);
 				
-				image = new Image(GameConstant.GAME_RES_PATH + "PowerMete1_6.png");
+				image = new Image(GameConstant.GAME_IMG_PATH + "PowerMete1_6.png");
 				image.x = 83;
 				image.y = 211;
 				this.addChild(image);
@@ -115,7 +115,6 @@ public class PowerMete extends Sprite
 	 */
 	public function isMax():Boolean
 	{
-		trace(this.pointer.rotation);
 		return this.pointer.rotation >= 80 && this.pointer.rotation <= 100;
 	}
 }

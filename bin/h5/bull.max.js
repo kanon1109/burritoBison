@@ -443,6 +443,9 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.CLOUD2_HEIGHT=590;
 		GameConstant.ROLE_WIDTH=133;
 		GameConstant.ROLE_HEIGHT=98;
+		__static(GameConstant,
+		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH="res/game/"+"ani/atlas/";},'GAME_SWF_PATH',function(){return this.GAME_SWF_PATH="res/game/"+"ani/swf/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";}
+		]);
 		return GameConstant;
 	})()
 
@@ -916,8 +919,8 @@ var Laya=window.Laya=(function(window,document){
 				throw new Error('没有可用的范围('+start+','+stop+')');
 			if (width < 0)
 				width=start-stop;
-			var n=Math.floor((width+step-1)/ step);
-			return Math.floor(Random.random()*n)*step+Math.min(start,stop);
+			var n=parseInt((width+step-1)/ step);
+			return parseInt(Random.random()*n)*step+Math.min(start,stop);
 		}
 
 		Random.randint=function(a,b){
@@ -944,7 +947,7 @@ var Laya=window.Laya=(function(window,document){
 		Random.choice=function(sequence){
 			if (!sequence.hasOwnProperty('length'))
 				throw new Error('无法对此对象执行此操作');
-			var index=Math.floor(Random.random()*sequence.length);
+			var index=parseInt(Random.random()*sequence.length);
 			if ((typeof sequence=='string'))
 				return String(sequence).charAt(index);
 			else
@@ -960,9 +963,9 @@ var Laya=window.Laya=(function(window,document){
 			var selected=[];
 			var indices=[];
 			for (var i=0;i < num;i++){
-				var index=Math.floor(Random.random()*len);
+				var index=parseInt(Random.random()*len);
 				while (indices.indexOf(index)>=0)
-				index=Math.floor(Random.random()*len);
+				index=parseInt(Random.random()*len);
 				selected.push(sequence[index]);
 				indices.push(index);
 			}
@@ -13553,35 +13556,35 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initUI=function(type){
 			switch (type){
 				case 1:;
-					var image=new Image("res/game/"+"PowerMete1_1.png");
+					var image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_1.png");
 					this.addChild(image);
-					image=new Image("res/game/"+"PowerMete1_7.png");
+					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_7.png");
 					image.x=14;
 					image.y=148;
 					this.addChild(image);
 					this.ani1=new Animation();
-					this.ani1.loadAtlas("res/game/"+"powerMeteAni1.json");
+					this.ani1.loadAtlas(GameConstant.GAME_ATLAS_PATH+"powerMeteAni1.json");
 					this.ani1.x=image.x;
 					this.ani1.y=image.y;
 					this.ani1.interval=60;
 					this.ani1.visible=false;
 					this.addChild(this.ani1);
-					image=new Image("res/game/"+"PowerMete1_4.png");
+					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_4.png");
 					image.x=63;
 					image.y=148;
 					this.addChild(image);
-					this.pointer=new Image("res/game/"+"PowerMete1_3.png");
+					this.pointer=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_3.png");
 					this.pointer.x=89;
 					this.pointer.y=152;
 					this.pointer.pivotX=7.75;
 					this.pointer.pivotY=7.25;
 					this.pointer.rotation=0;
 					this.addChild(this.pointer);
-					image=new Image("res/game/"+"PowerMete1_2.png");
+					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_2.png");
 					image.x=69;
 					image.y=134;
 					this.addChild(image);
-					image=new Image("res/game/"+"PowerMete1_6.png");
+					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_6.png");
 					image.x=83;
 					image.y=211;
 					this.addChild(image);
@@ -13619,7 +13622,6 @@ var Laya=window.Laya=(function(window,document){
 		*@return
 		*/
 		__proto.isMax=function(){
-			console.log(this.pointer.rotation);
 			return this.pointer.rotation >=80 && this.pointer.rotation <=100;
 		}
 
@@ -15444,7 +15446,7 @@ var Laya=window.Laya=(function(window,document){
 		*初始化
 		*/
 		__proto.init=function(){
-			this.fly=new Image("res/game/"+"roleFly.png");
+			this.fly=new Image(GameConstant.GAME_IMG_PATH+"roleFly.png");
 			this.fly.visible=false;
 			this.addChild(this.fly);
 			this.startAni=this.createAni("roleStart.json");
@@ -15493,7 +15495,7 @@ var Laya=window.Laya=(function(window,document){
 			this.failRunAni.y=this.failAni.y-50;
 			this.failRunAni.visible=false;
 			this.addChild(this.failRunAni);
-			this.hurt1=new Image("res/game/"+"roleHurt1.png");
+			this.hurt1=new Image(GameConstant.GAME_IMG_PATH+"roleHurt1.png");
 			this.hurt1.visible=false;
 			this.hurt1.width=111;
 			this.hurt1.height=100;
@@ -15501,7 +15503,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurt1.x=this.hurt1.width / 2;
 			this.hurt1.y=this.hurt1.height / 2;
 			this.addChild(this.hurt1);
-			this.hurt2=new Image("res/game/"+"roleHurt2.png");
+			this.hurt2=new Image(GameConstant.GAME_IMG_PATH+"roleHurt2.png");
 			this.hurt2.visible=false;
 			this.hurt2.width=128;
 			this.hurt2.height=92;
@@ -15509,7 +15511,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurt2.x=this.hurt2.width / 2;
 			this.hurt2.y=this.hurt2.height / 2;
 			this.addChild(this.hurt2);
-			this.hurt3=new Image("res/game/"+"roleHurt3.png");
+			this.hurt3=new Image(GameConstant.GAME_IMG_PATH+"roleHurt3.png");
 			this.hurt3.visible=false;
 			this.hurt3.width=109;
 			this.hurt3.height=119;
@@ -15527,7 +15529,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.createAni=function(name){
 			var ani=new Animation();
-			ani.loadAtlas("res/game/"+name);
+			ani.loadAtlas(GameConstant.GAME_ATLAS_PATH+name);
 			ani.interval=60;
 			ani.stop();
 			return ani;
@@ -23259,6 +23261,107 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
+	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
+	*
+	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
+	*<listing version="3.0">
+	*package
+	*{
+		*import laya.ui.HSlider;
+		*import laya.ui.VSlider;
+		*import laya.utils.Handler;
+		*public class VSlider_Example
+		*{
+			*private var vSlider:VSlider;
+			*public function VSlider_Example()
+			*{
+				*Laya.init(640,800);//设置游戏画布宽高。
+				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
+				*}
+			*private function onLoadComplete():void
+			*{
+				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+				*vSlider.min=0;//设置 vSlider 最低位置值。
+				*vSlider.max=10;//设置 vSlider 最高位置值。
+				*vSlider.value=2;//设置 vSlider 当前位置值。
+				*vSlider.tick=1;//设置 vSlider 刻度值。
+				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
+				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+				*}
+			*private function onChange(value:Number):void
+			*{
+				*trace("滑块的位置： value="+value);
+				*}
+			*}
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*Laya.init(640,800);//设置游戏画布宽高
+	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
+	*var vSlider;
+	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
+	*function onLoadComplete(){
+		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+		*vSlider.min=0;//设置 vSlider 最低位置值。
+		*vSlider.max=10;//设置 vSlider 最高位置值。
+		*vSlider.value=2;//设置 vSlider 当前位置值。
+		*vSlider.tick=1;//设置 vSlider 刻度值。
+		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
+		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+		*}
+	*function onChange(value){
+		*console.log("滑块的位置： value="+value);
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*import HSlider=laya.ui.HSlider;
+	*import VSlider=laya.ui.VSlider;
+	*import Handler=laya.utils.Handler;
+	*class VSlider_Example {
+		*private vSlider:VSlider;
+		*constructor(){
+			*Laya.init(640,800);//设置游戏画布宽高。
+			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
+			*}
+		*private onLoadComplete():void {
+			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+			*this.vSlider.min=0;//设置 vSlider 最低位置值。
+			*this.vSlider.max=10;//设置 vSlider 最高位置值。
+			*this.vSlider.value=2;//设置 vSlider 当前位置值。
+			*this.vSlider.tick=1;//设置 vSlider 刻度值。
+			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
+			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
+			*}
+		*private onChange(value:number):void {
+			*console.log("滑块的位置： value="+value);
+			*}
+		*}
+	*</listing>
+	*@see laya.ui.Slider
+	*/
+	//class laya.ui.VSlider extends laya.ui.Slider
+	var VSlider=(function(_super){
+		function VSlider(){VSlider.__super.call(this);;
+		};
+
+		__class(VSlider,'laya.ui.VSlider',_super);
+		return VSlider;
+	})(Slider)
+
+
+	/**
 	*<code>TextInput</code> 类用于创建显示对象以显示和输入文本。
 	*
 	*@example 以下示例代码，创建了一个 <code>TextInput</code> 实例。
@@ -23574,107 +23677,6 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
-	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
-	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
-	*
-	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
-	*<listing version="3.0">
-	*package
-	*{
-		*import laya.ui.HSlider;
-		*import laya.ui.VSlider;
-		*import laya.utils.Handler;
-		*public class VSlider_Example
-		*{
-			*private var vSlider:VSlider;
-			*public function VSlider_Example()
-			*{
-				*Laya.init(640,800);//设置游戏画布宽高。
-				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
-				*}
-			*private function onLoadComplete():void
-			*{
-				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-				*vSlider.min=0;//设置 vSlider 最低位置值。
-				*vSlider.max=10;//设置 vSlider 最高位置值。
-				*vSlider.value=2;//设置 vSlider 当前位置值。
-				*vSlider.tick=1;//设置 vSlider 刻度值。
-				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
-				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-				*}
-			*private function onChange(value:Number):void
-			*{
-				*trace("滑块的位置： value="+value);
-				*}
-			*}
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*Laya.init(640,800);//设置游戏画布宽高
-	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
-	*var vSlider;
-	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
-	*function onLoadComplete(){
-		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-		*vSlider.min=0;//设置 vSlider 最低位置值。
-		*vSlider.max=10;//设置 vSlider 最高位置值。
-		*vSlider.value=2;//设置 vSlider 当前位置值。
-		*vSlider.tick=1;//设置 vSlider 刻度值。
-		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
-		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-		*}
-	*function onChange(value){
-		*console.log("滑块的位置： value="+value);
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*import HSlider=laya.ui.HSlider;
-	*import VSlider=laya.ui.VSlider;
-	*import Handler=laya.utils.Handler;
-	*class VSlider_Example {
-		*private vSlider:VSlider;
-		*constructor(){
-			*Laya.init(640,800);//设置游戏画布宽高。
-			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
-			*}
-		*private onLoadComplete():void {
-			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-			*this.vSlider.min=0;//设置 vSlider 最低位置值。
-			*this.vSlider.max=10;//设置 vSlider 最高位置值。
-			*this.vSlider.value=2;//设置 vSlider 当前位置值。
-			*this.vSlider.tick=1;//设置 vSlider 刻度值。
-			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
-			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
-			*}
-		*private onChange(value:number):void {
-			*console.log("滑块的位置： value="+value);
-			*}
-		*}
-	*</listing>
-	*@see laya.ui.Slider
-	*/
-	//class laya.ui.VSlider extends laya.ui.Slider
-	var VSlider=(function(_super){
-		function VSlider(){VSlider.__super.call(this);;
-		};
-
-		__class(VSlider,'laya.ui.VSlider',_super);
-		return VSlider;
-	})(Slider)
-
-
-	/**
 	*@private
 	*/
 	//class laya.display.GraphicAnimation extends laya.display.FrameAnimation
@@ -23957,11 +23959,18 @@ var Laya=window.Laya=(function(window,document){
 			this.initData();
 			this.initEvent();
 			this.initRole();
+			this.initBoss();
 			this.initBg();
 			this.initCloud();
 			this.initPowerMete();
 		}
 
+		__proto.initBoss=function(){}
+		/*var boss:MovieClip=new MovieClip();
+		boss.load(GameConstant.GAME_SWF_PATH+"t.swf");
+		boss.width=20;
+		boss.height=20;
+		this.addChild(boss);*/
 		__proto.initPowerMete=function(){
 			if (!this.powerMete){
 				this.powerMete=new PowerMete();
@@ -24027,7 +24036,7 @@ var Laya=window.Laya=(function(window,document){
 			153,
 			this.bgCount,this.groundPosY,
 			Layer.GAME_BG_LAYER,this.groundArr);
-			this.startStageImg=new Image("res/game/"+"startStage.png");
+			this.startStageImg=new Image(GameConstant.GAME_IMG_PATH+"startStage.png");
 			this.startStageImg.x=150;
 			this.startStageImg.y=this.groundPosY-136;
 			Layer.GAME_FG_LAYER.addChild(this.startStageImg);
@@ -24065,7 +24074,8 @@ var Laya=window.Laya=(function(window,document){
 			var bg;
 			for (var i=0;i < count;i++){
 				bg=new GameBackGround();
-				bg.loadImage("res/game/"+name,0,0,width,height);
+				console.log(GameConstant.GAME_IMG_PATH+name);
+				bg.loadImage(GameConstant.GAME_IMG_PATH+name,0,0,width,height);
 				bg.x=width *i;
 				bg.y=posY;
 				bg.width=width;
