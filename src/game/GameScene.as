@@ -3,11 +3,10 @@ package game
 import common.Shake;
 import config.GameConstant;
 import config.MsgConstant;
+import game.obj.Boss;
 import game.obj.GameBackGround;
 import game.obj.PowerMete;
 import game.obj.Role;
-import laya.ani.bone.Skeleton;
-import laya.ani.bone.Templet;
 import laya.display.Sprite;
 import laya.events.Event;
 import laya.ui.Image;
@@ -16,6 +15,7 @@ import laya.utils.Ease;
 import laya.utils.Handler;
 import laya.utils.Tween;
 import support.NotificationCenter;
+import utils.Random;
 /**
  * ...游戏场景层
  * TODO
@@ -25,7 +25,7 @@ import support.NotificationCenter;
  * [根据下落速度调整震动大小]
  * [角色失败停下动作]
  * [角色起始动作]
- * 撞击boss
+ * [撞击boss]
  * 重置角色位置速度
  * 敌人出现移动删除
  * 人物动作变化
@@ -61,9 +61,10 @@ public class GameScene extends View
 	private var powerMete:PowerMete;
 	//是否开始
 	private var canStart:Boolean;
-	//boss动画
-	private var bossAni:Skeleton;
-	private var bossHurt:Image;
+	//boss
+	private var boss:Boss;
+	//敌人的计时器
+	private var enemyTimer:Timer;
 	public function GameScene() 
 	{
 		super();
@@ -89,30 +90,16 @@ public class GameScene extends View
 		this.initRole();
 	}
 	
+	/**
+	 * 初始化boss
+	 */
 	private function initBoss():void 
 	{
-		var boss:Templet = new Templet();
-		boss.on(Event.COMPLETE, this, function(fac:Templet)
-		{
-			this.bossAni = fac.buildArmature(0);
-			this.bossAni.play(0, true);
-			this.bossAni.x = 700;
-			this.bossAni.y = this.groundPosY - 78;
-			Layer.GAME_ROLE_LAYER.addChild(this.bossAni);
-			Layer.GAME_ROLE_LAYER.addChild(this.role);
-		});
-		boss.on(Event.ERROR, this, function(e:*){
-			trace("load fail");
-		});
-		boss.loadAni(GameConstant.GAME_BONES_PATH + "boss1Ani.sk");
-		
-		this.bossHurt = new Image(GameConstant.GAME_BOSS_PATH + "boss1Hurt.png");
-		this.bossHurt.pivotX = GameConstant.BOSS1_WIDTH / 2;
-		this.bossHurt.pivotY = GameConstant.BOSS1_HEIGHT;
-		this.bossHurt.x = 745;
-		this.bossHurt.y = this.groundPosY - 73;
-		this.bossHurt.visible = false;
-		Layer.GAME_ROLE_LAYER.addChild(this.bossHurt);
+		this.boss = new Boss();
+		this.boss.init(1);
+		this.boss.x = 700;
+		this.boss.y = this.groundPosY - 78;
+		Layer.GAME_ROLE_LAYER.addChild(this.boss);
 	}
 	
 	private function initPowerMete():void 
@@ -138,8 +125,17 @@ public class GameScene extends View
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_RUN_COMPLETE, roleFailRunCompleteHandler, this);
 		this.on(Event.MOUSE_DOWN, this, mouseDownHander);
+		
+		Laya.timer.loop(500, this, function() {
+			if (this.role && this.role.isStart)
+			{
+				trace("create enemy");
+				this.createEnemy();
+			}
+		}, null, false);
+		
 	}
-
+	
 	/**
 	 * 初始化数据
 	 */
@@ -275,9 +271,7 @@ public class GameScene extends View
 							this.role.vy = -45;
 							this.role.isStart = true;
 							Tween.to(this.role, {x: startPosX}, 200, Ease.linearNone, null);
-							this.bossAni.stop();
-							this.bossAni.visible = false;
-							this.bossHurt.visible = true;
+							this.boss.hurt();
 					}), 300);
 				}
 				else
@@ -304,6 +298,18 @@ public class GameScene extends View
 			this.role.vy = 0;
 			this.role.groundY = this.groundPosY + 20;
 			Layer.GAME_ROLE_LAYER.addChild(this.role);
+		}
+	}
+	
+	/**
+	 * 创建敌人
+	 */
+	private function createEnemy():void
+	{
+		var num:int = Random.randint(1, 4);
+		for (var i:int = 0; i < num; i++) 
+		{
+			
 		}
 	}
 	
@@ -400,14 +406,12 @@ public class GameScene extends View
 		if (this.role)
 			this.role.update();
 			
-		if (this.bossAni != null)
+		if (this.boss)
 		{
-			this.bossAni.x -= this.role.vx;
-			if (this.role.isOnTop) this.bossAni.y -= this.role.vy;
+			this.boss.vx = -this.role.vx;
+			if (this.role.isOnTop) this.boss.vy = -this.role.vy;
+			this.boss.update();
 		}
-		
-		this.bossHurt.x -= this.role.vx;
-		if (this.role.isOnTop) this.bossHurt.y -= this.role.vy;
 	}
 	
 	/**

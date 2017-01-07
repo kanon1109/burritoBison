@@ -115,7 +115,7 @@ public class PowerMete extends Sprite
 	 */
 	public function isMax():Boolean
 	{
-		return this.pointer.rotation >= 80 && this.pointer.rotation <= 100;
+		return this.pointer.rotation >= 75 && this.pointer.rotation <= 105;
 	}
 }
 }
