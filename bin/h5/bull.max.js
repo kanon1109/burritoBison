@@ -448,8 +448,10 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.CLOUD2_HEIGHT=590;
 		GameConstant.ROLE_WIDTH=133;
 		GameConstant.ROLE_HEIGHT=98;
+		GameConstant.BOSS1_WIDTH=235;
+		GameConstant.BOSS1_HEIGHT=167;
 		__static(GameConstant,
-		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH=config.GameConstant.GAME_ANI_PATH+"atlas/";},'GAME_BONES_PATH',function(){return this.GAME_BONES_PATH=config.GameConstant.GAME_ANI_PATH+"bones/";}
+		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH=config.GameConstant.GAME_ANI_PATH+"atlas/";},'GAME_BONES_PATH',function(){return this.GAME_BONES_PATH=config.GameConstant.GAME_ANI_PATH+"bones/";},'GAME_BG_PATH',function(){return this.GAME_BG_PATH=config.GameConstant.GAME_IMG_PATH+"bg/";},'GAME_ROLE_PATH',function(){return this.GAME_ROLE_PATH=config.GameConstant.GAME_IMG_PATH+"role/";},'GAME_BOSS_PATH',function(){return this.GAME_BOSS_PATH=config.GameConstant.GAME_IMG_PATH+"boss/";}
 		]);
 		return GameConstant;
 	})()
@@ -17254,7 +17256,7 @@ var Laya=window.Laya=(function(window,document){
 	*...功率计
 	*@author Kanon
 	*/
-	//class game.PowerMete extends laya.display.Sprite
+	//class game.obj.PowerMete extends laya.display.Sprite
 	var PowerMete=(function(_super){
 		function PowerMete(){
 			this.ani1=null;
@@ -17269,7 +17271,7 @@ var Laya=window.Laya=(function(window,document){
 			this.initUI(this.type);
 		}
 
-		__class(PowerMete,'game.PowerMete',_super);
+		__class(PowerMete,'game.obj.PowerMete',_super);
 		var __proto=PowerMete.prototype;
 		/**
 		*初始化UI
@@ -17277,9 +17279,9 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initUI=function(type){
 			switch (type){
 				case 1:;
-					var image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_1.png");
+					var image=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_1.png");
 					this.addChild(image);
-					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_7.png");
+					image=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_7.png");
 					image.x=14;
 					image.y=148;
 					this.addChild(image);
@@ -17290,22 +17292,22 @@ var Laya=window.Laya=(function(window,document){
 					this.ani1.interval=60;
 					this.ani1.visible=false;
 					this.addChild(this.ani1);
-					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_4.png");
+					image=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_4.png");
 					image.x=63;
 					image.y=148;
 					this.addChild(image);
-					this.pointer=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_3.png");
+					this.pointer=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_3.png");
 					this.pointer.x=89;
 					this.pointer.y=152;
 					this.pointer.pivotX=7.75;
 					this.pointer.pivotY=7.25;
 					this.pointer.rotation=0;
 					this.addChild(this.pointer);
-					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_2.png");
+					image=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_2.png");
 					image.x=69;
 					image.y=134;
 					this.addChild(image);
-					image=new Image(GameConstant.GAME_IMG_PATH+"PowerMete1_6.png");
+					image=new Image(GameConstant.GAME_BG_PATH+"PowerMete1_6.png");
 					image.x=83;
 					image.y=211;
 					this.addChild(image);
@@ -20859,7 +20861,7 @@ var Laya=window.Laya=(function(window,document){
 		*初始化
 		*/
 		__proto.init=function(){
-			this.fly=new Image(GameConstant.GAME_IMG_PATH+"roleFly.png");
+			this.fly=new Image(GameConstant.GAME_ROLE_PATH+"roleFly.png");
 			this.fly.visible=false;
 			this.addChild(this.fly);
 			this.startAni=this.createAni("roleStart.json");
@@ -20908,7 +20910,7 @@ var Laya=window.Laya=(function(window,document){
 			this.failRunAni.y=this.failAni.y-50;
 			this.failRunAni.visible=false;
 			this.addChild(this.failRunAni);
-			this.hurt1=new Image(GameConstant.GAME_IMG_PATH+"roleHurt1.png");
+			this.hurt1=new Image(GameConstant.GAME_ROLE_PATH+"roleHurt1.png");
 			this.hurt1.visible=false;
 			this.hurt1.width=111;
 			this.hurt1.height=100;
@@ -20916,7 +20918,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurt1.x=this.hurt1.width / 2;
 			this.hurt1.y=this.hurt1.height / 2;
 			this.addChild(this.hurt1);
-			this.hurt2=new Image(GameConstant.GAME_IMG_PATH+"roleHurt2.png");
+			this.hurt2=new Image(GameConstant.GAME_ROLE_PATH+"roleHurt2.png");
 			this.hurt2.visible=false;
 			this.hurt2.width=128;
 			this.hurt2.height=92;
@@ -20924,7 +20926,7 @@ var Laya=window.Laya=(function(window,document){
 			this.hurt2.x=this.hurt2.width / 2;
 			this.hurt2.y=this.hurt2.height / 2;
 			this.addChild(this.hurt2);
-			this.hurt3=new Image(GameConstant.GAME_IMG_PATH+"roleHurt3.png");
+			this.hurt3=new Image(GameConstant.GAME_ROLE_PATH+"roleHurt3.png");
 			this.hurt3.visible=false;
 			this.hurt3.width=109;
 			this.hurt3.height=119;
@@ -29389,6 +29391,8 @@ var Laya=window.Laya=(function(window,document){
 			this.bgMoveRangY=NaN;
 			this.powerMete=null;
 			this.canStart=false;
+			this.bossAni=null;
+			this.bossHurt=null;
 			GameScene.__super.call(this);
 			this.init();
 		}
@@ -29411,11 +29415,17 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initBoss=function(){
 			var boss=new Templet();
 			boss.on("complete",this,function(fac){
-				var ani=fac.buildArmature(0);
-				ani.play(0,true);
-				ani.x=750;
-				ani.y=this.groundPosY-78;
-				Layer.GAME_ROLE_LAYER.addChild(ani);
+				this.bossAni=fac.buildArmature(0);
+				this.bossAni.play(0,true);
+				this.bossAni.x=700;
+				this.bossAni.y=this.groundPosY-78;
+				Layer.GAME_ROLE_LAYER.addChild(this.bossAni);
+				this.bossHurt=new Image(GameConstant.GAME_BOSS_PATH+"boss1Hurt.png");
+				this.bossHurt.pivotX=235 / 2;
+				this.bossHurt.pivotY=167;
+				this.bossHurt.x=745;
+				this.bossHurt.y=this.groundPosY-73;
+				Layer.GAME_ROLE_LAYER.addChild(this.bossHurt);
 			});
 			boss.on("error",this,function(e){
 				console.log("load fail");
@@ -29451,6 +29461,7 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initData=function(){
 			this.size(1136,640);
 			this.bgCount=3;
+			this.timerLoop(1 / 60 *1000,this,this.gameLoop);
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
@@ -29487,7 +29498,7 @@ var Laya=window.Laya=(function(window,document){
 			153,
 			this.bgCount,this.groundPosY,
 			Layer.GAME_BG_LAYER,this.groundArr);
-			this.startStageImg=new Image(GameConstant.GAME_IMG_PATH+"startStage.png");
+			this.startStageImg=new Image(GameConstant.GAME_BG_PATH+"startStage.png");
 			this.startStageImg.x=150;
 			this.startStageImg.y=this.groundPosY-136;
 			Layer.GAME_FG_LAYER.addChild(this.startStageImg);
@@ -29525,8 +29536,8 @@ var Laya=window.Laya=(function(window,document){
 			var bg;
 			for (var i=0;i < count;i++){
 				bg=new GameBackGround();
-				console.log(GameConstant.GAME_IMG_PATH+name);
-				bg.loadImage(GameConstant.GAME_IMG_PATH+name,0,0,width,height);
+				console.log(GameConstant.GAME_BG_PATH+name);
+				bg.loadImage(GameConstant.GAME_BG_PATH+name,0,0,width,height);
 				bg.x=width *i;
 				bg.y=posY;
 				bg.width=width;
@@ -29650,6 +29661,10 @@ var Laya=window.Laya=(function(window,document){
 		__proto.updateRole=function(){
 			if (this.role)
 				this.role.update();
+			if (this.bossAni !=null){
+				this.bossAni.x-=this.role.vx;
+				if (this.role.isOnTop)this.bossAni.y-=this.role.vy;
+			}
 		}
 
 		/**

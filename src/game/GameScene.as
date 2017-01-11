@@ -4,6 +4,7 @@ import common.Shake;
 import config.GameConstant;
 import config.MsgConstant;
 import game.obj.GameBackGround;
+import game.obj.PowerMete;
 import game.obj.Role;
 import laya.ani.bone.Skeleton;
 import laya.ani.bone.Templet;
@@ -23,7 +24,8 @@ import support.NotificationCenter;
  * [人物在最顶部自动进入云层后加速下落]
  * [根据下落速度调整震动大小]
  * [角色失败停下动作]
- * 角色起始动作
+ * [角色起始动作]
+ * 撞击boss
  * 重置角色位置速度
  * 敌人出现移动删除
  * 人物动作变化
@@ -59,6 +61,9 @@ public class GameScene extends View
 	private var powerMete:PowerMete;
 	//是否开始
 	private var canStart:Boolean;
+	//boss动画
+	private var bossAni:Skeleton;
+	private var bossHurt:Image;
 	public function GameScene() 
 	{
 		super();
@@ -89,16 +94,24 @@ public class GameScene extends View
 		var boss:Templet = new Templet();
 		boss.on(Event.COMPLETE, this, function(fac:Templet)
 		{
-			var ani:Skeleton = fac.buildArmature(0);
-			ani.play(0, true);
-			ani.x = 750;
-			ani.y = this.groundPosY - 78;
-			Layer.GAME_ROLE_LAYER.addChild(ani);
+			this.bossAni = fac.buildArmature(0);
+			this.bossAni.play(0, true);
+			this.bossAni.x = 700;
+			this.bossAni.y = this.groundPosY - 78;
+			Layer.GAME_ROLE_LAYER.addChild(this.bossAni);
 		});
 		boss.on(Event.ERROR, this, function(e:*){
 			trace("load fail");
 		});
 		boss.loadAni(GameConstant.GAME_BONES_PATH + "boss1Ani.sk");
+		
+		this.bossHurt = new Image(GameConstant.GAME_BOSS_PATH + "boss1Hurt.png");
+		this.bossHurt.pivotX = GameConstant.BOSS1_WIDTH / 2;
+		this.bossHurt.pivotY = GameConstant.BOSS1_HEIGHT;
+		this.bossHurt.x = 745;
+		this.bossHurt.y = this.groundPosY - 73;
+		this.bossHurt.visible = false;
+		Layer.GAME_ROLE_LAYER.addChild(this.bossHurt);
 	}
 	
 	private function initPowerMete():void 
@@ -176,7 +189,7 @@ public class GameScene extends View
 					this.bgCount, this.groundPosY, 
 					Layer.GAME_BG_LAYER, this.groundArr);
 					
-		this.startStageImg = new Image(GameConstant.GAME_IMG_PATH + "startStage.png");
+		this.startStageImg = new Image(GameConstant.GAME_BG_PATH + "startStage.png");
 		this.startStageImg.x = 150;
 		this.startStageImg.y = this.groundPosY - 136;
 		Layer.GAME_FG_LAYER.addChild(this.startStageImg);
@@ -217,8 +230,8 @@ public class GameScene extends View
 		for (var i:int = 0; i < count; i++) 
 		{
 			bg = new GameBackGround();
-			trace(GameConstant.GAME_IMG_PATH + name);
-			bg.loadImage(GameConstant.GAME_IMG_PATH + name, 0, 0, width, height);
+			trace(GameConstant.GAME_BG_PATH + name);
+			bg.loadImage(GameConstant.GAME_BG_PATH + name, 0, 0, width, height);
 			bg.x = width * i;
 			bg.y = posY;
 			bg.width = width;
@@ -253,6 +266,7 @@ public class GameScene extends View
 				{
 					this.role.vx = 80;
 					this.role.vy = -45;
+					//TODO 播放撞击boss动画
 				}
 				else
 				{
@@ -373,6 +387,12 @@ public class GameScene extends View
 	{
 		if (this.role)
 			this.role.update();
+			
+		if (this.bossAni != null)
+		{
+			this.bossAni.x -= this.role.vx;
+			if (this.role.isOnTop) this.bossAni.y -= this.role.vy;
+		}
 	}
 	
 	/**

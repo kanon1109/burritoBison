@@ -129,7 +129,7 @@ public class Role extends GameObject
 	 */
 	private function init():void
 	{
-		this.fly = new Image(GameConstant.GAME_IMG_PATH + "roleFly.png");
+		this.fly = new Image(GameConstant.GAME_ROLE_PATH + "roleFly.png");
 		this.fly.visible = false;
 		this.addChild(this.fly);
 
@@ -194,7 +194,7 @@ public class Role extends GameObject
 		this.failRunAni.visible = false;
 		this.addChild(this.failRunAni);
 		
-		this.hurt1 = new Image(GameConstant.GAME_IMG_PATH + "roleHurt1.png");
+		this.hurt1 = new Image(GameConstant.GAME_ROLE_PATH + "roleHurt1.png");
 		this.hurt1.visible = false;
 		this.hurt1.width = 111;
 		this.hurt1.height = 100;
@@ -203,7 +203,7 @@ public class Role extends GameObject
 		this.hurt1.y = this.hurt1.height / 2;
 		this.addChild(this.hurt1);
 		
-		this.hurt2 = new Image(GameConstant.GAME_IMG_PATH + "roleHurt2.png");
+		this.hurt2 = new Image(GameConstant.GAME_ROLE_PATH + "roleHurt2.png");
 		this.hurt2.visible = false;
 		this.hurt2.width = 128;
 		this.hurt2.height = 92;
@@ -212,7 +212,7 @@ public class Role extends GameObject
 		this.hurt2.y = this.hurt2.height / 2;
 		this.addChild(this.hurt2);
 		
-		this.hurt3 = new Image(GameConstant.GAME_IMG_PATH + "roleHurt3.png");
+		this.hurt3 = new Image(GameConstant.GAME_ROLE_PATH + "roleHurt3.png");
 		this.hurt3.visible = false;
 		this.hurt3.width = 109;
 		this.hurt3.height = 119;

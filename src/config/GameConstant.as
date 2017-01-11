@@ -17,6 +17,9 @@ public class GameConstant
 	public static const GAME_ANI_PATH:String = GameConstant.GAME_RES_PATH + "ani/";
 	public static const GAME_ATLAS_PATH:String = GameConstant.GAME_ANI_PATH + "atlas/";
 	public static const GAME_BONES_PATH:String = GameConstant.GAME_ANI_PATH + "bones/";
+	public static const GAME_BG_PATH:String = GameConstant.GAME_IMG_PATH + "bg/";
+	public static const GAME_ROLE_PATH:String = GameConstant.GAME_IMG_PATH + "role/";
+	public static const GAME_BOSS_PATH:String = GameConstant.GAME_IMG_PATH + "boss/";
 	//背景高宽
 	public static const BG1_WIDTH:int = 1758;
 	public static const BG1_HEIGHT:int = 636;
@@ -38,5 +41,8 @@ public class GameConstant
 	//角色高宽
 	public static const ROLE_WIDTH:int = 133;
 	public static const ROLE_HEIGHT:int = 98;
+	
+	public static const BOSS1_WIDTH:int = 235;
+	public static const BOSS1_HEIGHT:int = 167;
 }
 }
