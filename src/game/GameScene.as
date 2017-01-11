@@ -82,11 +82,11 @@ public class GameScene extends View
 		//鼠标交互
 		this.initData();
 		this.initEvent();
-		this.initRole();
 		this.initBg();
 		this.initCloud();
 		this.initPowerMete();
 		this.initBoss();
+		this.initRole();
 	}
 	
 	private function initBoss():void 
@@ -99,6 +99,7 @@ public class GameScene extends View
 			this.bossAni.x = 700;
 			this.bossAni.y = this.groundPosY - 78;
 			Layer.GAME_ROLE_LAYER.addChild(this.bossAni);
+			Layer.GAME_ROLE_LAYER.addChild(this.role);
 		});
 		boss.on(Event.ERROR, this, function(e:*){
 			trace("load fail");
@@ -268,13 +269,16 @@ public class GameScene extends View
 					//TODO 播放撞击boss动画
 					this.role.bump();
 					var startPosX:Number = this.role.x;
-					Tween.to(this.role, {x: 720}, 600, Ease.linearNone, null);
-					Tween.to(this.role, {y: this.role.y - 200}, 300, Ease.circOut, null);
-					Tween.to(this.role, {y: this.role.y}, 300, Ease.circIn, Handler.create(this, function(){
+					Tween.to(this.role, {x: 620}, 600, Ease.linearNone, null);
+					Tween.to(this.role, {y: this.role.y - 250}, 300, Ease.circOut, null);
+					Tween.to(this.role, {y: this.role.y - 130}, 300, Ease.circIn, Handler.create(this, function(){
 							this.role.vx = 80;
 							this.role.vy = -45;
 							this.role.isStart = true;
 							Tween.to(this.role, {x: startPosX}, 200, Ease.linearNone, null);
+							this.bossAni.stop();
+							this.bossAni.visible = false;
+							this.bossHurt.visible = true;
 					}), 300);
 				}
 				else
@@ -402,6 +406,9 @@ public class GameScene extends View
 			this.bossAni.x -= this.role.vx;
 			if (this.role.isOnTop) this.bossAni.y -= this.role.vy;
 		}
+		
+		this.bossHurt.x -= this.role.vx;
+		if (this.role.isOnTop) this.bossHurt.y -= this.role.vy;
 	}
 	
 	/**
