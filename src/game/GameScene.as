@@ -263,8 +263,7 @@ public class GameScene extends View
 			{
 				this.powerMete.stop();
 				Tween.to(this.powerMete, { y: -300 }, 600, Ease.circOut, null, 800);
-				//if (this.powerMete.isMax())
-				if (true)
+				if (this.powerMete.isMax())
 				{
 					//TODO 播放撞击boss动画
 					this.role.bump();
