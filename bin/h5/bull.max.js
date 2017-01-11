@@ -20998,6 +20998,14 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
+		*冲击
+		*/
+		__proto.bump=function(){
+			this.stopStart();
+			this.showFlyAni(6);
+		}
+
+		/**
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
@@ -29365,7 +29373,8 @@ var Laya=window.Laya=(function(window,document){
 	*[人物在最顶部自动进入云层后加速下落]
 	*[根据下落速度调整震动大小]
 	*[角色失败停下动作]
-	*角色起始动作
+	*[角色起始动作]
+	*撞击boss
 	*重置角色位置速度
 	*敌人出现移动删除
 	*人物动作变化
@@ -29420,17 +29429,18 @@ var Laya=window.Laya=(function(window,document){
 				this.bossAni.x=700;
 				this.bossAni.y=this.groundPosY-78;
 				Layer.GAME_ROLE_LAYER.addChild(this.bossAni);
-				this.bossHurt=new Image(GameConstant.GAME_BOSS_PATH+"boss1Hurt.png");
-				this.bossHurt.pivotX=235 / 2;
-				this.bossHurt.pivotY=167;
-				this.bossHurt.x=745;
-				this.bossHurt.y=this.groundPosY-73;
-				Layer.GAME_ROLE_LAYER.addChild(this.bossHurt);
 			});
 			boss.on("error",this,function(e){
 				console.log("load fail");
 			});
 			boss.loadAni(GameConstant.GAME_BONES_PATH+"boss1Ani.sk");
+			this.bossHurt=new Image(GameConstant.GAME_BOSS_PATH+"boss1Hurt.png");
+			this.bossHurt.pivotX=235 / 2;
+			this.bossHurt.pivotY=167;
+			this.bossHurt.x=745;
+			this.bossHurt.y=this.groundPosY-73;
+			this.bossHurt.visible=false;
+			Layer.GAME_ROLE_LAYER.addChild(this.bossHurt);
 		}
 
 		__proto.initPowerMete=function(){
@@ -29562,15 +29572,23 @@ var Laya=window.Laya=(function(window,document){
 				else{
 					this.powerMete.stop();
 					Tween.to(this.powerMete,{y:-300 },600,Ease.circOut,null,800);
-					if (this.powerMete.isMax()){
-						this.role.vx=80;
-						this.role.vy=-45;
+					if (true){
+						this.role.bump();
+						var startPosX=this.role.x;
+						Tween.to(this.role,{x:720},600,Ease.linearNone,null);
+						Tween.to(this.role,{y:this.role.y-200},300,Ease.circOut,null);
+						Tween.to(this.role,{y:this.role.y},300,Ease.circIn,Handler.create(this,function(){
+							this.role.vx=80;
+							this.role.vy=-45;
+							this.role.isStart=true;
+							Tween.to(this.role,{x:startPosX},200,Ease.linearNone,null);
+						}),300);
 					}
 					else{
 						this.role.vx=40;
 						this.role.vy=-40;
+						this.role.isStart=true;
 					}
-					this.role.isStart=true;
 				}
 			}
 		}

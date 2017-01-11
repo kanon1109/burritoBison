@@ -262,18 +262,27 @@ public class GameScene extends View
 			{
 				this.powerMete.stop();
 				Tween.to(this.powerMete, { y: -300 }, 600, Ease.circOut, null, 800);
-				if (this.powerMete.isMax())
+				//if (this.powerMete.isMax())
+				if (true)
 				{
-					this.role.vx = 80;
-					this.role.vy = -45;
 					//TODO 播放撞击boss动画
+					this.role.bump();
+					var startPosX:Number = this.role.x;
+					Tween.to(this.role, {x: 720}, 600, Ease.linearNone, null);
+					Tween.to(this.role, {y: this.role.y - 200}, 300, Ease.circOut, null);
+					Tween.to(this.role, {y: this.role.y}, 300, Ease.circIn, Handler.create(this, function(){
+							this.role.vx = 80;
+							this.role.vy = -45;
+							this.role.isStart = true;
+							Tween.to(this.role, {x: startPosX}, 200, Ease.linearNone, null);
+					}), 300);
 				}
 				else
 				{
 					this.role.vx = 40;
 					this.role.vy = -40;
+					this.role.isStart = true;
 				}
-				this.role.isStart = true;
 			}
 		}
 	}

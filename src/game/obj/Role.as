@@ -302,12 +302,21 @@ public class Role extends GameObject
 	}
 	
 	/**
+	 * 冲击
+	 */
+	public function bump():void
+	{
+		this.stopStart();
+		this.showFlyAni(6);
+	}
+	
+	/**
 	 * 更新状态
 	 */
 	private function updateAniState():void
 	{
 		if (!this._isFail)
-		{
+		{	
 			if (this.isStart)
 			{
 				this.stopStart();
@@ -529,7 +538,7 @@ public class Role extends GameObject
 	{
 		_isStart = value;
 	}
-	
+
 	/**
 	 * 是否允许加速俯冲
 	 * @return
