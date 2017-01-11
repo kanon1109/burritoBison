@@ -9,12 +9,12 @@ package laya.d3.graphics {
 	import laya.d3.core.scene.BaseScene;
 	import laya.d3.math.Matrix4x4;
 	import laya.d3.shader.ShaderDefines3D;
+	import laya.d3.shader.ValusArray;
 	import laya.d3.utils.Utils3D;
 	import laya.utils.Stat;
 	import laya.webgl.WebGLContext;
 	import laya.webgl.shader.Shader;
 	import laya.webgl.utils.Buffer2D;
-	import laya.webgl.utils.ValusArray;
 	
 	/**
 	 * @private
@@ -27,7 +27,7 @@ package laya.d3.graphics {
 			var i:int, n:int;
 			if ((sprite3D is MeshSprite3D) && (sprite3D.isStatic))//TODO:可能会移除,目前只针对MeshSprite3D
 			{
-				var renderElements:Vector.<RenderElement> = (sprite3D as MeshSprite3D).meshRender.renderCullingObject._renderElements;
+				var renderElements:Vector.<RenderElement> = (sprite3D as MeshSprite3D).meshRender.renderObject._renderElements;
 				for (i = 0, n = renderElements.length; i < n; i++) {
 					var renderElement:RenderElement = renderElements[i];
 					if (renderElement.renderObj._vertexBufferCount === 1)//VertexBufferCount必须等于1
@@ -69,6 +69,12 @@ package laya.d3.graphics {
 		public var _vertexDeclaration:VertexDeclaration;
 		public var _material:BaseMaterial;
 		
+		//TODO:临时
+		/** @private */
+		public var _shaderValues:ValusArray;
+		/** @private */
+		public var _owner:Sprite3D;
+		
 		public function get _vertexBufferCount():int {
 			return 1;
 		}
@@ -82,6 +88,9 @@ package laya.d3.graphics {
 		}
 		
 		public function StaticBatch(rootSprite:Sprite3D, vertexDeclaration:VertexDeclaration, material:BaseMaterial) {
+			_shaderValues = new ValusArray();
+			_owner = rootSprite;
+			
 			_currentCombineVertexCount = 0;
 			_currentCombineIndexCount = 0;
 			_needFinishCombine = false;
@@ -96,22 +105,6 @@ package laya.d3.graphics {
 			_material = material;
 		}
 		
-		private function _testTangent(state:RenderState):void {
-			//var vb:VertexBuffer3D = _vertexBuffer;
-			//var vertexDeclaration:VertexDeclaration = vb.vertexDeclaration;
-			//var material:BaseMaterial = state.renderElement._material;
-			//if (material.normalTexture && !vertexDeclaration.shaderAttribute[VertexElementUsage.TANGENT0]) {
-				////是否放到事件触发。
-				//var vertexDatas:Float32Array = vb.getData();
-				//var newVertexDatas:Float32Array = Utils3D.generateTangent(vertexDatas, vertexDeclaration.vertexStride / 4, vertexDeclaration.shaderAttribute[VertexElementUsage.POSITION0][4] / 4, vertexDeclaration.shaderAttribute[VertexElementUsage.TEXTURECOORDINATE0][4] / 4, _indexBuffer.getData());
-				//vertexDeclaration = Utils3D.getVertexTangentDeclaration(vertexDeclaration.getVertexElements());
-				//
-				//var newVB:VertexBuffer3D = VertexBuffer3D.create(vertexDeclaration, WebGLContext.STATIC_DRAW);
-				//newVB.setData(newVertexDatas);
-				//vb.dispose();
-				//_vertexBuffer = newVB;
-			//}
-		}
 		
 		public function _getVertexBuffer(index:int = 0):VertexBuffer3D {
 			if (index === 0)
@@ -256,7 +249,6 @@ package laya.d3.graphics {
 		}
 		
 		public function _beforeRender(state:RenderState):Boolean {
-			//_testTangent(state);//TODO:临时
 			_vertexBuffer._bind();
 			_indexBuffer._bind();
 			return true;
@@ -267,6 +259,11 @@ package laya.d3.graphics {
 			state.context.drawElements(WebGLContext.TRIANGLES, indexCount, WebGLContext.UNSIGNED_SHORT, state._batchIndexStart * 2);
 			Stat.drawCall++;
 			Stat.trianglesFaces += indexCount / 3;
+		}
+		
+		/**NATIVE*/
+		public function _renderRuntime(conchGraphics3D:*, renderElement:RenderElement,state:RenderState):void {
+		
 		}
 	}
 

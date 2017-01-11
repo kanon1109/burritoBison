@@ -2,7 +2,10 @@ package laya.net {
 	import laya.events.Event;
 	import laya.events.EventDispatcher;
 	import laya.net.Loader;
+	import laya.resource.ICreateResource;
+	import laya.resource.Texture;
 	import laya.utils.Handler;
+	import laya.utils.Utils;
 	
 	/**
 	 * 加载完成时调度。
@@ -23,6 +26,11 @@ package laya.net {
 	 * 某个资源加载失败后，会按照最低优先级重试加载(属性retryNum决定重试几次)，如果重试后失败，则调用complete函数，并返回null
 	 */
 	public class LoaderManager extends EventDispatcher {
+		/**@private */
+		private static var _resMap:Object = {};
+		/**@private */
+		public static var createMap:Object = {atlas: [null, Loader.ATLAS]};
+		
 		/** 加载出错后的重试次数，默认重试一次*/
 		public var retryNum:int = 1;
 		/** 最大下载线程，默认为5个*/
@@ -34,8 +42,7 @@ package laya.net {
 		private var _loaderCount:int = 0;
 		/**@private */
 		private var _resInfos:Array = [];
-		/**@private */
-		private var _resMap:Object = {};
+		
 		/**@private */
 		private var _infoPool:Array = [];
 		/**@private */
@@ -51,6 +58,77 @@ package laya.net {
 		}
 		
 		/**
+		 * 根据clas定义创建一个资源空壳，随后进行异步加载，资源加载完成后，会调用资源类的onAsynLoaded方法回调真正的数据,套嵌资源的子资源会保留资源路径"?"后的部分
+		 * @param	url 资源地址或者数组，比如[{url:xx,clas:xx,priority:xx,params:xx},{url:xx,clas:xx,priority:xx,params:xx}]
+		 * @param	progress 进度回调，回调参数为当前文件加载的进度信息(0-1)。
+		 * @param	clas 资源类名，比如Texture
+		 * @param	type 资源类型
+		 * @param	priority 优先级
+		 * @param	cache 是否缓存
+		 * @return	返回资源对象
+		 */
+		public function create(url:*, complete:Handler = null, progress:Handler = null, clas:Class = null, params:Array = null, priority:int = 1, cache:Boolean = true):* {
+			if (url is Array) {
+				var items:Array = url as Array;
+				var itemCount:int = items.length;
+				var loadedCount:int = 0;
+				if (progress) {
+					var progress2:Handler = Handler.create(progress.caller, progress.method, progress.args, false);
+				}
+				for (var i:int = 0; i < itemCount; i++) {
+					var item:* = items[i];
+					if (item is String) item = items[i] = {url: item};
+					item.progress = 0;
+					var progressHandler:Handler = progress ? Handler.create(null, onProgress, [item], false) : null;
+					var completeHandler:Handler = (progress || complete) ? Handler.create(null, onComplete, [item]) : null;
+					_create(item.url, completeHandler, progressHandler, item.clas || clas, item.params || params, item.priority || priority, cache);
+				}
+				function onComplete(item:Object, content:* = null):void {
+					loadedCount++;
+					item.progress = 1;
+					if (loadedCount === itemCount && complete) {
+						complete.run();
+					}
+				}
+				
+				function onProgress(item:Object, value:Number):void {
+					item.progress = value;
+					var num:Number = 0;
+					for (var j:int = 0; j < itemCount; j++) {
+						var item1:Object = items[j];
+						num += item1.progress;
+					}
+					var v:Number = num / itemCount;
+					progress2.runWith(v);
+				}
+				return true;
+			} else return _create(url, complete, progress, clas, params, priority, cache);
+		}
+		
+		private function _create(url:String, complete:Handler = null, progress:Handler = null, clas:Class = null, params:Array = null, priority:int = 1, cache:Boolean = true):* {
+			var item:ICreateResource = getRes(url);
+			if (!item) {
+				var extension:String = Utils.getFileExtension(url);
+				var creatItem:Array = createMap[extension];
+				if (!clas) clas = creatItem[0];
+				var type:String = creatItem[1];
+				
+				if (clas === Texture) type = "htmlimage";
+				item = clas ? new clas() : null;
+				load(url, Handler.create(null, onLoaded), progress, type, priority, false, null, true);
+				function onLoaded(data:*):void {
+					item && item.onAsynLoaded.call(item, url, data, params);
+					if (complete) complete.run();
+				}
+				if (cache) cacheRes(url, item);
+			} else {
+				progress && progress.runWith(1);
+				complete && complete.run();
+			}
+			return item;
+		}
+		
+		/**
 		 * 加载资源。
 		 * @param	url 地址，或者资源对象数组(简单数组：["a.png","b.png"]，复杂数组[{url:"a.png",type:Loader.IMAGE,size:100,priority:1},{url:"b.json",type:Loader.JSON,size:50,priority:1}])。
 		 * @param	complete 结束回调，如果加载失败，则返回 null 。
@@ -59,33 +137,36 @@ package laya.net {
 		 * @param	priority 优先级，0-4，五个优先级，0优先级最高，默认为1。
 		 * @param	cache 是否缓存加载结果。
 		 * @param	group 分组。
+		 * @param	ignoreCache 是否忽略缓存，强制重新加载
 		 * @return 此 LoaderManager 对象。
 		 */
-		public function load(url:*, complete:Handler = null, progress:Handler = null, type:String = null, priority:int = 1, cache:Boolean = true,group:String=null):LoaderManager {
-			if (url is Array) return _loadAssets(url as Array, complete, progress, type, priority, cache,group);
-			url = Loader._parseURL(url);/*url = URL.formatURL(url);*/
+		public function load(url:*, complete:Handler = null, progress:Handler = null, type:String = null, priority:int = 1, cache:Boolean = true, group:String = null, ignoreCache:Boolean = false):LoaderManager {
+			if (url is Array) return _loadAssets(url as Array, complete, progress, type, priority, cache, group);
+			url = URL.formatURL(url);
 			var content:* = Loader.getRes(url);
 			if (content != null) {
+				progress && progress.runWith(1);
 				complete && complete.runWith(content);
 				//判断是否全部加载，如果是则抛出complete事件
 				_loaderCount || event(Event.COMPLETE);
 			} else {
-				var info:ResInfo = this._resMap[url];
+				var info:ResInfo = _resMap[url];
 				if (!info) {
 					info = _infoPool.length ? _infoPool.pop() : new ResInfo();
 					info.url = url;
 					info.type = type;
 					info.cache = cache;
 					info.group = group;
+					info.ignoreCache = ignoreCache;
 					complete && info.on(Event.COMPLETE, complete.caller, complete.method, complete.args);
 					progress && info.on(Event.PROGRESS, progress.caller, progress.method, progress.args);
-					this._resMap[url] = info;
+					_resMap[url] = info;
 					priority = priority < this._maxPriority ? priority : this._maxPriority - 1;
 					this._resInfos[priority].push(info);
 					_next();
 				} else {
-					complete && info.on(Event.COMPLETE, complete.caller, complete.method, complete.args);
-					progress && info.on(Event.PROGRESS, progress.caller, progress.method, progress.args);
+					complete && info._createListener(Event.COMPLETE, complete.caller, complete.method, complete.args, false, false);
+					progress && info._createListener(Event.PROGRESS, progress.caller, progress.method, progress.args, false, false);
 				}
 			}
 			return this;
@@ -119,11 +200,11 @@ package laya.net {
 				loader.offAll();
 				loader._data = null;
 				_this._loaders.push(loader);
-				_this._endLoad(resInfo, data);
+				_this._endLoad(resInfo, data is Array ? [data] : data);
 				_this._loaderCount--;
 				_this._next();
 			}
-			loader.load(resInfo.url, resInfo.type, resInfo.cache,resInfo.group);
+			loader.load(resInfo.url, resInfo.type, resInfo.cache, resInfo.group, resInfo.ignoreCache);
 		}
 		
 		private function _endLoad(resInfo:ResInfo, content:*):void {
@@ -140,7 +221,7 @@ package laya.net {
 					event(Event.ERROR, resInfo.url);
 				}
 			}
-			delete this._resMap[resInfo.url];
+			delete _resMap[resInfo.url];
 			resInfo.event(Event.COMPLETE, content);
 			resInfo.offAll();
 			_infoPool.push(resInfo);
@@ -188,7 +269,7 @@ package laya.net {
 				infos.length = 0;
 			}
 			this._loaderCount = 0;
-			this._resMap = {};
+			_resMap = {};
 		}
 		
 		/**
@@ -219,16 +300,16 @@ package laya.net {
 					}
 				}
 			}
-			if (this._resMap[url]) delete this._resMap[url];
+			if (_resMap[url]) delete _resMap[url];
 		}
 		
 		/**
 		 * @private
 		 * 加载数组里面的资源。
 		 * @param arr 简单：["a.png","b.png"]，复杂[{url:"a.png",type:Loader.IMAGE,size:100,priority:1},{url:"b.json",type:Loader.JSON,size:50,priority:1}]*/
-		private function _loadAssets(arr:Array, complete:Handler = null, progress:Handler = null, type:String = null, priority:int = 1, cache:Boolean = true,group:String=null):LoaderManager {
+		private function _loadAssets(arr:Array, complete:Handler = null, progress:Handler = null, type:String = null, priority:int = 1, cache:Boolean = true, group:String = null):LoaderManager {
 			var itemCount:int = arr.length;
-			var loadedSize:int = 0;
+			var loadedCount:int = 0;
 			var totalSize:int = 0;
 			var items:Array = [];
 			var defaultType:String = type || Loader.IMAGE;
@@ -239,14 +320,15 @@ package laya.net {
 				item.progress = 0;
 				totalSize += item.size;
 				items.push(item);
-				var progressHandler:* = progress ? Handler.create(this, loadProgress, [item], false) : null;
-				load(item.url, Handler.create(item, loadComplete, [item]), progressHandler, item.type, item.priority || 1, cache,item.group||group);
+				var progressHandler:* = progress ? Handler.create(null, loadProgress, [item], false) : null;
+				var completeHandler:* = (complete || progress) ? Handler.create(null, loadComplete, [item]) : null;
+				load(item.url, completeHandler, progressHandler, item.type, item.priority || 1, cache, item.group || group);
 			}
 			
 			function loadComplete(item:Object, content:* = null):void {
-				loadedSize++;
+				loadedCount++;
 				item.progress = 1;
-				if (loadedSize === itemCount && complete) {
+				if (loadedCount === itemCount && complete) {
 					complete.run();
 				}
 			}
@@ -255,8 +337,7 @@ package laya.net {
 				if (progress != null) {
 					item.progress = value;
 					var num:Number = 0;
-					var count:Number = items.length;
-					for (var j:int = 0; j < count; j++) {
+					for (var j:int = 0; j < items.length; j++) {
 						var item1:Object = items[j];
 						num += item1.size * item1.progress;
 					}
@@ -275,4 +356,5 @@ class ResInfo extends EventDispatcher {
 	public var type:String;
 	public var cache:Boolean;
 	public var group:String;
+	public var ignoreCache:Boolean;
 }

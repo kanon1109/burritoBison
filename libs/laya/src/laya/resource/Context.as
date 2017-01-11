@@ -1,5 +1,6 @@
 package laya.resource {
 	import laya.maths.Matrix;
+	import laya.maths.Point;
 	import laya.utils.HTMLChar;
 	import laya.utils.Stat;
 	
@@ -24,7 +25,7 @@ package laya.resource {
 			to.__fillText = to.fillText;
 			to.__fillRect = to.fillRect;
 			to.__strokeText = to.strokeText;
-			var funs:Array = ['drawTextures','fillWords','setIsMainContext','fillRect', 'strokeText', 'fillText', 'transformByMatrix', 'setTransformByMatrix', 'clipRect', 'drawTexture', 'drawTexture2', 'drawTextureWithTransform', 'flush', 'clear', 'destroy', 'drawCanvas', 'fillBorderText'];
+			var funs:Array = ['drawTextures','fillWords','setIsMainContext','fillRect', 'strokeText','fillTexture', 'fillText', 'transformByMatrix', 'setTransformByMatrix', 'clipRect', 'drawTexture', 'drawTexture2', 'drawTextureWithTransform', 'flush', 'clear', 'destroy', 'drawCanvas', 'fillBorderText','drawCurves'];
 			funs.forEach(function(i:String):void {
 				to[i] = from[i] || to[i];
 			});
@@ -300,6 +301,31 @@ package laya.resource {
 			if (alphaChanged) this.globalAlpha = temp;
 		}
 		
+		public function fillTexture(texture:Texture, x:Number, y:Number, width:Number, height:Number, type:String, offset:Point, other:*):void {
+			if (!other.pat)
+			{
+				if (texture.uv != Texture.DEF_UV) {
+					var canvas:HTMLCanvas = new HTMLCanvas("2D");
+					canvas.getContext('2d');
+					canvas.size(texture.width, texture.height);
+					canvas.context.drawTexture(texture, 0, 0, texture.width, texture.height, 0, 0);
+					texture = new Texture(canvas);
+				}
+				other.pat = this.createPattern(texture.bitmap.source, type);
+			}
+			var oX:Number = x, oY:Number = y;
+			var sX:Number = 0, sY:Number = 0;
+			if (offset) {
+				oX += offset.x % texture.width;
+				oY += offset.y % texture.height;
+				sX -= offset.x % texture.width;
+				sY -= offset.y % texture.height;
+			}
+			this.translate(oX, oY);
+			fillRect(sX, sY, width,height,other.pat);
+			this.translate(-oX, -oY);			
+		}
+		
 		/*** @private */
 		public function flush():int {
 			return 0;
@@ -327,6 +353,21 @@ package laya.resource {
 		public function clear():void {
 			this.clearRect(0, 0, _canvas.width, _canvas.height);
 			_repaint = false;
+		}
+		
+		public function drawCurves(x:Number, y:Number, args:Array):void
+		{
+			this.beginPath();
+			this.strokeStyle = args[3];
+			this.lineWidth = args[4];
+			var points:Array = args[2];
+			x += args[0], y += args[1];
+			this.moveTo(x + points[0], y + points[1]);
+			var i:int = 2, n:int = points.length;
+			while (i < n) {
+				this.quadraticCurveTo(x + points[i++], y + points[i++], x + points[i++], y + points[i++]);
+			}
+			this.stroke();
 		}
 	}
 }

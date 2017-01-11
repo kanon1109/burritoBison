@@ -28,7 +28,6 @@ package laya.webgl {
 	import laya.webgl.resource.IMergeAtlasBitmap;
 	import laya.webgl.resource.RenderTarget2D;
 	import laya.webgl.resource.WebGLImage;
-	import laya.webgl.shader.d2.fillTexture.FillTextureSprite;
 	import laya.webgl.shader.d2.Shader2D;
 	import laya.webgl.shader.d2.ShaderDefines2D;
 	import laya.webgl.shader.d2.skinAnishader.SkinMesh;
@@ -136,6 +135,10 @@ package laya.webgl {
 		public static function enable():Boolean {
 			if (Render.isConchApp) {
 				if (!Render.isConchWebGL) {
+					RunDriver.skinAniSprite = function():* {
+						var tSkinSprite:SkinMesh = new SkinMesh()
+						return tSkinSprite;
+					}
 					expandContext();
 					return false;
 				}
@@ -242,10 +245,10 @@ package laya.webgl {
 			}
 			
 			RunDriver.getTexturePixels = function(value:Texture, x:Number, y:Number, width:Number, height:Number):Array {
+				(Render.context.ctx as WebGLContext2D).clear();
 				var tSprite:Sprite = new Sprite();
-				tSprite.x = -x;
-				tSprite.y = -y;
-				tSprite.graphics.drawTexture(value, 0, 0, value.sourceWidth, value.sourceHeight);
+				tSprite.graphics.drawTexture(value, -x, -y);
+				
 				//启用RenderTarget2D，把精灵上的内容画上去
 				var tRenderTarget:RenderTarget2D = RenderTarget2D.create(width, height);
 				tRenderTarget.start();
@@ -268,12 +271,6 @@ package laya.webgl {
 				}
 				return tArray;
 			}
-			
-			RunDriver.fillTextureShader = function(value:Texture, x:Number, y:Number, width:Number, height:Number):* {
-				var tFillTetureSprite:FillTextureSprite = new FillTextureSprite();
-				return tFillTetureSprite;
-			}
-			
 			RunDriver.skinAniSprite = function():* {
 				var tSkinSprite:SkinMesh = new SkinMesh()
 				return tSkinSprite;
@@ -388,7 +385,11 @@ package laya.webgl {
 							tHalfPadding = 25;
 						}
 						b = new Rectangle();
-						b.copyFrom((sprite as Sprite).getBounds());
+						b.copyFrom((sprite as Sprite).getSelfBounds());
+						b.x += (sprite as Sprite).x;
+						b.y += (sprite as Sprite).y;
+						b.x -= (sprite as Sprite).pivotX;
+						b.y -= (sprite as Sprite).pivotY;
 						var tSX:Number = b.x;
 						var tSY:Number = b.y;
 						//重新计算宽和高
@@ -409,6 +410,7 @@ package laya.webgl {
 						scope.addValue("bounds", b);
 						var submit:SubmitCMD = SubmitCMD.create([scope, sprite, context, 0, 0], Filter._filterStart);
 						context.addRenderObject(submit);
+						(context.ctx as WebGLContext2D)._renderKey = 0;
 						(context.ctx as WebGLContext2D)._shader2D.glTexture = null;//绘制前置空下，保证不会被打包进上一个序列
 						var tX:Number = sprite.x - tSX + tHalfPadding;
 						var tY:Number = sprite.y - tSY + tHalfPadding;
@@ -492,6 +494,7 @@ package laya.webgl {
 		}
 		
 		public static function onStageResize(width:Number, height:Number):void {
+			if (mainContext == null) return;
 			mainContext.viewport(0, 0, width, height);
 			/*[IF-FLASH]*/
 			mainContext.configureBackBuffer(width, height, 0, true);

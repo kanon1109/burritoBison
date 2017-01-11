@@ -113,7 +113,10 @@ package laya.display.css {
 			return (_type & _WIDTH_SET) != 0;
 		}
 		
-		private function _calculation(type:String, value:String):Boolean {
+		/**
+		 * @private
+		 */
+		public function _calculation(type:String, value:String):Boolean {
 			if (value.indexOf('%') < 0) return false;
 			var ower:Sprite = _ower;
 			var parent:Sprite = ower.parent as Sprite;
@@ -508,7 +511,7 @@ package laya.display.css {
 		}
 		
 		/**
-		 * 边框属性。
+		 * 边框属性，比如border="5px solid red"
 		 */
 		public function get border():String {
 			return _border ? _border.value : "";
@@ -556,14 +559,14 @@ package laya.display.css {
 			}
 			_border || (_border = {size: 1, type: 'solid'});
 			_border.color = (value == null) ? null : Color.create(value);
-			_ower.model && _ower.model.border(_border.color.strColor);
+			_ower.conchModel && _ower.conchModel.border(_border.color.strColor);
 			_ower._renderType |= RenderSprite.STYLE;
 		}
 		
 		public function set backgroundColor(value:String):void {
 			if (value === 'none') _bgground = null;
 			else (_bgground || (_bgground = { } ), _bgground.color = value);
-			_ower.model && _ower.model.bgColor(value);
+			_ower.conchModel && _ower.conchModel.bgColor(value);
 			_ower._renderType |= RenderSprite.STYLE;
 		}
 		
@@ -581,7 +584,7 @@ package laya.display.css {
 			}
 			_bgground || (_bgground = {});
 			_bgground.color = value;
-			_ower.model && _ower.model.bgColor(value);
+			_ower.conchModel && _ower.conchModel.bgColor(value);
 			_type |= _BACKGROUND_SET;
 			_ower._renderType |= RenderSprite.STYLE;
 		}
@@ -685,7 +688,7 @@ package laya.display.css {
 		 * @param	y Y 轴平移量。
 		 */
 		public function translate(x:Number, y:Number):void {
-			_tf === _TF_EMPTY && (_tf = _createTransform());
+			_tf === _TF_EMPTY && (_tf = new TransformInfo());
 			_tf.translateX = x;
 			_tf.translateY = y;
 		}
@@ -696,7 +699,7 @@ package laya.display.css {
 		 * @param	y Y 轴缩放值。
 		 */
 		public function scale(x:Number, y:Number):void {
-			_tf === _TF_EMPTY && (_tf = _createTransform());
+			_tf === _TF_EMPTY && (_tf = new TransformInfo());
 			_tf.scaleX = x;
 			_tf.scaleY = y;
 		}

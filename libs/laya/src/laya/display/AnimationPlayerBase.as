@@ -17,10 +17,12 @@ package laya.display {
 	 *  动画播放控制器
 	 */
 	public class AnimationPlayerBase extends Sprite {
-		/** 播放间隔(单位：毫秒)。*/
-		private var _interval:int = Config.animationInterval;
 		/**是否循环播放 */
 		public var loop:Boolean;
+		/**播放类型：0为正序播放，1为倒序播放，2为pingpong播放*/
+		public var wrapMode:int = 0;
+		/** 播放间隔(单位：毫秒)。*/
+		protected var _interval:int = Config.animationInterval;
 		/**@private */
 		protected var _index:int;
 		/**@private */
@@ -29,13 +31,14 @@ package laya.display {
 		protected var _isPlaying:Boolean;
 		/**@private */
 		protected var _labels:Object;
+		/**是否是逆序播放*/
+		protected var _isReverse:Boolean = false;
+		/**@private */
+		protected var _frameRateChanged:Boolean = false;
 		/**@private */
 		private var _controlNode:Sprite;
-		
-		/**播放类型：0为正序播放，1为倒序播放，2为pingpong播放*/
-		public var wrapMode:int = 0;
-		/**是否是逆序播放*/
-		protected var _isReverse:Boolean=false;
+		/**@private */
+		protected var _actionName:String;
 		
 		/**
 		 * 播放动画。
@@ -45,8 +48,9 @@ package laya.display {
 		 */
 		public function play(start:* = 0, loop:Boolean = true, name:String = ""):void {
 			this._isPlaying = true;
-			this.index = (start is String)?_getFrameByLabel(start):start;
+			this.index = (start is String) ? _getFrameByLabel(start) : start;
 			this.loop = loop;
+			this._actionName = name;
 			_isReverse = wrapMode == 1;
 			if (this.interval > 0) {
 				timerLoop(this.interval, this, _frameLoop, null, true);
@@ -54,78 +58,67 @@ package laya.display {
 		}
 		
 		/** 播放间隔(单位：毫秒)。*/
-		public function set interval(v:int):void
-		{
-			_interval = v;
-			if (_isPlaying && v > 0 )
-			{
-				timerLoop(v, this, _frameLoop, null, true);
+		public function set interval(value:int):void {
+			if (_interval != value) {
+				_frameRateChanged = true;
+				_interval = value;
+				if (_isPlaying && value > 0) {
+					timerLoop(value, this, _frameLoop, null, true);
+				}
 			}
 		}
 		
 		/** 播放间隔(单位：毫秒)。*/
-		public function get interval():int
-		{
+		public function get interval():int {
 			return _interval;
 		}
+		
 		/**@private */
-		protected function _getFrameByLabel(label:String):int
-		{
+		protected function _getFrameByLabel(label:String):int {
 			var i:int;
-			for (i = 0; i < _count; i++)
-			{
-				if (_labels[i]==label) return i;
+			for (i = 0; i < _count; i++) {
+				if (_labels[i] == label) return i;
 			}
 			return 0;
 		}
 		
 		/**@private */
 		protected function _frameLoop():void {
-			if (_isReverse)
-			{
+			if (_isReverse) {
 				this._index--;
-				if (this._index < 0){
-					if(loop){
-						if(wrapMode==2)
-						{
-							this._index = this._count > 0?1:0;	
+				if (this._index < 0) {
+					if (loop) {
+						if (wrapMode == 2) {
+							this._index = this._count > 0 ? 1 : 0;
 							_isReverse = false;
-						}else
-						{
-							this._index = this._count - 1;						
-						}		
+						} else {
+							this._index = this._count - 1;
+						}
 						event(Event.COMPLETE);
-					}else
-					{
+					} else {
 						this._index = 0;
 						stop();
 						event(Event.COMPLETE);
 						return;
-					}				
+					}
 				}
-			}else
-			{
+			} else {
 				this._index++;
 				if (this._index >= this._count) {
-					
-					if(loop)
-					{
-						if(wrapMode==2)
-						{
-							this._index = this._count - 2 >= 0?this._count - 2:0;	
-							_isReverse=true;
-						}else
-						{
-							this._index = 0;	
+					if (loop) {
+						if (wrapMode == 2) {
+							this._index = this._count - 2 >= 0 ? this._count - 2 : 0;
+							_isReverse = true;
+						} else {
+							this._index = 0;
 						}
 						event(Event.COMPLETE);
-					}else
-					{
+					} else {
 						this._index--;
 						stop();
 						event(Event.COMPLETE);
 						return;
-					}			
+					}
 				}
 			}
 			this.index = this._index;
@@ -138,15 +131,14 @@ package laya.display {
 				_controlNode.off(Event.UNDISPLAY, this, _onDisplay);
 			}
 			_controlNode = node;
-			if (node&&node!=this) {
+			if (node && node != this) {
 				node.on(Event.DISPLAY, this, _onDisplay);
 				node.on(Event.UNDISPLAY, this, _onDisplay);
 			}
 		}
 		
 		/**@private */
-		override public function _setDisplay(value:Boolean):void 
-		{
+		override public function _setDisplay(value:Boolean):void {
 			super._setDisplay(value);
 			_onDisplay();
 		}
@@ -154,7 +146,7 @@ package laya.display {
 		/**@private */
 		private function _onDisplay():void {
 			if (_isPlaying) {
-				if (_controlNode.displayedInStage) play(_index, loop);
+				if (_controlNode.displayedInStage) play(_index, loop, _actionName);
 				else clearTimer(this, _frameLoop);
 			}
 		}
@@ -170,8 +162,7 @@ package laya.display {
 		/**
 		 * 是否在播放中
 		 */
-		public function get isPlaying():Boolean
-		{
+		public function get isPlaying():Boolean {
 			return _isPlaying;
 		}
 		
@@ -206,7 +197,7 @@ package laya.display {
 		 * @param	position 帧索引或label
 		 */
 		public function gotoAndStop(position:*):void {
-			this.index = (position is String)?_getFrameByLabel(position):position;
+			this.index = (position is String) ? _getFrameByLabel(position) : position;
 			this.stop();
 		}
 		

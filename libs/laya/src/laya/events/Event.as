@@ -1,6 +1,7 @@
 package laya.events {
 	
 	import laya.display.Sprite;
+	import laya.display.Stage;
 	import laya.maths.Point;
 	
 	/**
@@ -90,6 +91,10 @@ package laya.events {
 		public static const BLUR:String = "blur";
 		/** 定义 focus 事件对象的 type 属性值。*/
 		public static const FOCUS:String = "focus";
+		/** 定义 visibilitychange 事件对象的 type 属性值。*/
+		public static const VISIBILITY_CHANGE:String = "visibilitychange";
+		/** 定义 focuschange 事件对象的 type 属性值。*/
+		public static const FOCUS_CHANGE:String = "focuschange";
 		/** 定义 played 事件对象的 type 属性值。*/
 		public static const PLAYED:String = "played";
 		/** 定义 paused 事件对象的 type 属性值。*/
@@ -137,11 +142,9 @@ package laya.events {
 		/**世界矩阵更新时触发。*/
 		public static const WORLDMATRIX_NEEDCHANGE:String = "worldmatrixneedchanged";
 		/**更换动作时触发。*/
-		public static const ANIMATION_CHANGED:String = "actionchanged";
-		/**是否在舞台发生变化时触发。*/
-		public static const INSTAGE_CHANGED:String = "instagechanged";
-		/**需重新缓存动画时触发，引擎内部使用。*/
-		public static const CACHEFRAMEINDEX_CHANGED:String = "cacheframeindexchanged";
+		public static const ANIMATION_CHANGED:String = "animationchanged";
+		///**需重新缓存动画时触发，引擎内部使用。*/
+		//public static const CACHEFRAMEINDEX_CHANGED:String = "cacheframeindexchanged";
 		
 		/** 事件类型。*/
 		public var type:String;
@@ -185,11 +188,13 @@ package laya.events {
 		public function get touches():Array {
 			var arr:Array = this.nativeEvent.touches;
 			if (arr) {
+				var stage:Stage = Laya.stage;
 				for (var i:int = 0, n:int = arr.length; i < n; i++) {
 					var e:* = arr[i];
 					var point:Point = Point.TEMP;
 					point.setTo(e.clientX, e.clientY);
-					Laya.stage._canvasTransform.invertTransformPoint(point);
+					stage._canvasTransform.invertTransformPoint(point);
+					stage.transform.invertTransformPoint(point);
 					
 					e.stageX = point.x;
 					e.stageY = point.y;

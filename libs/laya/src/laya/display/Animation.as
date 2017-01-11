@@ -38,7 +38,7 @@ package laya.display {
 	 * 			animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 	 * 			animation.x = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 	 * 			animation.y = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-	 * 			animation.interval = 30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+	 * 			animation.interval = 50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 	 * 			animation.play();//播放动画。
 	 * 			Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 	 * 		}
@@ -58,7 +58,7 @@ package laya.display {
 	 *     animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 	 *     animation.x = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 	 *     animation.y = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-	 *     animation.interval = 30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+	 *     animation.interval = 50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 	 *     animation.play();//播放动画。
 	 *     Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 	 * }
@@ -76,7 +76,7 @@ package laya.display {
 	 *         animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 	 *         animation.x = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 	 *         animation.y = 200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-	 *         animation.interval = 30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+	 *         animation.interval = 50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 	 *         animation.play();//播放动画。
 	 *         Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 	 *     }
@@ -91,8 +91,6 @@ package laya.display {
 		protected var _frames:Array;
 		/**@private */
 		protected var _url:String;
-		/**@private */
-		protected var _actionName:String;
 		
 		/**
 		 * 创建一个新的 <code>Animation</code> 实例。
@@ -122,7 +120,7 @@ package laya.display {
 			this.loop = loop;
 			this._actionName = name;
 			_isReverse = wrapMode == 1;
-			if (this._frames && this._frames.length > 1 && this.interval > 0) {
+			if (this._frames && this.interval > 0) {
 				timerLoop(this.interval, this, _frameLoop, null, true);
 			}
 		}
@@ -132,6 +130,8 @@ package laya.display {
 			if (name && framesMap[name]) {
 				this._frames = framesMap[name];
 				this._count = _frames.length;
+				//如果是读取动的画配置信息，帧率按照动画设置的帧率播放
+				if (!_frameRateChanged && framesMap[name+"$len"]) _interval = framesMap[name+"$len"];
 				return true;
 			}
 			return false;
@@ -212,7 +212,6 @@ package laya.display {
 						_this.frames = framesMap[cacheName] ? framesMap[cacheName] : createFrames(url, cacheName);
 						if (loaded) loaded.run();
 					}
-				
 				}
 				if (Loader.getAtlas(url)) onLoaded(url);
 				else Laya.loader.load(url, Handler.create(null, onLoaded, [url]), null, Loader.ATLAS);
@@ -221,7 +220,7 @@ package laya.display {
 		}
 		
 		/**
-		 * 加载并播放一个由IDE制作的动画。
+		 * 加载并播放一个由IDE制作的动画，播放的帧率按照IDE设计的帧率
 		 * @param	url 	动画地址。
 		 * @param	loaded	加载完毕回调
 		 * @return 	返回动画本身。
@@ -240,19 +239,25 @@ package laya.display {
 							var obj:Object = aniData.animationDic;
 							var flag:Boolean = true;
 							for (var name:String in obj) {
-								var arr:Array = obj[name];
-								if (arr.length) {
-									framesMap[url + "#" + name] = arr;
+								var info:Object = obj[name];
+								if (info.frames.length) {
+									framesMap[url + "#" + name] = info.frames;
+									framesMap[url + "#" + name+"$len"] = info.interval;
 								} else {
 									flag = false;
 								}
 							}
 							
 							//设置第一个为默认
-							_this.frames = aniData.animationList[0];
-							if (flag) framesMap[url + "#"] = _this.frames;
+							if(!_this._frameRateChanged) _this._interval=aniData.animationList[0].interval;
+							_this.frames = aniData.animationList[0].frames;							
+							if (flag) {							
+								framesMap[url + "#$len"] = aniData.animationList[0].interval;
+								framesMap[url + "#"] = _this.frames;
+							}
 						} else {
-							_this.frames = framesMap[url + "#"];
+							if(!_this._frameRateChanged) _this._interval=framesMap[url + "#$len"];
+							_this.frames = framesMap[url + "#"];							
 						}
 						
 						if (loaded) loaded.run();

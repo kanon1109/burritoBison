@@ -98,7 +98,7 @@ package laya.ui {
 		override public function set width(value:Number):void {
 			if (_width != value) {
 				_width = value;
-				model && model.size(_width, _height);
+				conchModel && conchModel.size(_width, _height);
 				callLater(changeSize);
 				if (_layout.enable && (!isNaN(_layout.centerX) || !isNaN(_layout.right) || !isNaN(_layout.anchorX))) resetLayoutX();
 			}
@@ -148,7 +148,7 @@ package laya.ui {
 		override public function set height(value:Number):void {
 			if (_height != value) {
 				_height = value;
-				model && model.size(_width, _height);
+				conchModel && conchModel.size(_width, _height);
 				callLater(changeSize);
 				if (_layout.enable && (!isNaN(_layout.centerY) || !isNaN(_layout.bottom) || !isNaN(_layout.anchorY))) resetLayoutY();
 			}
@@ -395,20 +395,20 @@ package laya.ui {
 		 * <p>重置对象的 <code>X</code> 轴（水平方向）布局。</p>
 		 */
 		protected function resetLayoutX():void {
+			var layout:LayoutStyle = _layout;
+			if (!isNaN(layout.anchorX)) this.pivotX = layout.anchorX * width;
 			var parent:Sprite = this.parent as Sprite;
 			if (parent) {
-				var layout:LayoutStyle = _layout;
-				if (!isNaN(layout.anchorX)) this.pivotX = layout.anchorX * width;
 				if (!isNaN(layout.centerX)) {
-					x = (parent.width - displayWidth) * 0.5 + layout.centerX + this.pivotX;
+					x = (parent.width - displayWidth) * 0.5 + layout.centerX + this.pivotX * this.scaleX;
 				} else if (!isNaN(layout.left)) {
-					x = layout.left + this.pivotX;
+					x = layout.left + this.pivotX * this.scaleX;
 					if (!isNaN(layout.right)) {
 						//TODO:
 						width = (parent._width - layout.left - layout.right) / scaleX;
 					}
 				} else if (!isNaN(layout.right)) {
-					x = parent.width - displayWidth - layout.right + this.pivotX;
+					x = parent.width - displayWidth - layout.right + this.pivotX * this.scaleX;
 				}
 			}
 		}
@@ -417,20 +417,20 @@ package laya.ui {
 		 * <p>重置对象的 <code>Y</code> 轴（垂直方向）布局。</p>
 		 */
 		protected function resetLayoutY():void {
+			var layout:LayoutStyle = _layout;
+			if (!isNaN(layout.anchorY)) this.pivotY = layout.anchorY * height;
 			var parent:Sprite = this.parent as Sprite;
 			if (parent) {
-				var layout:LayoutStyle = _layout;
-				if (!isNaN(layout.anchorY)) this.pivotY = layout.anchorY * height;
 				if (!isNaN(layout.centerY)) {
-					y = (parent.height - displayHeight) * 0.5 + layout.centerY + this.pivotY;
+					y = (parent.height - displayHeight) * 0.5 + layout.centerY + this.pivotY * this.scaleY;
 				} else if (!isNaN(layout.top)) {
-					y = layout.top + this.pivotY;
+					y = layout.top + this.pivotY * this.scaleY;
 					if (!isNaN(layout.bottom)) {
 						//TODO:
 						height = (parent._height - layout.top - layout.bottom) / scaleY;
 					}
 				} else if (!isNaN(layout.bottom)) {
-					y = parent.height - displayHeight - layout.bottom + this.pivotY;
+					y = parent.height - displayHeight - layout.bottom + this.pivotY * this.scaleY;
 				}
 			}
 		}
@@ -503,7 +503,7 @@ package laya.ui {
 		
 		/** 是否变灰。*/
 		public function get gray():Boolean {
-			return _disabled;
+			return _gray;
 		}
 		
 		public function set gray(value:Boolean):void {

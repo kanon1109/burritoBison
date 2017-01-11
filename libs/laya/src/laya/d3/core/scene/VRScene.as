@@ -1,4 +1,5 @@
 package laya.d3.core.scene {
+	import laya.d3.core.BaseCamera;
 	import laya.d3.core.VRCamera;
 	import laya.d3.core.render.RenderState;
 	import laya.d3.math.Matrix4x4;
@@ -20,11 +21,10 @@ package laya.d3.core.scene {
 		}
 		
 		private function renderCamera(gl:WebGLContext, state:RenderState, cameraVR:VRCamera):void {
-			_prepareScene(gl, cameraVR, state);
-			state.shaderDefs.add(ShaderDefines3D.VR);
-			beforeUpate(state);//更新之前
-			_updateScene(state);
-			lateUpate(state);//更新之前
+			state.camera = cameraVR;
+			cameraVR._prepareCameraToRender();
+			//_prepareRenderToRenderState(cameraVR, state);
+			state.shaderDefines.add(ShaderDefines3D.VR);
 			
 			beforeRender(state);//渲染之前
 			var renderTarget:RenderTexture = cameraVR.renderTarget;
@@ -33,11 +33,15 @@ package laya.d3.core.scene {
 				Matrix4x4.multiply(_invertYScaleMatrix, cameraVR.leftProjectionMatrix, _invertYProjectionMatrix);
 				Matrix4x4.multiply(_invertYScaleMatrix, cameraVR.leftProjectionViewMatrix, _invertYProjectionViewMatrix);
 				state.projectionMatrix = _invertYProjectionMatrix;
+				cameraVR._setShaderValueMatrix4x4(BaseCamera.PROJECTMATRIX, _invertYProjectionMatrix);
 				state.projectionViewMatrix = _invertYProjectionViewMatrix;
 			} else {
 				state.projectionMatrix = cameraVR.leftProjectionMatrix;
+				cameraVR._setShaderValueMatrix4x4(BaseCamera.PROJECTMATRIX, cameraVR.leftProjectionMatrix);
 				state.projectionViewMatrix = cameraVR.leftProjectionViewMatrix;
 			}
+			
+			cameraVR._setShaderValueMatrix4x4(BaseCamera.VIEWMATRIX, cameraVR.leftViewMatrix);
 			state.viewMatrix = cameraVR.leftViewMatrix;
 			state.viewport = cameraVR.leftViewport;
 			_preRenderScene(gl, state);
@@ -49,11 +53,15 @@ package laya.d3.core.scene {
 				Matrix4x4.multiply(_invertYScaleMatrix, cameraVR.rightProjectionMatrix, _invertYProjectionMatrix);
 				Matrix4x4.multiply(_invertYScaleMatrix, cameraVR.rightProjectionViewMatrix, _invertYProjectionViewMatrix);
 				state.projectionMatrix = _invertYProjectionMatrix;
+				cameraVR._setShaderValueMatrix4x4(BaseCamera.PROJECTMATRIX, _invertYProjectionMatrix);
 				state.projectionViewMatrix = _invertYProjectionViewMatrix;
 			} else {
 				state.projectionMatrix = cameraVR.rightProjectionMatrix;
+				cameraVR._setShaderValueMatrix4x4(BaseCamera.PROJECTMATRIX, cameraVR.rightProjectionMatrix);
 				state.projectionViewMatrix = cameraVR.rightProjectionViewMatrix;
 			}
+			
+			cameraVR._setShaderValueMatrix4x4(BaseCamera.VIEWMATRIX, cameraVR.rightViewMatrix);
 			state.viewMatrix = cameraVR.rightViewMatrix;
 			state.viewport = cameraVR.rightViewport;
 			_preRenderScene(gl, state);

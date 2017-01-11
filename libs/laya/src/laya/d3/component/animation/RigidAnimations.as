@@ -1,5 +1,6 @@
 package laya.d3.component.animation {
 	import laya.ani.AnimationState;
+	import laya.ani.AnimationTemplet;
 	import laya.d3.core.Sprite3D;
 	import laya.d3.core.render.RenderState;
 	import laya.d3.math.Matrix4x4;
@@ -40,6 +41,14 @@ package laya.d3.component.animation {
 			(_templet._animationDatasCache) || (_templet._animationDatasCache = []);
 		}
 		
+		override public function set templet(value:AnimationTemplet):void {
+			super.templet = value;
+			_curOriginalData = null;
+			_curAnimationDatas = null;
+			_tempCurAnimationData = null;
+			(_templet._animationDatasCache) || (_templet._animationDatasCache = []);
+		}
+		
 		/**
 		 * 创建一个新的 <code>RigidAnimations</code> 实例。
 		 */
@@ -56,7 +65,6 @@ package laya.d3.component.animation {
 			var nodes:Vector.<Object> = _templet.getNodes(currentAnimationClipIndex);
 			var curParentSprite:Node = _owner;//节点初始父节点
 			var nodeLength:int = nodes.length;
-			
 			var pathStart:int = 0;
 			var extentDatas:Uint16Array = new Uint16Array(_templet.getPublicExtData());
 			for (var i:int = 0; i < nodeLength; i++) {
@@ -138,7 +146,7 @@ package laya.d3.component.animation {
 			if (_player.state !== AnimationState.playing || !_templet || !_templet.loaded)
 				return;
 			
-			var rate:Number = _player.playbackRate * state.scene.timer.scale;
+			var rate:Number = _player.playbackRate * Laya.timer.scale;
 			var cachePlayRate:Number = _player.cachePlayRate;
 			var isCache:Boolean = _player.isCache && rate >= cachePlayRate;//是否可以缓存
 			var frameIndex:int = isCache ? currentFrameIndex : -1;//慢动作或者不缓存时frameIndex为-1
@@ -192,9 +200,11 @@ package laya.d3.component.animation {
 		 */
 		override public function _unload(owner:Sprite3D):void {
 			super._unload(owner);
-			_player.off(Event.STOPPED, this, _animtionStop);
-			_player.off(Event.PLAYED, this, _animtionPlay);
-		
+			_animationSprites = null;
+			_animationSpritesInitLocalMatrix = null;
+			_tempCurAnimationData = null;
+			_curOriginalData = null;
+			_curAnimationDatas = null;
 		}
 	}
 }

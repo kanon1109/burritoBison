@@ -77,7 +77,12 @@ package laya.media.h5audio {
 			}
 			
 			this.audio = ad;
-			ad.load();
+			if (ad.load) {
+				ad.load();
+			}else {
+				onErr();
+			}
+			
 		}
 		
 		/**
@@ -103,6 +108,18 @@ package laya.media.h5audio {
 			channel.play();
 			SoundManager.addChannel(channel);
 			return channel;
+		}
+		
+		/**
+		 * 获取总时间。
+		 */
+		public function get duration():Number 
+		{
+			var ad:Audio;
+			ad = _audioCache[url];
+			if (!ad)
+				return 0;
+			return ad.duration;
 		}
 	
 	}

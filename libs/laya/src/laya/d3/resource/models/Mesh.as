@@ -9,11 +9,12 @@ package laya.d3.resource.models {
 	import laya.d3.graphics.VertexElement;
 	import laya.d3.graphics.VertexElementFormat;
 	import laya.d3.graphics.VertexElementUsage;
-	import laya.d3.loaders.LoadModel;
+	import laya.d3.loaders.MeshReader;
 	import laya.d3.math.BoundBox;
 	import laya.d3.math.BoundSphere;
 	import laya.d3.math.Matrix4x4;
 	import laya.d3.math.Vector3;
+	import laya.d3.utils.Utils3D;
 	import laya.events.Event;
 	import laya.events.EventDispatcher;
 	import laya.net.Loader;
@@ -31,25 +32,7 @@ package laya.d3.resource.models {
 		 * @param url 模板地址。
 		 */
 		public static function load(url:String):Mesh {
-			url = URL.formatURL(url);
-			var mesh:Mesh = Resource.meshCache[url];
-			if (!mesh) {
-				mesh = Resource.meshCache[url] = new Mesh();
-				var loader:Loader = new Loader();
-				loader.once(Event.COMPLETE, null, function(data:ArrayBuffer):void {
-					new LoadModel(data, mesh, mesh._materials, url);
-					mesh._loaded = true;
-					mesh.event(Event.LOADED, mesh);
-				});
-				loader.load(url, Loader.BUFFER);
-			}
-			return mesh;
-		
-			//var mesh:Mesh = new Mesh(url);
-			//Laya.loader.load(url, Handler.create(null,function():void{
-			//
-			//},[mesh]),null,"Mesh");
-			//return mesh;
+			return Laya.loader.create(url, null, null, Mesh);
 		}
 		
 		/** @private */
@@ -60,7 +43,6 @@ package laya.d3.resource.models {
 		public var _bindPoses:Vector.<Matrix4x4>;
 		/** @private */
 		public var _inverseBindPoses:Vector.<Matrix4x4>;
-		
 		/**
 		 * 获取网格顶点
 		 * @return 网格顶点。
@@ -162,6 +144,17 @@ package laya.d3.resource.models {
 			_subMeshes.splice(index, 1);
 			_subMeshCount--;
 			return true;
+		}
+		
+		/**
+		 *@private
+		 */
+		override public function onAsynLoaded(url:String, data:*, params:Array):void {
+			var bufferData:Object = data[0];
+			var textureMap:Object = data[1];
+			MeshReader.read(bufferData as ArrayBuffer, this, _materials, textureMap);
+			_loaded = true;
+			event(Event.LOADED, this);
 		}
 		
 		/**

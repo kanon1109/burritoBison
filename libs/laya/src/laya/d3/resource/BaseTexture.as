@@ -1,5 +1,6 @@
 package laya.d3.resource {
 	import laya.d3.utils.Size;
+	import laya.renders.Render;
 	import laya.resource.Resource;
 	
 	/**
@@ -22,8 +23,7 @@ package laya.d3.resource {
 		protected var _magFifter:int;
 		/** @private */
 		protected var _source:*;
-		/**@private */
-		protected var _loaded:Boolean;
+		public var _conchTexture:*//NATIVE
 		
 		/**
 		 * 获取宽度。
@@ -60,7 +60,17 @@ package laya.d3.resource {
 			return _mipmap;
 		}
 		
-		/**\
+		/**
+		 * 是否使用mipLevel
+		 */
+		public function set mipmap(value:Boolean):void {
+			_mipmap = value;
+			if (_mipmap != value) {
+				_conchTexture && _conchTexture.setMipMap(value);
+			}
+		}
+		
+		/**
 		 * 缩小过滤器
 		 */
 		public function get minFifter():int {
@@ -68,10 +78,30 @@ package laya.d3.resource {
 		}
 		
 		/**
+		 * 缩小过滤器
+		 */
+		public function set minFifter(value:int):void {
+			_minFifter = value;
+			if (_minFifter != value) {
+				_conchTexture && _conchTexture.setMinFifter(value);
+			}
+		}
+		
+		/**
 		 * 放大过滤器
 		 */
 		public function get magFifter():int {
 			return _magFifter;
+		}
+		
+		/**
+		 * 放大过滤器
+		 */
+		public function set magFifter(value:int):void {
+			_magFifter = value;
+			if (value != _magFifter) {
+				_conchTexture && _conchTexture.setMaxFifter(value);
+			}
 		}
 		
 		/**
@@ -83,20 +113,22 @@ package laya.d3.resource {
 		}
 		
 		/**
-		 * 表示是否加载成功，只能表示初次载入成功（通常包含下载和载入）,并不能完全表示资源是否可立即使用（资源管理机制释放影响等）。
-		 */
-		public function get loaded():Boolean {
-			return _loaded;
-		}
-		
-		/**
 		 * 创建一个 <code>BaseTexture</code> 实例。
 		 */
 		public function BaseTexture() {
+			if (Render.isConchNode) {//NATIVE
+				_conchTexture = __JS__("new ConchTexture()");
+			}
 			_repeat = true;
-			_mipmap = true;
-			_minFifter = -1;
-			_magFifter = -1;
+			mipmap = true;
+			minFifter = -1;
+			magFifter = -1;
+		
+		}
+		
+		override public function dispose():void {
+			resourceManager.removeResource(this);
+			super.dispose();
 		}
 	
 	}

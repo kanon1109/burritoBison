@@ -1,13 +1,9 @@
 package laya.d3.core.scene {
-	import laya.d3.core.Camera;
-	import laya.d3.core.Layer;
-	import laya.d3.core.MeshSprite3D;
-	import laya.d3.core.Sprite3D;
 	import laya.d3.core.BaseCamera;
+	import laya.d3.core.Layer;
+	import laya.d3.core.Sprite3D;
 	import laya.d3.core.light.LightSprite;
-	import laya.d3.core.material.BaseMaterial;
 	import laya.d3.core.render.RenderConfig;
-	import laya.d3.core.render.RenderElement;
 	import laya.d3.core.render.RenderQueue;
 	import laya.d3.core.render.RenderState;
 	import laya.d3.graphics.DynamicBatchManager;
@@ -20,8 +16,8 @@ package laya.d3.core.scene {
 	import laya.d3.math.Viewport;
 	import laya.d3.resource.RenderTexture;
 	import laya.d3.resource.models.Sky;
-	import laya.d3.resource.models.Sky;
 	import laya.d3.shader.ShaderDefines3D;
+	import laya.d3.shader.ValusArray;
 	import laya.display.Node;
 	import laya.display.Sprite;
 	import laya.events.Event;
@@ -33,22 +29,58 @@ package laya.d3.core.scene {
 	import laya.webgl.WebGLContext;
 	import laya.webgl.canvas.WebGLContext2D;
 	import laya.webgl.submit.ISubmit;
-	import laya.webgl.utils.Buffer2D;
 	import laya.webgl.utils.RenderState2D;
-	import laya.webgl.utils.ValusArray;
 	
 	/**
 	 * <code>BaseScene</code> 类用于实现场景的父类。
 	 */
 	public class BaseScene extends Sprite implements ISubmit {		
+		public static const FOGCOLOR:int = 0;
+		public static const FOGSTART:int = 1;
+		public static const FOGRANGE:int = 2;
+		
+		public static const LIGHTDIRECTION:int = 3;
+		public static const LIGHTDIRDIFFUSE:int = 4;
+		public static const LIGHTDIRAMBIENT:int = 5;
+		public static const LIGHTDIRSPECULAR:int = 6;
+		
+		public static const POINTLIGHTPOS:int = 7;
+		public static const POINTLIGHTRANGE:int = 8;
+		public static const POINTLIGHTATTENUATION:int = 9;
+		public static const POINTLIGHTDIFFUSE:int = 10;
+		public static const POINTLIGHTAMBIENT:int = 11;
+		public static const POINTLIGHTSPECULAR:int = 12;
+		
+		public static const SPOTLIGHTPOS:int = 13;
+		public static const SPOTLIGHTDIRECTION:int = 14;
+		public static const SPOTLIGHTSPOT:int = 15;
+		public static const SPOTLIGHTRANGE:int = 16;
+		public static const SPOTLIGHTATTENUATION:int = 17;
+		public static const SPOTLIGHTDIFFUSE:int = 18;
+		public static const SPOTLIGHTAMBIENT:int = 19;
+		public static const SPOTLIGHTSPECULAR:int = 20;
+
+		
+		/**
+		 * @private
+		 */
+		private static function _sortScenes(a:Node, b:Node):Number {
+			if (a.parent === Laya.stage && b.parent === Laya.stage) {
+				var stageChildren:Array = Laya.stage._childs;
+				return stageChildren.indexOf(a) - stageChildren.indexOf(b);
+			} else if (a.parent !== Laya.stage && b.parent !== Laya.stage) {
+				return _sortScenes(a.parent, b.parent);
+			} else {
+				return (a.parent === Laya.stage) ? -1 : 1;
+			}
+		}
+		
 		/** @private */
 		protected var _invertYProjectionMatrix:Matrix4x4;
 		/** @private */
 		protected var _invertYProjectionViewMatrix:Matrix4x4;
 		/** @private */
 		protected var _invertYScaleMatrix:Matrix4x4;
-		/**是否在Stage中。*/
-		protected var _isInStage:Boolean;
 		/** @private */
 		protected var _boundFrustum:BoundFrustum;
 		/** @private */
@@ -66,6 +98,9 @@ package laya.d3.core.scene {
 		protected var _customRenderQueneIndex:int = 11;
 		/** @private */
 		protected var _lastCurrentTime:Number;
+		
+		/** @private */
+		public var _shaderValues:ValusArray;
 		
 		/** @private */
 		public var _frustumCullingObjects:Vector.<RenderObject> = new Vector.<RenderObject>();
@@ -98,17 +133,10 @@ package laya.d3.core.scene {
 		}
 		
 		/**
-		 * 获取是否在场景树。
-		 *   @return	是否在场景树。
-		 */
-		public function get isInStage():Boolean {
-			return _isInStage;
-		}
-		
-		/**
 		 * 创建一个 <code>BaseScene</code> 实例。
 		 */
 		public function BaseScene() {
+			_shaderValues = new ValusArray();
 			_invertYProjectionMatrix = new Matrix4x4();
 			_invertYProjectionViewMatrix = new Matrix4x4();
 			_invertYScaleMatrix = new Matrix4x4();
@@ -201,54 +229,33 @@ package laya.d3.core.scene {
 			renderConfig.sFactor = WebGLContext.SRC_ALPHA;
 			renderConfig.dFactor = WebGLContext.ONE;
 			
-			on(Event.ADDED, this, _onAdded);
-			on(Event.REMOVED, this, _onRemoved);
+			on(Event.DISPLAY, this, _onDisplay);
+			on(Event.UNDISPLAY, this, _onUnDisplay);
+		}
+		
+		override public function createConchModel():* //NATIVE
+		{
+			var pScene:* = __JS__("new ConchScene()");
+			//TODO wyw
+			pScene.init(512, 512, 512, 4);
+			return pScene;
+			;
 		}
 		
 		/**
 		 * @private
 		 */
-		private function _onAdded():void {
-			var isInStage:Boolean = Laya.stage.contains(this);
-			(isInStage) && (_addSelfAndChildrenRenderObjects());
-			(isInStage) && (_changeSelfAndChildrenInStage(true));
+		private function _onDisplay():void {
+			Laya.stage._scenes.push(this);
+			Laya.stage._scenes.sort(_sortScenes);
 		}
 		
 		/**
 		 * @private
 		 */
-		private function _onRemoved():void {
-			var isInStage:Boolean = Laya.stage.contains(this);//触发时还在stage中
-			(isInStage) && (_clearSelfAndChildrenRenderObjects());
-			(isInStage) && (_changeSelfAndChildrenInStage(false));
-		}
-		
-		/**
-		 * @private
-		 */
-		public function _changeSelfAndChildrenInStage(isInStage:Boolean):void {
-			_isInStage = isInStage;
-			event(Event.INSTAGE_CHANGED, isInStage);
-			
-			var children:Array = _childs;
-			for (var i:int = 0, n:int = children.length; i < n; i++)
-				(_childs[i] as Sprite3D)._changeSelfAndChildrenInStage(isInStage);
-		}
-		
-		/**
-		 * 清理自身和子节点渲染物体,重写此函数。
-		 */
-		public function _clearSelfAndChildrenRenderObjects():void {
-			for (var i:int = 0, n:int = _childs.length; i < n; i++)
-				(_childs[i] as Sprite3D)._clearSelfAndChildrenRenderObjects();
-		}
-		
-		/**
-		 * 添加自身和子节点渲染物体,重写此函数。
-		 */
-		public function _addSelfAndChildrenRenderObjects():void {
-			for (var i:int = 0, n:int = _childs.length; i < n; i++)
-				(_childs[i] as Sprite3D)._addSelfAndChildrenRenderObjects();
+		private function _onUnDisplay():void {
+			var scenes:Array = Laya.stage._scenes;
+			scenes.splice(scenes.indexOf(this), 1);
 		}
 		
 		/**
@@ -257,25 +264,25 @@ package laya.d3.core.scene {
 		 * @param gl WebGL上下文。
 		 * @return state 渲染状态。
 		 */
-		protected function _prepareScene(gl:WebGLContext, camera:BaseCamera, state:RenderState):void {
-			Layer._currentCameraCullingMask = camera.cullingMask;
-			
+		protected function _prepareUpdateToRenderState(gl:WebGLContext, state:RenderState):void {
 			state.context = WebGL.mainContext;
-			
 			state.elapsedTime = _lastCurrentTime ? timer.currTimer - _lastCurrentTime : 0;
 			_lastCurrentTime = timer.currTimer;
-			
-			state.reset();
 			state.loopCount = Stat.loopCount;
 			state.scene = this;
-			state.camera = camera;
+		}
+		
+		/**
+		 * @private
+		 * 场景相关渲染准备设置。
+		 * @param gl WebGL上下文。
+		 * @return state 渲染状态。
+		 */
+		protected function _prepareSceneToRender(state:RenderState):void {
+			var shaderDefines:ShaderDefines3D = state.shaderDefines;
+			(WebGL.frameShaderHighPrecision) && (shaderDefines.addInt(ShaderDefines3D.FSHIGHPRECISION));
 			
-			var worldShaderValue:ValusArray = state.worldShaderValue;
-			var loopCount:int = Stat.loopCount;
-			camera && worldShaderValue.pushValue(Buffer2D.CAMERAPOS, camera.transform.position.elements);
-			
-			if (_lights.length > 0)//灯光相关
-			{
+			if (_lights.length > 0) {
 				var lightCount:int = 0;
 				for (var i:int = 0; i < _lights.length; i++) {
 					var light:LightSprite = _lights[i];
@@ -286,34 +293,45 @@ package laya.d3.core.scene {
 					light.updateToWorldState(state);
 				}
 			}
-			if (enableFog)//雾化
-			{
-				worldShaderValue.pushValue(Buffer2D.FOGSTART, fogStart);
-				worldShaderValue.pushValue(Buffer2D.FOGRANGE, fogRange);
-				worldShaderValue.pushValue(Buffer2D.FOGCOLOR, fogColor.elements);
+			if (enableFog) {
+				var sceneSV:ValusArray = _shaderValues;
+				shaderDefines.addInt(ShaderDefines3D.FOG);
+				sceneSV.setValue(BaseScene.FOGSTART, fogStart);
+				sceneSV.setValue(BaseScene.FOGRANGE, fogRange);
+				sceneSV.setValue(BaseScene.FOGCOLOR, fogColor.elements);
 			}
-			
-			state.shaderValue.pushArray(worldShaderValue);
-			
-			var shaderDefs:ShaderDefines3D = state.shaderDefs;
-			(enableFog) && (shaderDefs._value = shaderDefs._value |= ShaderDefines3D.FOG);
+		}
+		
+		protected function _endRenderToRenderState(state:RenderState):void {
+			_shaderValues.data.length = 0;
+			state.reset();
 		}
 		
 		/**
 		 * @private
 		 */
-		protected function _updateScene(state:RenderState):void {
-			_updateChilds(state);
+		public function _updateScene():void {
+			var renderState:RenderState = _renderState;
+			_prepareUpdateToRenderState(WebGL.mainContext, renderState);
+			beforeUpdate(renderState);//更新之前
+			_updateChilds(renderState);
+			lateUpdate(renderState);//更新之后
+			if (Render.isConchNode) {//NATIVE
+				_prepareSceneToRender(renderState);
+				for (var i:int = 0, n:int = _cameraPool.length; i < n; i++) {
+					var camera:BaseCamera = _cameraPool[i];
+					renderState.camera = camera;
+					camera._prepareCameraToRender();
+				}
+			}
 		}
 		
 		/**
 		 * @private
 		 */
 		protected function _updateChilds(state:RenderState):void {
-			for (var i:int = 0, n:int = _childs.length; i < n; ++i) {
-				var child:Sprite3D = _childs[i];
-				child._update(state);
-			}
+			for (var i:int = 0, n:int = _childs.length; i < n; ++i)
+				_childs[i]._update(state);
 		}
 		
 		/**
@@ -322,7 +340,7 @@ package laya.d3.core.scene {
 		protected function _preRenderScene(gl:WebGLContext, state:RenderState):void {
 			_boundFrustum.matrix = state.projectionViewMatrix;
 			
-			FrustumCulling.RenderObjectCulling(_boundFrustum, this);
+			FrustumCulling.RenderObjectCulling(_boundFrustum, this,state.camera,state.viewMatrix,state.projectionMatrix,state.projectionViewMatrix);
 			for (var i:int = 0, iNum:int = _quenes.length; i < iNum; i++)
 				(_quenes[i]) && (_quenes[i]._preRender(state));
 		}
@@ -332,7 +350,6 @@ package laya.d3.core.scene {
 			var camera:BaseCamera = state.camera;
 			var renderTargetHeight:int = camera.renderTargetSize.height;
 			gl.viewport(viewport.x, renderTargetHeight - viewport.y - viewport.height, viewport.width, viewport.height);
-			
 			var clearFlag:int = 0;
 			switch (camera.clearFlag) {
 			case BaseCamera.CLEARFLAG_SOLIDCOLOR: 
@@ -365,7 +382,7 @@ package laya.d3.core.scene {
 					gl.disable(WebGLContext.SCISSOR_TEST);
 				} else {
 					gl.clear(WebGLContext.DEPTH_BUFFER_BIT);
-					//gl.clear(WebGLContext.DEPTH_BUFFER_BIT | WebGLContext.STENCIL_BUFFER_BIT | WebGLContext.COLOR_BUFFER_BIT);
+						//gl.clear(WebGLContext.DEPTH_BUFFER_BIT | WebGLContext.STENCIL_BUFFER_BIT | WebGLContext.COLOR_BUFFER_BIT);
 				}
 				break;
 			case BaseCamera.CLEARFLAG_SKY: 
@@ -525,14 +542,14 @@ package laya.d3.core.scene {
 		 * 更新前处理,可重写此函数。
 		 * @param state 渲染相关状态。
 		 */
-		public function beforeUpate(state:RenderState):void {
+		public function beforeUpdate(state:RenderState):void {
 		}
 		
 		/**
 		 * 更新后处理,可重写此函数。
 		 * @param state 渲染相关状态。
 		 */
-		public function lateUpate(state:RenderState):void {
+		public function lateUpdate(state:RenderState):void {
 		}
 		
 		/**

@@ -42,6 +42,7 @@ package laya.net {
 		public static function formatURL(url:String, base:String = null):String {
 			if (customFormat != null) url = customFormat(url, base);
 			if (!url) return "null path";
+			if (url.indexOf("data:image") === 0) return url;
 			if (Render.isConchApp == false) {
 				version[url] && (url += "?v=" + version[url]);
 			}
@@ -49,8 +50,7 @@ package laya.net {
 			if (isAbsolute(url)) return url;
 			
 			var retVal:String = (base || basePath) + url;
-			/*[IF-FLASH]*/return formatRelativePath(retVal);
-			return retVal;
+			return formatRelativePath(retVal);
 		}
 		
 		/**

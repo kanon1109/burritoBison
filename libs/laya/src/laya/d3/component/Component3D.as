@@ -131,8 +131,6 @@ package laya.d3.component {
 		 */
 		public function _uninitialize():void {
 			_unload(owner);
-			_owner.off(Event.LAYER_CHANGED, this, _onLayerChanged);
-			_owner.off(Event.ENABLED_CHANGED, this, _onEnableChanged);
 			_owner = null;
 		}
 		
@@ -187,6 +185,7 @@ package laya.d3.component {
 		 * 卸载组件时执行,可重写此函数。
 		 */
 		public function _unload(owner:Sprite3D):void {
+			this.offAll();
 		}
 	
 		////日后添加，物理相关函数

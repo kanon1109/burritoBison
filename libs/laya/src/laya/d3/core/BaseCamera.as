@@ -1,20 +1,31 @@
 package laya.d3.core {
 	import laya.d3.core.Layer;
 	import laya.d3.core.Sprite3D;
+	import laya.d3.core.render.RenderState;
 	import laya.d3.math.Matrix4x4;
 	import laya.d3.math.Vector2;
 	import laya.d3.math.Vector3;
 	import laya.d3.math.Vector4;
 	import laya.d3.resource.RenderTexture;
 	import laya.d3.resource.models.Sky;
+	import laya.d3.shader.ValusArray;
 	import laya.d3.utils.Size;
 	import laya.events.Event;
 	import laya.maths.Rectangle;
+	import laya.renders.Render;
 	
 	/**
 	 * <code>BaseCamera</code> 类用于创建摄像机的父类。
 	 */
 	public class BaseCamera extends Sprite3D {
+		public static const CAMERAPOS:int = 0;
+		public static const VIEWMATRIX:int = 1;
+		public static const PROJECTMATRIX:int = 2;
+		public static const VPMATRIX:int = 3;//TODO:xx
+		public static const VPMATRIX_NO_TRANSLATE:int = 4;//TODO:xx
+		
+
+		
 		/**渲染模式,延迟光照渲染，暂未开放。*/
 		public static const RENDERINGTYPE_DEFERREDLIGHTING:String = "DEFERREDLIGHTING";
 		/**渲染模式,前向渲染。*/
@@ -62,6 +73,8 @@ package laya.d3.core {
 		private var _orthographic:Boolean;
 		/**@private 正交投影的垂直尺寸。*/
 		private var _orthographicVerticalSize:Number;
+		/**@private 天空。*/
+		private var _sky:Sky;
 		
 		/**@private 是否使用用户自定义投影矩阵，如果使用了用户投影矩阵，摄像机投影矩阵相关的参数改变则不改变投影矩阵的值，需调用ResetProjectionMatrix方法。*/
 		protected var _useUserProjectionMatrix:Boolean;
@@ -77,8 +90,19 @@ package laya.d3.core {
 		public var clearColor:Vector4;
 		/** 可视遮罩图层。 */
 		public var cullingMask:int;
-		/**天空。*/
-		public var sky:Sky;
+		
+		/**获取天空。*/
+		public function get sky():Sky {
+			return _sky;
+		}
+		
+		/**设置天空。*/
+		public function set sky(value:Sky):void {
+			_sky = value;
+			if (conchModel) {//NATIVE
+				conchModel.setSkyMesh(_sky._conchSky);
+			}
+		}
 		
 		/**获取位置。*/
 		public function get position():Vector3 {
@@ -299,6 +323,7 @@ package laya.d3.core {
 		public function BaseCamera(nearPlane:Number = 0.1, farPlane:Number = 1000) {
 			_tempVector3 = new Vector3();
 			
+			_position = new Vector3();
 			_up = new Vector3();
 			_forward = new Vector3();
 			_right = new Vector3();
@@ -316,17 +341,21 @@ package laya.d3.core {
 			_farPlane = farPlane;
 			
 			cullingMask = 2147483647/*int.MAX_VALUE*/;
-			clearColor = new Vector4(0.26,0.26,0.26,1.0);
+			clearColor = new Vector4(0.26, 0.26, 0.26, 1.0);
 			clearFlag = BaseCamera.CLEARFLAG_SOLIDCOLOR;
 			_calculateProjectionMatrix();
 			Laya.stage.on(Event.RESIZE, this, _onScreenSizeChanged);
+		}
+		
+		override public function createConchModel():* {
+			return __JS__("new ConchCamera()");
 		}
 		
 		/**
 		 * 通过RenderingOrder属性对摄像机机型排序。
 		 */
 		public function _sortCamerasByRenderingOrder():void {
-			if (isInStage) {
+			if (_displayedInStage) {
 				var cameraPool:Vector.<BaseCamera> = scene._cameraPool;//TODO:可优化，从队列中移除再加入
 				var n:int = cameraPool.length - 1;
 				for (var i:int = 0; i < n; i++) {
@@ -345,6 +374,18 @@ package laya.d3.core {
 		
 		private function _onScreenSizeChanged():void {
 			_calculateProjectionMatrix();
+		}
+		
+		/**
+		 * @private
+		 * 场景相关渲染准备设置。
+		 * @param gl WebGL上下文。
+		 * @return state 渲染状态。
+		 */
+		public function _prepareCameraToRender():void {
+			Layer._currentCameraCullingMask = cullingMask;
+			var cameraSV:ValusArray = _shaderValues;
+			cameraSV.setValue(BaseCamera.CAMERAPOS, transform.position.elements);
 		}
 		
 		/**
@@ -472,12 +513,15 @@ package laya.d3.core {
 			if (cmaeraCount > 0) {
 				for (var i:int = cmaeraCount - 1; i >= 0; i--) {
 					if (this.renderingOrder <= cameraPool[i].renderingOrder) {
-						cameraPool.splice(i+1, 0, this);
+						cameraPool.splice(i + 1, 0, this);
 						break;
 					}
 				}
 			} else {
 				cameraPool.push(this);
+				if (scene.conchModel) {//NATIVE
+					scene.conchModel.setCurrentCamera(conchModel);
+				}
 			}
 		}
 		

@@ -19,6 +19,7 @@ package laya.display {
 	/**
 	 * 舞台获得焦点时调度。比如浏览器或者当前标签被切换到后台后，重新切换回来时。
 	 * @eventType Event.FOCUS
+	 *
 	 */
 	[Event(name = "focus", type = "laya.events.Event")]
 	/**
@@ -26,6 +27,16 @@ package laya.display {
 	 * @eventType Event.BLUR
 	 */
 	[Event(name = "blur", type = "laya.events.Event")]
+	/**
+	 * 舞台焦点变化时调度，使用Laya.stage.isFocused可以获取当前舞台是否获得焦点。
+	 * @eventType Event.FOCUS_CHANGE
+	 */
+	[Event(name = "focuschange", type = "laya.events.Event")]
+	/**
+	 * 舞台可见性发生变化时调度（比如浏览器或者当前标签被切换到后台后调度），使用Laya.stage.isVisibility可以获取当前是否处于显示状态。
+	 * @eventType Event.VISIBILITY_CHANGE
+	 */
+	[Event(name = "visibilitychange", type = "laya.events.Event")]
 	/**
 	 * 浏览器全屏更改时调度，比如进入全屏或者退出全屏。
 	 * @eventType Event.FULL_SCREEN_CHANGE
@@ -78,13 +89,15 @@ package laya.display {
 		public static const FRAME_SLOW:String = "slow";
 		/**自动模式，以30的帧率运行，但鼠标活动后会自动加速到60，鼠标不动2秒后降低为30帧，以节省消耗。*/
 		public static const FRAME_MOUSE:String = "mouse";
+		/**休眠模式，以1的帧率运行*/
+		public static const FRAME_SLEEP:String = "sleep";
 		
 		/**当前焦点对象，此对象会影响当前键盘事件的派发主体。*/
 		public var focus:Node;
-		/**@private 相对浏览器左上角的偏移。*/
+		/**@private 相对浏览器左上角的偏移，弃用，请使用_canvasTransform。*/
 		public var offset:Point = new Point();
-		/**@private 开发者自己设置的画布偏移*/
-		private var _offset:Point;
+		///**@private 开发者自己设置的画布偏移*/
+		//private var _offset:Point;
 		/**帧率类型，支持三种模式：fast-60帧(默认)，slow-30帧，mouse-30帧，但鼠标活动后会自动加速到60，鼠标不动2秒后降低为30帧，以节省消耗。*/
 		public var frameRate:String = "fast";
 		/**设计宽度（初始化时设置的宽度Laya.init(width,height)）*/
@@ -118,21 +131,36 @@ package laya.display {
 		private var _safariOffsetY:Number = 0;
 		/**@private */
 		private var _frameStartTime:Number;
+		/**@private */
 		private var _previousOrientation:int;
+		/**@private */
+		private var _isFocused:Boolean;
+		/**@private */
+		private var _isVisibility:Boolean;
+		/**@private 3D场景*/
+		public var _scenes:Array;
 		
 		public function Stage() {
+			transform = Matrix.create();
+			_scenes = [];
 			this.mouseEnabled = true;
 			this.hitTestPrior = true;
+			this.autoSize = false;
 			this._displayedInStage = true;
+			this._isFocused = true;
 			
 			var _this:Stage = this;
 			var window:* = Browser.window;
 			
 			window.addEventListener("focus", function():void {
+				_isFocused = true;
 				_this.event(Event.FOCUS);
+				_this.event(Event.FOCUS_CHANGE);
 			});
 			window.addEventListener("blur", function():void {
+				_isFocused = false;
 				_this.event(Event.BLUR);
+				_this.event(Event.FOCUS_CHANGE);
 				if (_this._isInputting()) Input["inputElement"].target.focus = false;
 			});
 			// 各种浏览器兼容
@@ -155,27 +183,27 @@ package laya.display {
 			window.document.addEventListener(visibilityChange, visibleChangeFun);
 			function visibleChangeFun():void {
 				if (Browser.document[state] == "hidden") {
-					_this.event(Event.BLUR);
+					_isVisibility = false;
 					if (_this._isInputting()) Input["inputElement"].target.focus = false;
 				} else {
-					_this.event(Event.FOCUS);
+					_isVisibility = true;
 				}
+				_this.event(Event.VISIBILITY_CHANGE);
 			}
 			window.addEventListener("resize", function():void {
 				// 处理屏幕旋转。旋转后收起输入法。
 				var orientation:* = Browser.window.orientation;
-				if (orientation != null && orientation != _previousOrientation && _this._isInputting())
-				{
+				if (orientation != null && orientation != _previousOrientation && _this._isInputting()) {
 					Input["inputElement"].target.focus = false;
 				}
 				_previousOrientation = orientation;
-					
+				
 				// 弹出输入法不应对画布进行resize。
 				if (_this._isInputting()) return;
 				
 				// Safari横屏工具栏偏移
 				if (Browser.onSafari)
-					_this._safariOffsetY = (Browser.document.body.clientHeight || Browser.document.documentElement.clientHeight) - Browser.window.innerHeight;
+					_this._safariOffsetY = (Browser.window.__innerHeight || Browser.document.body.clientHeight || Browser.document.documentElement.clientHeight) - Browser.window.innerHeight;
 				
 				_this._resetCanvas();
 			});
@@ -208,6 +236,20 @@ package laya.display {
 			Laya.timer.callLater(this, _changeCanvasSize);
 		}
 		
+		/**
+		 *舞台是否获得焦点。
+		 */
+		public function get isFocused():Boolean {
+			return _isFocused;
+		}
+		
+		/**
+		 *舞台是否处于可见状态。
+		 */
+		public function get isVisibility():Boolean {
+			return _isVisibility;
+		}
+		
 		/** @private */
 		private function _changeCanvasSize():void {
 			setScreenSize(Browser.clientWidth * Browser.pixelRatio, Browser.clientHeight * Browser.pixelRatio);
@@ -219,7 +261,7 @@ package laya.display {
 			var canvasStyle:* = canvas.source.style;
 			canvas.size(1, 1);
 			canvasStyle.transform = canvasStyle.webkitTransform = canvasStyle.msTransform = canvasStyle.mozTransform = canvasStyle.oTransform = "";
-			_style.visible = false;
+			visible = false;
 			Laya.timer.once(100, this, this._changeCanvasSize);
 		}
 		
@@ -236,8 +278,7 @@ package laya.display {
 				rotation = screenType !== _screenMode;
 				/*[IF-FLASH]*/
 				rotation = false;
-				if (rotation)
-				{
+				if (rotation) {
 					//宽高互换
 					var temp:Number = screenHeight;
 					screenHeight = screenWidth;
@@ -298,12 +339,11 @@ package laya.display {
 			scaleX *= this.scaleX;
 			scaleY *= this.scaleY;
 			if (scaleX === 1 && scaleY === 1) {
-				transform && transform.identity();
+				transform.identity();
 			} else {
-				transform || (transform = new Matrix());
-				transform.a = scaleX / (realWidth / canvasWidth);
-				transform.d = scaleY / (realHeight / canvasHeight);
-				model && model.scale(transform.a, transform.d);//由于上面的两句通知不到微端
+				transform.a = _formatData(scaleX / (realWidth / canvasWidth));
+				transform.d = _formatData(scaleY / (realHeight / canvasHeight));
+				conchModel && conchModel.scale(transform.a, transform.d);//由于上面的两句通知不到微端
 			}
 			
 			//处理canvas大小			
@@ -321,17 +361,17 @@ package laya.display {
 			else if (_alignV === ALIGN_BOTTOM) offset.y = screenHeight - realHeight;
 			else offset.y = (screenHeight - realHeight) * 0.5 / pixelRatio;
 			
-			//处理用户自行设置的画布偏移
-			if (!_offset) {
-				_offset = new Point(parseInt(canvasStyle.left) || 0, parseInt(canvasStyle.top) || 0);
-				canvasStyle.left = canvasStyle.top = "0px";
-			}
-			offset.x += _offset.x;
-			offset.y += _offset.y;
+			////处理用户自行设置的画布偏移
+			//if (!_offset) {
+			//_offset = new Point(parseInt(canvasStyle.left) || 0, parseInt(canvasStyle.top) || 0);
+			//canvasStyle.left = canvasStyle.top = "0px";
+			//}
+			//offset.x += _offset.x;
+			//offset.y += _offset.y;
 			offset.x = Math.round(offset.x);
 			offset.y = Math.round(offset.y);
-			canvasStyle.top = _safariOffsetY + "px";
 			mat.translate(offset.x, offset.y);
+			if (_safariOffsetY && parseInt(canvasStyle.top) === 0) canvasStyle.top = _safariOffsetY + "px";
 			
 			//处理横竖屏
 			canvasDegree = 0;
@@ -347,14 +387,27 @@ package laya.display {
 				}
 			}
 			
-			if (mat.a < 0.00000000000001) mat.a = mat.d = 0;
-			if (mat.tx < 0.00000000000001) mat.tx = 0;
-			if (mat.ty < 0.00000000000001) mat.ty = 0;
+			mat.a = _formatData(mat.a);
+			mat.d = _formatData(mat.d);
+			mat.tx = _formatData(mat.tx);
+			mat.ty = _formatData(mat.ty);
+			//if (Math.abs(mat.a) < 0.00000001) mat.a = mat.d = 0;
+			//if (Math.abs(mat.tx) < 0.00000001) mat.tx = 0;
+			//if (Math.abs(mat.ty) < 0.00000001) mat.ty = 0;
 			canvasStyle.transformOrigin = canvasStyle.webkitTransformOrigin = canvasStyle.msTransformOrigin = canvasStyle.mozTransformOrigin = canvasStyle.oTransformOrigin = "0px 0px 0px";
 			canvasStyle.transform = canvasStyle.webkitTransform = canvasStyle.msTransform = canvasStyle.mozTransform = canvasStyle.oTransform = "matrix(" + mat.toString() + ")";
-			_style.visible = true;
+			//修正用户自行设置的偏移
+			//var rect:* = canvas.source.getBoundingClientRect();
+			mat.translate(parseInt(canvasStyle.left) || 0, parseInt(canvasStyle.top) || 0);
+			visible = true;
 			_repaint = 1;
 			event(Event.RESIZE);
+		}
+		
+		private function _formatData(value:Number):Number {
+			if (Math.abs(value) < 0.000001) return 0;
+			if (Math.abs(1 - value) < 0.001) return value > 0 ? 1 : -1;
+			return value;
 		}
 		
 		/**
@@ -421,7 +474,7 @@ package laya.display {
 		
 		public function set bgColor(value:String):void {
 			_bgColor = value;
-			model && model.bgColor(value);
+			conchModel && conchModel.bgColor(value);
 			if (value) {
 				Render.canvas.style.background = value;
 			} else {
@@ -498,17 +551,38 @@ package laya.display {
 			return Browser.now() - _frameStartTime;
 		}
 		
+		public override function set visible(value:Boolean):void {
+			if (this.visible !== value) {
+				super.visible = value;
+				var style:* = Render._mainCanvas.source.style;
+				style.visibility = value ? "visible" : "hidden";
+			}
+		}
+		
 		/**@inheritDoc */
 		override public function render(context:RenderContext, x:Number, y:Number):void {
-			_frameStartTime = Browser.now();
-			Render.isFlash && repaint();
+			if (frameRate === FRAME_SLEEP) {
+				var now:Number = Browser.now();
+				if (now - _frameStartTime >= 1000) _frameStartTime = now;
+				else return;
+			}
 			
 			_renderCount++;
+			Render.isFlash && repaint();
 			
+			if (!visible) {
+				if (_renderCount % 5 === 0) {
+					Stat.loopCount++;
+					MouseManager.instance.runEvent();
+					Laya.timer._update();
+				}
+				return;
+			}
+			
+			_frameStartTime = Browser.now();
 			var frameMode:String = frameRate === FRAME_MOUSE ? (((_frameStartTime - _mouseMoveTime) < 2000) ? FRAME_FAST : FRAME_SLOW) : frameRate;
 			var isFastMode:Boolean = (frameMode !== FRAME_SLOW);
 			var isDoubleLoop:Boolean = (_renderCount % 2 === 0);
-			var ctx:* = context;
 			
 			Stat.renderSlow = !isFastMode;
 			
@@ -516,26 +590,39 @@ package laya.display {
 				Stat.loopCount++;
 				MouseManager.instance.runEvent();
 				Laya.timer._update();
-				if (Render.isConchNode) {
+				
+				var i:int, n:int;
+				for (i = 0, n = _scenes.length; i < n; i++) {
+					var scene:* = _scenes[i];
+					(scene) && (scene._updateScene());
+				}
+				
+				if (Render.isConchNode) {//NATIVE
 					var customList:Array = Sprite.CustomList;
-					for (var i:Number = 0, n:Number = customList.length; i < n; i++) {
-						customList[i].customRender(customList[i].customContext, 0, 0);
+					for (i = 0, n = customList.length; i < n; i++) {
+						var customItem:* = customList[i];
+						customItem.customRender(customItem.customContext, 0, 0);
 					}
 					return;
 				}
-				if (renderingEnabled && _style.visible) {
-					Render.isWebGL ? ctx.clear() : RunDriver.clear(_bgColor);
+				if (Render.isWebGL && renderingEnabled) {
+					context.clear();
 					super.render(context, x, y);
 				}
 			}
-			if (Render.isConchNode) return;
-			if (renderingEnabled && _style.visible && (isFastMode || !isDoubleLoop)) {
-				Render.isWebGL && RunDriver.clear(_bgColor);
-				RunDriver.beginFlush();
-				context.flush();
-				RunDriver.endFinish();
+			if (Render.isConchNode) return;//NATIVE
+			if (renderingEnabled && (isFastMode || !isDoubleLoop)) {
+				if (Render.isWebGL) {
+					RunDriver.clear(_bgColor);
+					RunDriver.beginFlush();
+					context.flush();
+					RunDriver.endFinish();
+					VectorGraphManager.instance && VectorGraphManager.getInstance().endDispose();
+				} else {
+					RunDriver.clear(_bgColor);
+					super.render(context, x, y);
+				}
 			}
-			VectorGraphManager.instance && VectorGraphManager.getInstance().endDispose();
 		}
 		
 		/**是否开启全屏，用户点击后进入全屏*/

@@ -38,6 +38,11 @@ package laya.ani.bone {
 		private var _diyTexture:Texture;
 		private var _parentMatrix:Matrix;
 		private var _resultMatrix:Matrix;//只有不使用缓冲时才使用
+		/** 索引替换表 */
+		private var _replaceDic:Object = { };
+		/** 当前diyTexture的动画纹理 */
+		private var _curDiyUV:Array;
+		private var _curDiyVS:Array;
 		
 		/** 实时模式下，复用使用 */
 		private var _skinSprite:*;
@@ -48,9 +53,11 @@ package laya.ani.bone {
 		 * 设置要显示的插槽数据
 		 * @param	slotData
 		 * @param	disIndex
+		 * @param	freshIndex 是否重置纹理
 		 */
-		public function showSlotData(slotData:SlotData):void {
+		public function showSlotData(slotData:SlotData,freshIndex:Boolean=true):void {
 			currSlotData = slotData;
+			if(freshIndex)
 			displayIndex = srcDisplayIndex;
 			currDisplayData = null;
 			currTexture = null;
@@ -68,10 +75,41 @@ package laya.ani.bone {
 		}
 		
 		/**
+		 * 替换贴图名
+		 * @param	tarName 要替换的贴图名
+		 * @param	newName 替换后的贴图名
+		 */
+		public function replaceDisplayByName(tarName:String, newName:String):void
+		{
+			if (!currSlotData) return;
+			var preIndex:int;
+			preIndex = currSlotData.getDisplayByName(tarName);
+			var newIndex:int;
+			newIndex = currSlotData.getDisplayByName(newName);
+			replaceDisplayByIndex(preIndex, newIndex);
+		}
+		
+		/**
+		 * 替换贴图索引
+		 * @param	tarIndex 要替换的索引
+		 * @param	newIndex 替换后的索引
+		 */
+		public function replaceDisplayByIndex(tarIndex:int, newIndex:int):void
+		{
+			if (!currSlotData) return;
+			_replaceDic[tarIndex] = newIndex;
+			if (displayIndex == tarIndex)
+			{
+				showDisplayByIndex(tarIndex);
+			}
+		}
+		
+		/**
 		 * 指定显示对象
 		 * @param	index
 		 */
 		public function showDisplayByIndex(index:int):void {
+			if (_replaceDic[index]) index = _replaceDic[index];
 			if (currSlotData && index > -1 && index < currSlotData.displayArr.length) {
 				displayIndex = index;
 				currDisplayData = currSlotData.displayArr[index];
@@ -90,12 +128,14 @@ package laya.ani.bone {
 			}
 		}
 		
+		
 		/**
 		 * 替换皮肤
 		 * @param	_texture
 		 */
 		public function replaceSkin(_texture:Texture):void {
 			_diyTexture = _texture;
+			if (_curDiyUV) _curDiyUV.length = 0;
 		}
 		
 		/**
@@ -106,6 +146,8 @@ package laya.ani.bone {
 			_parentMatrix = parentMatrix;
 		}
 		
+		private var _mVerticleArr:Array;
+		private static var _tempMatrix:Matrix = new Matrix();
 		/**
 		 * 把纹理画到Graphics上
 		 * @param	graphics
@@ -118,7 +160,6 @@ package laya.ani.bone {
 					return;
 				}
 			}
-			
 			var tTexture:Texture = currTexture;
 			if (_diyTexture) tTexture = _diyTexture;
 			var tSkinSprite:*;
@@ -137,9 +178,10 @@ package laya.ani.bone {
 								} else {
 									tResultMatrix = new Matrix();
 								}
-								if ((!Render.isWebGL && currDisplayData.uvs) || (Render.isWebGL && _diyTexture))
+								if ((!Render.isWebGL && currDisplayData.uvs) || (Render.isWebGL && _diyTexture && currDisplayData.uvs))
 								{
-									var tTestMatrix:Matrix = new Matrix(1, 0, 0, 1);
+									var tTestMatrix:Matrix = _tempMatrix;
+									tTestMatrix.identity();
 									//判断是否反转
 									if (currDisplayData.uvs[1] > currDisplayData.uvs[5])
 									{
@@ -179,13 +221,11 @@ package laya.ani.bone {
 					{
 						return;
 					}
-					var tVBArray:Array = [];
-					var tIBArray:Array = [];
+					var tIBArray:Array ;
 					var tRed:Number = 1;
 					var tGreed:Number = 1;
 					var tBlue:Number = 1;
 					var tAlpha:Number = 1;
-					
 					if (currDisplayData.bones == null)
 					{
 						var tVertices:Array = currDisplayData.weights;
@@ -193,20 +233,31 @@ package laya.ani.bone {
 						{
 							tVertices = deformData;
 						}
-						for (var i:int = 0,ii:int = 0; i < tVertices.length && ii< currDisplayData.uvs.length;)
+						var tUVs:Array;				
+						if (_diyTexture)
 						{
-							var tX:Number = tVertices[i++];
-							var tY:Number = tVertices[i++];
-							tVBArray.push(tX, tY, currDisplayData.uvs[ii++], currDisplayData.uvs[ii++], tRed, tGreed, tBlue, tAlpha);
+							if (!_curDiyUV)
+							{
+								_curDiyUV = [];
+							}
+							if (_curDiyUV.length == 0)
+							{
+								_curDiyUV = UVTools.getRelativeUV(this.currTexture.uv, currDisplayData.uvs,_curDiyUV);
+								_curDiyUV = UVTools.getAbsoluteUV(this._diyTexture.uv, _curDiyUV, _curDiyUV);
+							}
+							tUVs = _curDiyUV;
+						}else
+						{
+							tUVs = currDisplayData.uvs;
 						}
+						
+						_mVerticleArr = tVertices;
 						var tTriangleNum:int = currDisplayData.triangles.length / 3;
-						for (i = 0; i < tTriangleNum; i++)
-						{
-							tIBArray.push(currDisplayData.triangles[i * 3]);
-							tIBArray.push(currDisplayData.triangles[i * 3 + 1]);
-							tIBArray.push(currDisplayData.triangles[i * 3 + 2]);
-						}
-						tSkinSprite.init(currTexture, tVBArray, tIBArray);
+	
+						tIBArray = currDisplayData.triangles;
+
+						tSkinSprite.init2(tTexture, null , tIBArray,_mVerticleArr,tUVs);
+						
 						var tCurrentMatrix2:Matrix = getDisplayMatrix();
 						if (_parentMatrix) {
 							if (tCurrentMatrix2) {
@@ -255,11 +306,27 @@ package laya.ani.bone {
 		private function skinMesh(boneMatrixArray:Array,skinSprite:*,alpha:Number):void
 		{
 			var tBones:Array = currDisplayData.bones;
-			var tUvs:Array = currDisplayData.uvs;
+			var tUvs:Array;				
+			if (_diyTexture)
+			{
+				if (!_curDiyUV)
+				{
+					_curDiyUV = [];
+				}
+				if (_curDiyUV.length == 0)
+				{
+					_curDiyUV = UVTools.getRelativeUV(this.currTexture.uv, currDisplayData.uvs,_curDiyUV);
+					_curDiyUV = UVTools.getAbsoluteUV(this._diyTexture.uv, _curDiyUV, _curDiyUV);
+				}
+				tUvs = _curDiyUV;
+			}else
+			{
+				tUvs = currDisplayData.uvs;
+			}
+			
 			var tWeights:Array = currDisplayData.weights;
 			var tTriangles:Array = currDisplayData.triangles;
-			var tVBArray:Array = [];
-			var tIBArray:Array = [];
+			var tIBArray:Array ;
 			var tRx:Number = 0;
 			var tRy:Number = 0;
 			var nn:int = 0;
@@ -268,7 +335,7 @@ package laya.ani.bone {
 			var tY:Number;
 			var tB:Number = 0;
 			var tWeight:Number = 0;
-			var tVertices:Vector.<Number> = new Vector.<Number>();
+			var tVertices:Array = [];
 			var i:int = 0, j:int = 0, n:int = 0;
 			var tRed:Number = 1;
 			var tGreed:Number = 1;
@@ -310,17 +377,9 @@ package laya.ani.bone {
 					tVertices.push(tRx, tRy);
 				}
 			}
-			for (i = 0, j = 0; i < tVertices.length && j < tUvs.length; )
-			{
-				tRx = tVertices[i++];
-				tRy = tVertices[i++];
-				tVBArray.push(tRx, tRy, tUvs[j++], tUvs[j++], tRed, tGreed, tBlue, tAlpha);
-			}
-			for (i = 0, n = tTriangles.length; i < n; i++)
-			{
-				tIBArray.push(tTriangles[i]);
-			}
-			skinSprite.init(currTexture, tVBArray, tIBArray);
+			_mVerticleArr = tVertices;
+			tIBArray = tTriangles;
+			skinSprite.init2(currTexture, null, tIBArray, _mVerticleArr,tUvs);
 		}
 		
 		/**

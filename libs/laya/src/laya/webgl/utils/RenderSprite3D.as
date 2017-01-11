@@ -54,17 +54,21 @@ package laya.webgl.utils {
 			scope.recycle();
 		}
 		
-		override public function _blend(sprite:Sprite, context:RenderContext, x:Number, y:Number):void {
-			var style:Style = sprite._style;
+		override public function _mask(sprite:Sprite, context:RenderContext, x:Number, y:Number):void
+		{
 			var next:RenderSprite = this._next;
 			var mask:Sprite = sprite.mask;
 			var submitCMD:SubmitCMD;
 			var submitStencil:SubmitStencil;
-			context.ctx.save();
 			if (mask) {
+			    context.ctx.save();
 				var preBlendMode:String = (context.ctx as WebGLContext2D).globalCompositeOperation;
 				var tRect:Rectangle = new Rectangle();
 				tRect.copyFrom(mask.getBounds());
+				tRect.width=Math.round(tRect.width);
+				tRect.height=Math.round(tRect.height);
+				tRect.x=Math.round(tRect.x);
+				tRect.y=Math.round(tRect.y);
 				if (tRect.width > 0 && tRect.height > 0) {
 					var scope:SubmitCMDScope = SubmitCMDScope.create();
 					scope.addValue("bounds", tRect);
@@ -85,20 +89,61 @@ package laya.webgl.utils {
 					context.addRenderObject(submitStencil);
 					Matrix.TEMP.identity();
 					var shaderValue:Value2D = Value2D.create(ShaderDefines2D.TEXTURE2D, 0);
-					(context.ctx as WebGLContext2D).drawTarget(scope, x + tRect.x, y + tRect.y, tRect.width, tRect.height, Matrix.TEMP, "tmpTarget", shaderValue, Texture.INV_UV, 6);
+					var uv:Array = Texture.INV_UV;
+					var w:Number = tRect.width;
+					var h:Number = tRect.height;
+					//这个地方代码不要删除，为了解决在iphone6-plus上的诡异问题
+					//renderTarget + StencilBuffer + renderTargetSize < 32 就会变得超级卡
+					//所以增加的限制。王亚伟
+					const tempLimit:Number = 32;
+					if ( tRect.width < tempLimit || tRect.height < tempLimit )
+					{
+						uv = new Array(8);
+						uv[0] = 0;
+						uv[1] = 0;
+						uv[2] = ( tRect.width >= 32 ) ? 1 : tRect.width/tempLimit;
+						uv[3] = 0
+						uv[4] = ( tRect.width >= 32 ) ? 1 : tRect.width/tempLimit;
+						uv[5] = ( tRect.height >= 32 ) ? 1 : tRect.height/tempLimit;
+						uv[6] = 0;
+						uv[7] = ( tRect.height >= 32 ) ? 1 : tRect.height/tempLimit;
+						
+						tRect.width = ( tRect.width >= 32 ) ? tRect.width : tempLimit;
+						tRect.height = ( tRect.height >= 32 ) ? tRect.height : tempLimit;
+						uv[1] *= -1; uv[3] *= -1; uv[5] *= -1; uv[7] *= -1;
+						uv[1] += 1;uv[3] += 1;uv[5] += 1;uv[7] += 1;
+					}
+					
+					(context.ctx as WebGLContext2D).drawTarget(scope, x + tRect.x, y + tRect.y, w, h, Matrix.TEMP, "tmpTarget", shaderValue, uv, 6);
 					submitCMD = SubmitCMD.create([scope], RenderSprite3D.recycleTarget);
 					context.addRenderObject(submitCMD);
 					submitStencil = SubmitStencil.create(6);
 					submitStencil.blendMode = preBlendMode;
 					context.addRenderObject(submitStencil);
 				}
-			} else {
-				context.ctx.globalCompositeOperation = style.blendMode;
-				next = this._next;
+				context.ctx.restore();
+			}
+			else
+			{
 				next._fun.call(next, sprite, context, x, y);
 			}
-			context.ctx.restore();
+			
+		}
 		
+		override public function _blend(sprite:Sprite, context:RenderContext, x:Number, y:Number):void {
+			var style:Style = sprite._style;
+			var next:RenderSprite = this._next;
+			if (style.blendMode)
+			{
+				context.ctx.save();
+				context.ctx.globalCompositeOperation = style.blendMode;
+				next._fun.call(next, sprite, context, x, y);
+				context.ctx.restore();
+			}
+			else
+			{
+				next._fun.call(next, sprite, context, x, y);
+			}
 		}
 		
 		override public function _transform(sprite:Sprite, context:RenderContext, x:Number, y:Number):void {
@@ -113,10 +158,10 @@ package laya.webgl.utils {
 				var m1:Matrix = m2.clone();
 				Matrix.mul(transform, m2, m2);
 				m2._checkTransform();
+				transform.tx = transform.ty = 0;
 				_next._fun.call(_next, sprite, context, 0, 0);
 				m1.copyTo(m2);
 				m1.destroy();
-				transform.tx = transform.ty = 0;
 			} else {
 				_next._fun.call(_next, sprite, context, x, y);
 			}

@@ -29,6 +29,7 @@ package laya.resource {
 		/**@private */
 		private static var _rect2:Rectangle =/*[STATIC SAFE]*/ new Rectangle();
 		
+		
 		/** 图片或者canvas 。*/
 		public var bitmap:*;
 		/** UV信息。*/
@@ -208,10 +209,9 @@ package laya.resource {
 					}
 				}
 				bitmap = null;
-				if (url && this === Laya.loader.getRes(url)) Laya.loader.clearRes(url);
+				if (url && this === Laya.loader.getRes(url)) Laya.loader.clearRes(url,forceDispose);
 				_loaded = false;
 			}
-			//uv = null;
 		}
 		
 		/** 实际宽度。*/
@@ -287,9 +287,7 @@ package laya.resource {
 		public function load(url:String):void {
 			_loaded = false;
 			var fileBitmap:FileBitmap = (this.bitmap || (this.bitmap = HTMLImage.create(URL.formatURL(url)))) as FileBitmap;//WebGl模式被自动替换为WebGLImage
-			if (fileBitmap) {
-				fileBitmap.useNum++;
-			}
+			if (fileBitmap) fileBitmap.useNum++;
 			var _this:Texture = this;
 			fileBitmap.onload = function():void {
 				fileBitmap.onload = null;
@@ -315,16 +313,21 @@ package laya.resource {
 		 * @return  返回像素点集合
 		 */
 		public function getPixels(x:Number, y:Number, width:Number, height:Number):Array {
-			if (Render.isWebGL)
-			{
+			if (Render.isWebGL) {
 				return RunDriver.getTexturePixels(this, x, y, width, height);
-			}else {
-				Browser.canvas.size(x+width, y+height);
-				Browser.context.drawImage(bitmap.source, 0, 0);
-				var info:* = Browser.context.getImageData(x, y, width, height);
+			} else {
+				Browser.canvas.size(width, height);
+				Browser.canvas.clear();
+				Browser.context.drawTexture(this, -x, -y, this.width, this.height, 0, 0);
+				var info:* = Browser.context.getImageData(0, 0, width, height);
 			}
-			
 			return info.data;
+		}
+		
+		/**@private */
+		public function onAsynLoaded(url:String, bitmap:Bitmap):void {
+			if (bitmap) bitmap.useNum++;
+			setTo(bitmap, uv);
 		}
 	}
 }

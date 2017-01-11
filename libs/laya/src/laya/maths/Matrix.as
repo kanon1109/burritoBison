@@ -308,6 +308,85 @@ package laya.maths {
 			return out;
 		}
 		
+			/**
+		 * 将指定的两个矩阵相乘后的结果赋值给指定的输出数组长度为16。
+		 * @param	m1 矩阵一。
+		 * @param	m2 矩阵二。
+		 * @param	out 输出对象Array。
+		 * @return 结果输出对象 out。
+		 */
+		public static function mul16(m1:Matrix, m2:Matrix, out:Array):Array {
+			var aa:Number = m1.a, ab:Number = m1.b, ac:Number = m1.c, ad:Number = m1.d, atx:Number = m1.tx, aty:Number = m1.ty;
+			var ba:Number = m2.a, bb:Number = m2.b, bc:Number = m2.c, bd:Number = m2.d, btx:Number = m2.tx, bty:Number = m2.ty;
+			if (bb !== 0 || bc !== 0) {
+				out[0] = aa * ba + ab * bc;
+				out[1] = aa * bb + ab * bd;
+				out[4] = ac * ba + ad * bc;
+				out[5] = ac * bb + ad * bd;
+				out[12] = ba * atx + bc * aty + btx;
+				out[13] = bb * atx + bd * aty + bty;
+			} else {
+				out[0] = aa * ba;
+				out[1] = ab * bd;
+				out[4] = ac * ba;
+				out[5] = ad * bd;
+				out[12] = ba * atx + btx;
+				out[13] = bd * aty + bty;
+			}
+			return out;
+		}
+		
+		
+		/**
+		 * 对矩阵应用缩放转换。反向相乘
+		 * @param	x 用于沿 x 轴缩放对象的乘数。
+		 * @param	y 用于沿 y 轴缩放对象的乘数。
+		 */
+		public function scaleEx(x:Number, y:Number):void {
+			var ba:Number = this.a, bb:Number = this.b, bc:Number = this.c, bd:Number = this.d;
+			if (bb !== 0 || bc !== 0) {
+				this.a = x * ba;
+				this.b = x * bb;
+				this.c = y * bc;
+				this.d = y * bd;
+			}
+			else
+			{
+				this.a = x * ba;
+				this.b = 0 * bd;
+				this.c = 0 * ba;
+				this.d = y * bd;
+			}
+			bTransform = true;
+		}
+		
+		
+		
+		/**
+		 * 对 Matrix 对象应用旋转转换。反向相乘
+		 * @param	angle 以弧度为单位的旋转角度。
+		 */
+		public function rotateEx(angle:Number):void {
+		    var cos:Number = Math.cos(angle);
+			var sin:Number = Math.sin(angle);
+			var ba:Number = this.a, bb:Number = this.b, bc:Number = this.c, bd:Number = this.d;
+			if (bb !== 0 || bc !== 0) {
+				this.a = cos * ba + sin * bc;
+				this.b = cos * bb + sin * bd;
+				this.c = - sin * ba + cos * bc;
+				this.d = - sin * bb + cos * bd;
+			}
+			else
+			{
+				this.a = cos * ba;
+				this.b = sin * bd;
+				this.c = - sin * ba;
+				this.d = cos * bd;
+			}
+			bTransform = true;
+		}
+		
+		
 		/**@private */
 		public static function mulPre(m1:Matrix, ba:Number, bb:Number, bc:Number, bd:Number, btx:Number, bty:Number, out:Matrix):Matrix {
 			var aa:Number = m1.a, ab:Number = m1.b, ac:Number = m1.c, ad:Number = m1.d, atx:Number = m1.tx, aty:Number = m1.ty;

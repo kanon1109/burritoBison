@@ -56,7 +56,6 @@ package laya.media.webaudio {
 				this.gain = this.context["createGainNode"]();
 			}
 		}
-		
 		/**
 		 * 播放声音
 		 */
@@ -79,6 +78,7 @@ package laya.media.webaudio {
 			if (loops == 0) {
 				bufferSource.loop = true;
 			}
+			bufferSource.playbackRate.value = SoundManager.playbackRate;
 			bufferSource.start(0, this.startTime);
 			this._currentTime = 0;
 		}
@@ -111,6 +111,15 @@ package laya.media.webaudio {
 			}
 			return 0;
 		}
+		
+		override public function get duration():Number 
+		{
+			if (this.audioBuffer) {
+				return this.audioBuffer.duration;
+			}
+			return 0;
+		}
+		
 		private function _clearBufferSource():void
 		{
 			if (this.bufferSource) {

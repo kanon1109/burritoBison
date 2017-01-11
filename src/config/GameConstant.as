@@ -14,9 +14,9 @@ public class GameConstant
 	//游戏资源地址
 	public static const GAME_RES_PATH:String = "res/game/";
 	public static const GAME_IMG_PATH:String = GameConstant.GAME_RES_PATH + "img/";
-	public static const GAME_ATLAS_PATH:String = GameConstant.GAME_RES_PATH + "ani/atlas/";
-	public static const GAME_SWF_PATH:String = GameConstant.GAME_RES_PATH + "ani/swf/";
 	public static const GAME_ANI_PATH:String = GameConstant.GAME_RES_PATH + "ani/";
+	public static const GAME_ATLAS_PATH:String = GameConstant.GAME_ANI_PATH + "atlas/";
+	public static const GAME_BONES_PATH:String = GameConstant.GAME_ANI_PATH + "bones/";
 	//背景高宽
 	public static const BG1_WIDTH:int = 1758;
 	public static const BG1_HEIGHT:int = 636;

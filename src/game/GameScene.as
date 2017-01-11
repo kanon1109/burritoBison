@@ -5,6 +5,8 @@ import config.GameConstant;
 import config.MsgConstant;
 import game.obj.GameBackGround;
 import game.obj.Role;
+import laya.ani.bone.Skeleton;
+import laya.ani.bone.Templet;
 import laya.display.Sprite;
 import laya.events.Event;
 import laya.ui.Image;
@@ -76,20 +78,27 @@ public class GameScene extends View
 		this.initData();
 		this.initEvent();
 		this.initRole();
-		this.initBoss();
 		this.initBg();
 		this.initCloud();
 		this.initPowerMete();
+		this.initBoss();
 	}
 	
 	private function initBoss():void 
 	{
-		/*var boss:MovieClip = new MovieClip();
-		boss.load(GameConstant.GAME_SWF_PATH + "t.swf");
-		boss.width = 20;
-		boss.height = 20;
-		this.addChild(boss);*/
-		
+		var boss:Templet = new Templet();
+		boss.on(Event.COMPLETE, this, function(fac:Templet)
+		{
+			var ani:Skeleton = fac.buildArmature(0);
+			ani.play(0, true);
+			ani.x = 750;
+			ani.y = this.groundPosY - 78;
+			Layer.GAME_ROLE_LAYER.addChild(ani);
+		});
+		boss.on(Event.ERROR, this, function(e:*){
+			trace("load fail");
+		});
+		boss.loadAni(GameConstant.GAME_BONES_PATH + "boss1Ani.sk");
 	}
 	
 	private function initPowerMete():void 

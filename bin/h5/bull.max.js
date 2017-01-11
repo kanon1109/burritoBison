@@ -1,7 +1,7 @@
 var window = window || global;
 var document = document || (window.document = {});
 /***********************************/
-/*http://www.layabox.com 2016/11/11*/
+/*http://www.layabox.com 2016/11/25*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -23,10 +23,15 @@ var Laya=window.Laya=(function(window,document){
 		__extend:function(d,b){
 			for (var p in b){
 				if (!b.hasOwnProperty(p)) continue;
-				var g = Object.getOwnPropertyDescriptor(b, p).get, s = Object.getOwnPropertyDescriptor(b, p).set; 
+				var gs=Object.getOwnPropertyDescriptor(b, p);
+				var g = gs.get, s = gs.set; 
 				if ( g || s ) {
-					g && Object.defineProperty(d, p, g);
-					s && Object.defineProperty(d, p, s);
+					if ( g && s)
+						Object.defineProperty(d,p,gs);
+					else{
+						g && Object.defineProperty(d, p, g);
+						s && Object.defineProperty(d, p, s);
+					}
 				}
 				else d[p] = b[p];
 			}
@@ -198,6 +203,7 @@ var Laya=window.Laya=(function(window,document){
 	Laya.interface('laya.runtime.IConchNode');
 	Laya.interface('laya.filters.IFilterAction');
 	Laya.interface('laya.runtime.ICPlatformClass');
+	Laya.interface('laya.resource.ICreateResource');
 	/**
 	*@private
 	*/
@@ -217,7 +223,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		RunDriver.newWebGLContext=function(canvas,webGLName){
-			return canvas.getContext(webGLName,{stencil:true,alpha:false,antialias:Config.isAntialias,premultipliedAlpha:false});
+			return canvas.getContext(webGLName,{stencil:true,alpha:Config.isAlpha,antialias:Config.isAntialias,premultipliedAlpha:Config.premultipliedAlpha});
 		}
 
 		RunDriver.getPixelRatio=function(){
@@ -303,10 +309,6 @@ var Laya=window.Laya=(function(window,document){
 			return null;
 		}
 
-		RunDriver.fillTextureShader=function(value,x,y,width,height){
-			return null;
-		}
-
 		RunDriver.skinAniSprite=function(){
 			return null;
 		}
@@ -338,6 +340,8 @@ var Laya=window.Laya=(function(window,document){
 
 		Laya.init=function(width,height,__plugins){
 			var plugins=[];for(var i=2,sz=arguments.length;i<sz;i++)plugins.push(arguments[i]);
+			if (Laya._isinit)return;
+			Laya._isinit=true;
 			Browser.__init__();
 			Context.__init__();
 			Graphics.__init__();
@@ -351,7 +355,7 @@ var Laya=window.Laya=(function(window,document){
 			ResourceManager.__init__();
 			CacheManger.beginCheck();
 			Laya.stageBox=Laya.stage=new Stage();
-			Laya.stage.model&&Laya.stage.model.setRootNode();
+			Laya.stage.conchModel&&Laya.stage.conchModel.setRootNode();
 			var location=Browser.window.location;
 			var pathName=location.pathname;
 			pathName=pathName.charAt(2)==':' ? pathName.substring(1):pathName;
@@ -371,8 +375,9 @@ var Laya=window.Laya=(function(window,document){
 		Laya.timer=null;
 		Laya.loader=null;
 		Laya.render=null
-		Laya.version="1.5.2";
+		Laya.version="1.6.1Beta";
 		Laya.stageBox=null
+		Laya._isinit=false;
 		__static(Laya,
 		['conchMarket',function(){return this.conchMarket=window.conch?conchMarket:null;},'PlatformClass',function(){return this.PlatformClass=window.PlatformClass;}
 		]);
@@ -444,7 +449,7 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.ROLE_WIDTH=133;
 		GameConstant.ROLE_HEIGHT=98;
 		__static(GameConstant,
-		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH="res/game/"+"ani/atlas/";},'GAME_SWF_PATH',function(){return this.GAME_SWF_PATH="res/game/"+"ani/swf/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";}
+		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH=config.GameConstant.GAME_ANI_PATH+"atlas/";},'GAME_BONES_PATH',function(){return this.GAME_BONES_PATH=config.GameConstant.GAME_ANI_PATH+"bones/";}
 		]);
 		return GameConstant;
 	})()
@@ -472,6 +477,7 @@ var Laya=window.Laya=(function(window,document){
 		var EventHandler;
 		function EventDispatcher(){
 			this._events=null;
+			Object.defineProperty(this,"_events",{enumerable:false});
 		}
 
 		__class(EventDispatcher,'laya.events.EventDispatcher');
@@ -540,8 +546,10 @@ var Laya=window.Laya=(function(window,document){
 			return this._createListener(type,caller,listener,args,true);
 		}
 
-		__proto._createListener=function(type,caller,listener,args,once){
-			this.off(type,caller,listener,once);
+		/**@private */
+		__proto._createListener=function(type,caller,listener,args,once,offBefore){
+			(offBefore===void 0)&& (offBefore=true);
+			offBefore && this.off(type,caller,listener,once);
 			var handler=EventHandler.create(caller || this,listener,args,once);
 			this._events || (this._events={});
 			var events=this._events;
@@ -608,7 +616,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto._recoverHandlers=function(arr){
-			if(!arr)return;
+			if (!arr)return;
 			if (arr.run){
 				arr.recover();
 				}else {
@@ -999,7 +1007,1896 @@ var Laya=window.Laya=(function(window,document){
 		Config.GPUMemoryLimit=160 *1024 *1024;
 		Config.animationInterval=50;
 		Config.isAntialias=false;
+		Config.isAlpha=false;
+		Config.premultipliedAlpha=false;
 		return Config;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.AnimationState
+	var AnimationState=(function(){
+		function AnimationState(){}
+		__class(AnimationState,'laya.ani.AnimationState');
+		AnimationState.stopped=0;
+		AnimationState.paused=1;
+		AnimationState.playing=2;
+		return AnimationState;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.Bone
+	var Bone=(function(){
+		function Bone(){
+			this.name=null;
+			this.root=null;
+			this.parentBone=null;
+			this.length=10;
+			this.transform=null;
+			this.inheritScale=true;
+			this.inheritRotation=true;
+			this.rotation=NaN;
+			this.resultRotation=NaN;
+			this.d=-1;
+			this._tempMatrix=null;
+			this._sprite=null;
+			this.resultTransform=new Transform();
+			this.resultMatrix=new Matrix();
+			this._children=[];
+		}
+
+		__class(Bone,'laya.ani.bone.Bone');
+		var __proto=Bone.prototype;
+		__proto.setTempMatrix=function(matrix){
+			this._tempMatrix=matrix;
+			var i=0,n=0;
+			var tBone;
+			for (i=0,n=this._children.length;i < n;i++){
+				tBone=this._children[i];
+				tBone.setTempMatrix(this._tempMatrix);
+			}
+		}
+
+		__proto.update=function(pMatrix){
+			this.rotation=this.transform.skX;
+			var tResultMatrix;
+			if (pMatrix){
+				tResultMatrix=this.resultTransform.getMatrix();
+				Matrix.mul(tResultMatrix,pMatrix,this.resultMatrix);
+				this.resultRotation=this.rotation;
+			}
+			else {
+				this.resultRotation=this.rotation+this.parentBone.resultRotation;
+				if (this.parentBone){
+					if (this.inheritRotation && this.inheritScale){
+						tResultMatrix=this.resultTransform.getMatrix();
+						Matrix.mul(tResultMatrix,this.parentBone.resultMatrix,this.resultMatrix);
+					}
+					else {
+						var temp=0;
+						var parent=this.parentBone;
+						var tAngle=NaN;
+						var cos=NaN;
+						var sin=NaN;
+						var tParentMatrix=this.parentBone.resultMatrix;
+						tResultMatrix=this.resultTransform.getMatrix();
+						var worldX=tParentMatrix.a *tResultMatrix.tx+tParentMatrix.c *tResultMatrix.ty+tParentMatrix.tx;
+						var worldY=tParentMatrix.b *tResultMatrix.tx+tParentMatrix.d *tResultMatrix.ty+tParentMatrix.ty;
+						var tTestMatrix=new Matrix();
+						if (this.inheritRotation){
+							tAngle=Math.atan2(parent.resultMatrix.b,parent.resultMatrix.a);
+							cos=Math.cos(tAngle),sin=Math.sin(tAngle);
+							tTestMatrix.setTo(cos,sin,-sin,cos,0,0);
+							Matrix.mul(this._tempMatrix,tTestMatrix,Matrix.TEMP);
+							Matrix.TEMP.copyTo(tTestMatrix);
+							tResultMatrix=this.resultTransform.getMatrix();
+							Matrix.mul(tResultMatrix,tTestMatrix,this.resultMatrix);
+							this.resultMatrix.tx=worldX;
+							this.resultMatrix.ty=worldY;
+						}
+						else if (this.inheritScale){
+							tResultMatrix=this.resultTransform.getMatrix();
+							Matrix.TEMP.identity();
+							Matrix.TEMP.d=this.d;
+							Matrix.mul(tResultMatrix,Matrix.TEMP,this.resultMatrix);
+							this.resultMatrix.tx=worldX;
+							this.resultMatrix.ty=worldY;
+						}
+						else {
+							tResultMatrix=this.resultTransform.getMatrix();
+							Matrix.TEMP.identity();
+							Matrix.TEMP.d=this.d;
+							Matrix.mul(tResultMatrix,Matrix.TEMP,this.resultMatrix);
+							this.resultMatrix.tx=worldX;
+							this.resultMatrix.ty=worldY;
+						}
+					}
+				}
+				else {
+					tResultMatrix=this.resultTransform.getMatrix();
+					tResultMatrix.copyTo(this.resultMatrix);
+				}
+			};
+			var i=0,n=0;
+			var tBone;
+			for (i=0,n=this._children.length;i < n;i++){
+				tBone=this._children[i];
+				tBone.update();
+			}
+		}
+
+		__proto.updateChild=function(){
+			var i=0,n=0;
+			var tBone;
+			for (i=0,n=this._children.length;i < n;i++){
+				tBone=this._children[i];
+				tBone.update();
+			}
+		}
+
+		__proto.setRotation=function(rd){
+			if (this._sprite){
+				this._sprite.rotation=rd *180 / Math.PI;
+			}
+		}
+
+		__proto.updateDraw=function(x,y){
+			if (!Bone.ShowBones || Bone.ShowBones[this.name]){
+				if (this._sprite){
+					this._sprite.x=x+this.resultMatrix.tx;
+					this._sprite.y=y+this.resultMatrix.ty;
+				}
+				else {
+					this._sprite=new Sprite();
+					this._sprite.graphics.drawCircle(0,0,5,"#ff0000");
+					this._sprite.graphics.drawLine(0,0,this.length,0,"#00ff00");
+					this._sprite.graphics.fillText(this.name,0,0,"20px Arial","#00ff00","center");
+					Laya.stage.addChild(this._sprite);
+					this._sprite.x=x+this.resultMatrix.tx;
+					this._sprite.y=y+this.resultMatrix.ty;
+				}
+			};
+			var i=0,n=0;
+			var tBone;
+			for (i=0,n=this._children.length;i < n;i++){
+				tBone=this._children[i];
+				tBone.updateDraw(x,y);
+			}
+		}
+
+		__proto.addChild=function(bone){
+			this._children.push(bone);
+			bone.parentBone=this;
+		}
+
+		__proto.findBone=function(boneName){
+			if (this.name==boneName){
+				return this;
+			}
+			else {
+				var i=0,n=0;
+				var tBone;
+				var tResult;
+				for (i=0,n=this._children.length;i < n;i++){
+					tBone=this._children[i];
+					tResult=tBone.findBone(boneName);
+					if (tResult){
+						return tResult;
+					}
+				}
+			}
+			return null;
+		}
+
+		__proto.localToWorld=function(local){
+			var localX=local[0];
+			var localY=local[1];
+			local[0]=localX *this.resultMatrix.a+localY *this.resultMatrix.c+this.resultMatrix.tx;
+			local[1]=localX *this.resultMatrix.b+localY *this.resultMatrix.d+this.resultMatrix.ty;
+		}
+
+		Bone.ShowBones={};
+		return Bone;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.BoneSlot
+	var BoneSlot=(function(){
+		function BoneSlot(){
+			this.name=null;
+			this.parent=null;
+			this.attachmentName=null;
+			this.srcDisplayIndex=-1;
+			this.type="src";
+			this.templet=null;
+			this.currSlotData=null;
+			this.currTexture=null;
+			this.currDisplayData=null;
+			this.displayIndex=-1;
+			this._diyTexture=null;
+			this._parentMatrix=null;
+			this._resultMatrix=null;
+			this._replaceDic={};
+			this._curDiyUV=null;
+			this._curDiyVS=null;
+			this._skinSprite=null;
+			this.deformData=null;
+			this._mVerticleArr=null;
+		}
+
+		__class(BoneSlot,'laya.ani.bone.BoneSlot');
+		var __proto=BoneSlot.prototype;
+		/**
+		*设置要显示的插槽数据
+		*@param slotData
+		*@param disIndex
+		*@param freshIndex 是否重置纹理
+		*/
+		__proto.showSlotData=function(slotData,freshIndex){
+			(freshIndex===void 0)&& (freshIndex=true);
+			this.currSlotData=slotData;
+			if(freshIndex)
+				this.displayIndex=this.srcDisplayIndex;
+			this.currDisplayData=null;
+			this.currTexture=null;
+		}
+
+		/**
+		*通过名字显示指定对象
+		*@param name
+		*/
+		__proto.showDisplayByName=function(name){
+			if (this.currSlotData){
+				this.showDisplayByIndex(this.currSlotData.getDisplayByName(name));
+			}
+		}
+
+		/**
+		*替换贴图名
+		*@param tarName 要替换的贴图名
+		*@param newName 替换后的贴图名
+		*/
+		__proto.replaceDisplayByName=function(tarName,newName){
+			if (!this.currSlotData)return;
+			var preIndex=0;
+			preIndex=this.currSlotData.getDisplayByName(tarName);
+			var newIndex=0;
+			newIndex=this.currSlotData.getDisplayByName(newName);
+			this.replaceDisplayByIndex(preIndex,newIndex);
+		}
+
+		/**
+		*替换贴图索引
+		*@param tarIndex 要替换的索引
+		*@param newIndex 替换后的索引
+		*/
+		__proto.replaceDisplayByIndex=function(tarIndex,newIndex){
+			if (!this.currSlotData)return;
+			this._replaceDic[tarIndex]=newIndex;
+			if (this.displayIndex==tarIndex){
+				this.showDisplayByIndex(tarIndex);
+			}
+		}
+
+		/**
+		*指定显示对象
+		*@param index
+		*/
+		__proto.showDisplayByIndex=function(index){
+			if (this._replaceDic[index])index=this._replaceDic[index];
+			if (this.currSlotData && index >-1 && index < this.currSlotData.displayArr.length){
+				this.displayIndex=index;
+				this.currDisplayData=this.currSlotData.displayArr[index];
+				if (this.currDisplayData){
+					var tName=this.currDisplayData.name;
+					this.currTexture=this.templet.getTexture(tName);
+					if (this.currTexture && Render.isWebGL && this.currDisplayData.type==0 && this.currDisplayData.uvs){
+						this.currTexture=this.currDisplayData.createTexture(this.currTexture);
+					}
+				}
+				}else {
+				this.displayIndex=-1;
+				this.currDisplayData=null;
+				this.currTexture=null;
+			}
+		}
+
+		/**
+		*替换皮肤
+		*@param _texture
+		*/
+		__proto.replaceSkin=function(_texture){
+			this._diyTexture=_texture;
+			if (this._curDiyUV)this._curDiyUV.length=0;
+		}
+
+		/**
+		*保存父矩阵的索引
+		*@param parentMatrix
+		*/
+		__proto.setParentMatrix=function(parentMatrix){
+			this._parentMatrix=parentMatrix;
+		}
+
+		/**
+		*把纹理画到Graphics上
+		*@param graphics
+		*@param noUseSave
+		*/
+		__proto.draw=function(graphics,boneMatrixArray,noUseSave,alpha){
+			(noUseSave===void 0)&& (noUseSave=false);
+			(alpha===void 0)&& (alpha=1);
+			if ((this._diyTexture==null && this.currTexture==null)|| this.currDisplayData==null){
+				if (!(this.currDisplayData && this.currDisplayData.type==3)){
+					return;
+				}
+			};
+			var tTexture=this.currTexture;
+			if (this._diyTexture)tTexture=this._diyTexture;
+			var tSkinSprite;
+			switch (this.currDisplayData.type){
+				case 0:
+					if (graphics){
+						var tCurrentMatrix=this.getDisplayMatrix();
+						if (this._parentMatrix){
+							var tRotateKey=false;
+							if (tCurrentMatrix){
+								Matrix.mul(tCurrentMatrix,this._parentMatrix,Matrix.TEMP);
+								var tResultMatrix;
+								if (noUseSave){
+									if (this._resultMatrix==null)this._resultMatrix=new Matrix();
+									tResultMatrix=this._resultMatrix;
+									}else {
+									tResultMatrix=new Matrix();
+								}
+								if ((!Render.isWebGL && this.currDisplayData.uvs)|| (Render.isWebGL && this._diyTexture && this.currDisplayData.uvs)){
+									var tTestMatrix=BoneSlot._tempMatrix;
+									tTestMatrix.identity();
+									if (this.currDisplayData.uvs[1] > this.currDisplayData.uvs[5]){
+										tTestMatrix.d=-1;
+									}
+									if (this.currDisplayData.uvs[0] > this.currDisplayData.uvs[4]
+										&& this.currDisplayData.uvs[1] > this.currDisplayData.uvs[5]){
+										tRotateKey=true;
+										tTestMatrix.rotate(-Math.PI/2);
+									}
+									Matrix.mul(tTestMatrix,Matrix.TEMP,tResultMatrix);
+									}else {
+									Matrix.TEMP.copyTo(tResultMatrix);
+								}
+								if (tRotateKey){
+									graphics.drawTexture(tTexture,-this.currDisplayData.height / 2,-this.currDisplayData.width / 2,this.currDisplayData.height,this.currDisplayData.width,tResultMatrix);
+									}else {
+									graphics.drawTexture(tTexture,-this.currDisplayData.width / 2,-this.currDisplayData.height / 2,this.currDisplayData.width,this.currDisplayData.height,tResultMatrix);
+								}
+							}
+						}
+					}
+					break ;
+				case 1:
+					if (noUseSave){
+						if (this._skinSprite==null){
+							this._skinSprite=RunDriver.skinAniSprite();
+						}
+						tSkinSprite=this._skinSprite;
+						}else {
+						tSkinSprite=RunDriver.skinAniSprite();
+					}
+					if (tSkinSprite==null){
+						return;
+					};
+					var tIBArray;
+					var tRed=1;
+					var tGreed=1;
+					var tBlue=1;
+					var tAlpha=1;
+					if (this.currDisplayData.bones==null){
+						var tVertices=this.currDisplayData.weights;
+						if (this.deformData){
+							tVertices=this.deformData;
+						};
+						var tUVs;
+						if (this._diyTexture){
+							if (!this._curDiyUV){
+								this._curDiyUV=[];
+							}
+							if (this._curDiyUV.length==0){
+								this._curDiyUV=UVTools.getRelativeUV(this.currTexture.uv,this.currDisplayData.uvs,this._curDiyUV);
+								this._curDiyUV=UVTools.getAbsoluteUV(this._diyTexture.uv,this._curDiyUV,this._curDiyUV);
+							}
+							tUVs=this._curDiyUV;
+							}else{
+							tUVs=this.currDisplayData.uvs;
+						}
+						this._mVerticleArr=tVertices;
+						var tTriangleNum=this.currDisplayData.triangles.length / 3;
+						tIBArray=this.currDisplayData.triangles;
+						tSkinSprite.init2(tTexture,null ,tIBArray,this._mVerticleArr,tUVs);
+						var tCurrentMatrix2=this.getDisplayMatrix();
+						if (this._parentMatrix){
+							if (tCurrentMatrix2){
+								Matrix.mul(tCurrentMatrix2,this._parentMatrix,Matrix.TEMP);
+								var tResultMatrix2;
+								if (noUseSave){
+									if (this._resultMatrix==null)this._resultMatrix=new Matrix();
+									tResultMatrix2=this._resultMatrix;
+									}else {
+									tResultMatrix2=new Matrix();
+								}
+								Matrix.TEMP.copyTo(tResultMatrix2);
+								tSkinSprite.transform=tResultMatrix2;
+							}
+						}
+						}else {
+						this.skinMesh(boneMatrixArray,tSkinSprite,alpha);
+					}
+					graphics.drawSkin(tSkinSprite);
+					break ;
+				case 2:
+					if (noUseSave){
+						if (this._skinSprite==null){
+							this._skinSprite=RunDriver.skinAniSprite();
+						}
+						tSkinSprite=this._skinSprite;
+						}else {
+						tSkinSprite=RunDriver.skinAniSprite();
+					}
+					if (tSkinSprite==null){
+						return;
+					}
+					this.skinMesh(boneMatrixArray,tSkinSprite,alpha);
+					graphics.drawSkin(tSkinSprite);
+					break ;
+				case 3:
+					break ;
+				}
+		}
+
+		/**
+		*显示蒙皮动画
+		*@param boneMatrixArray 当前帧的骨骼矩阵
+		*/
+		__proto.skinMesh=function(boneMatrixArray,skinSprite,alpha){
+			var tBones=this.currDisplayData.bones;
+			var tUvs;
+			if (this._diyTexture){
+				if (!this._curDiyUV){
+					this._curDiyUV=[];
+				}
+				if (this._curDiyUV.length==0){
+					this._curDiyUV=UVTools.getRelativeUV(this.currTexture.uv,this.currDisplayData.uvs,this._curDiyUV);
+					this._curDiyUV=UVTools.getAbsoluteUV(this._diyTexture.uv,this._curDiyUV,this._curDiyUV);
+				}
+				tUvs=this._curDiyUV;
+				}else{
+				tUvs=this.currDisplayData.uvs;
+			};
+			var tWeights=this.currDisplayData.weights;
+			var tTriangles=this.currDisplayData.triangles;
+			var tIBArray;
+			var tRx=0;
+			var tRy=0;
+			var nn=0;
+			var tMatrix;
+			var tX=NaN;
+			var tY=NaN;
+			var tB=0;
+			var tWeight=0;
+			var tVertices=[];
+			var i=0,j=0,n=0;
+			var tRed=1;
+			var tGreed=1;
+			var tBlue=1;
+			var tAlpha=alpha;
+			if (this.deformData && this.deformData.length > 0){
+				var f=0;
+				for (i=0,n=tBones.length;i < n;){
+					nn=tBones[i++]+i;
+					tRx=0,tRy=0;
+					for (;i < nn;i++){
+						tMatrix=boneMatrixArray[tBones[i]]
+						tX=tWeights[tB]+this.deformData[f++];
+						tY=tWeights[tB+1]+this.deformData[f++];
+						tWeight=tWeights[tB+2];
+						tRx+=(tX *tMatrix.a+tY *tMatrix.c+tMatrix.tx)*tWeight;
+						tRy+=(tX *tMatrix.b+tY *tMatrix.d+tMatrix.ty)*tWeight;
+						tB+=3;
+					}
+					tVertices.push(tRx,tRy);
+				}
+				}else {
+				for (i=0,n=tBones.length;i < n;){
+					nn=tBones[i++]+i;
+					tRx=0,tRy=0;
+					for (;i < nn;i++){
+						tMatrix=boneMatrixArray[tBones[i]]
+						tX=tWeights[tB];
+						tY=tWeights[tB+1];
+						tWeight=tWeights[tB+2];
+						tRx+=(tX *tMatrix.a+tY *tMatrix.c+tMatrix.tx)*tWeight;
+						tRy+=(tX *tMatrix.b+tY *tMatrix.d+tMatrix.ty)*tWeight;
+						tB+=3;
+					}
+					tVertices.push(tRx,tRy);
+				}
+			}
+			this._mVerticleArr=tVertices;
+			tIBArray=tTriangles;
+			skinSprite.init2(this.currTexture,null,tIBArray,this._mVerticleArr,tUvs);
+		}
+
+		/**
+		*画骨骼的起始点，方便调试
+		*@param graphics
+		*/
+		__proto.drawBonePoint=function(graphics){
+			if (graphics && this._parentMatrix){
+				graphics.drawCircle(this._parentMatrix.tx,this._parentMatrix.ty,5,"#ff0000");
+			}
+		}
+
+		/**
+		*得到显示对象的矩阵
+		*@return
+		*/
+		__proto.getDisplayMatrix=function(){
+			if (this.currDisplayData){
+				return this.currDisplayData.transform.getMatrix();
+			}
+			return null;
+		}
+
+		/**
+		*得到插糟的矩阵
+		*@return
+		*/
+		__proto.getMatrix=function(){
+			return this._resultMatrix;
+		}
+
+		/**
+		*用原始数据拷贝出一个
+		*@return
+		*/
+		__proto.copy=function(){
+			var tBoneSlot=new BoneSlot();
+			tBoneSlot.type="copy";
+			tBoneSlot.name=this.name;
+			tBoneSlot.attachmentName=this.attachmentName;
+			tBoneSlot.srcDisplayIndex=this.srcDisplayIndex;
+			tBoneSlot.parent=this.parent;
+			tBoneSlot.displayIndex=this.displayIndex;
+			tBoneSlot.templet=this.templet;
+			tBoneSlot.currSlotData=this.currSlotData;
+			tBoneSlot.currTexture=this.currTexture;
+			tBoneSlot.currDisplayData=this.currDisplayData;
+			return tBoneSlot;
+		}
+
+		__static(BoneSlot,
+		['_tempMatrix',function(){return this._tempMatrix=new Matrix();}
+		]);
+		return BoneSlot;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.DeformAniData
+	var DeformAniData=(function(){
+		function DeformAniData(){
+			this.skinName=null;
+			this.deformSlotDataList=[];
+		}
+
+		__class(DeformAniData,'laya.ani.bone.DeformAniData');
+		return DeformAniData;
+	})()
+
+
+	/**
+	*...
+	*@author
+	*/
+	//class laya.ani.bone.DeformSlotData
+	var DeformSlotData=(function(){
+		function DeformSlotData(){
+			this.deformSlotDisplayList=[];
+		}
+
+		__class(DeformSlotData,'laya.ani.bone.DeformSlotData');
+		return DeformSlotData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.DeformSlotDisplayData
+	var DeformSlotDisplayData=(function(){
+		function DeformSlotDisplayData(){
+			this.boneSlot=null;
+			this.slotIndex=-1;
+			this.attachment=null;
+			this.deformData=null;
+			this.frameIndex=0;
+			this.timeList=[];
+			this.vectices=[];
+			this.tweenKeyList=[];
+		}
+
+		__class(DeformSlotDisplayData,'laya.ani.bone.DeformSlotDisplayData');
+		var __proto=DeformSlotDisplayData.prototype;
+		__proto.binarySearch1=function(values,target){
+			var low=0;
+			var high=values.length-2;
+			if (high==0)
+				return 1;
+			var current=high >>> 1;
+			while (true){
+				if (values[Math.floor(current+1)] <=target)
+					low=current+1;
+				else
+				high=current;
+				if (low==high)
+					return low+1;
+				current=(low+high)>>> 1;
+			}
+			return 0;
+		}
+
+		// Can't happen.
+		__proto.apply=function(time,boneSlot,alpha){
+			(alpha===void 0)&& (alpha=1);
+			time+=0.05;
+			if (this.timeList.length <=0){
+				return;
+			};
+			var i=0;
+			var n=0;
+			var tTime=this.timeList[0];
+			if (time < tTime){
+				return;
+			};
+			var tVertexCount=this.vectices[0].length;
+			var tVertices=[];
+			var tFrameIndex=this.binarySearch1(this.timeList,time);
+			this.frameIndex=tFrameIndex;
+			if (time >=this.timeList[this.timeList.length-1]){
+				var lastVertices=this.vectices[this.vectices.length-1];
+				if (alpha < 1){
+					for (i=0;i < tVertexCount;i++){
+						tVertices[i]+=(lastVertices[i]-tVertices[i])*alpha;
+					}
+					}else {
+					for (i=0;i < tVertexCount;i++){
+						tVertices[i]=lastVertices[i];
+					}
+				}
+				this.deformData=tVertices;
+				return;
+			};
+			var tTweenKey=this.tweenKeyList[this.frameIndex];
+			var tPrevVertices=this.vectices[this.frameIndex-1];
+			var tNextVertices=this.vectices[this.frameIndex];
+			var tPreFrameTime=this.timeList[this.frameIndex-1];
+			var tFrameTime=this.timeList[this.frameIndex];
+			if (this.tweenKeyList[tFrameIndex-1]){
+				alpha=(time-tPreFrameTime)/ (tFrameTime-tPreFrameTime);
+				}else {
+				alpha=0;
+			};
+			var tPrev=NaN;
+			for (i=0;i < tVertexCount;i++){
+				tPrev=tPrevVertices[i];
+				tVertices[i]=tPrev+(tNextVertices[i]-tPrev)*alpha;
+			}
+			this.deformData=tVertices;
+		}
+
+		return DeformSlotDisplayData;
+	})()
+
+
+	/**
+	*...
+	*@author
+	*/
+	//class laya.ani.bone.DrawOrderData
+	var DrawOrderData=(function(){
+		function DrawOrderData(){
+			this.time=NaN;
+			this.drawOrder=[];
+		}
+
+		__class(DrawOrderData,'laya.ani.bone.DrawOrderData');
+		return DrawOrderData;
+	})()
+
+
+	//class laya.ani.bone.EventData
+	var EventData=(function(){
+		function EventData(){
+			this.name=null;
+			this.intValue=0;
+			this.floatValue=NaN;
+			this.stringValue=null;
+			this.time=NaN;
+		}
+
+		__class(EventData,'laya.ani.bone.EventData');
+		return EventData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.IkConstraint
+	var IkConstraint=(function(){
+		function IkConstraint(data,bones){
+			this._targetBone=null;
+			this._bones=null;
+			this._data=null;
+			this.name=null;
+			this.mix=NaN;
+			this.bendDirection=NaN;
+			this.isSpine=true;
+			this._sp=null;
+			this.isDebug=false;
+			this._data=data;
+			this._targetBone=bones[data.targetBoneIndex];
+			this.isSpine=data.isSpine;
+			if (this._bones==null)this._bones=[];
+			this._bones.length=0;
+			for (var i=0,n=data.boneIndexs.length;i < n;i++){
+				this._bones.push(bones[data.boneIndexs[i]]);
+			}
+			this.name=data.name;
+			this.mix=data.mix;
+			this.bendDirection=data.bendDirection;
+		}
+
+		__class(IkConstraint,'laya.ani.bone.IkConstraint');
+		var __proto=IkConstraint.prototype;
+		__proto.apply=function(){
+			switch (this._bones.length){
+				case 1:
+					this._applyIk1(this._bones[0],this._targetBone.resultMatrix.tx,this._targetBone.resultMatrix.ty,this.mix);
+					break ;
+				case 2:
+					if (this.isSpine){
+						this._applyIk2(this._bones[0],this._bones[1],this._targetBone.resultMatrix.tx,this._targetBone.resultMatrix.ty,this.bendDirection,this.mix);
+						}else{
+						this._applyIk3(this._bones[0],this._bones[1],this._targetBone.resultMatrix.tx,this._targetBone.resultMatrix.ty,this.bendDirection,this.mix);
+					}
+					break ;
+				}
+		}
+
+		__proto._applyIk1=function(bone,targetX,targetY,alpha){
+			var pp=bone.parentBone;
+			var id=1 / (pp.resultMatrix.a *pp.resultMatrix.d-pp.resultMatrix.b *pp.resultMatrix.c);
+			var x=targetX-pp.resultMatrix.tx;
+			var y=targetY-pp.resultMatrix.ty;
+			var tx=(x *pp.resultMatrix.d-y *pp.resultMatrix.c)*id-bone.transform.x;
+			var ty=(y *pp.resultMatrix.a-x *pp.resultMatrix.b)*id-bone.transform.y;
+			var rotationIK=Math.atan2(ty,tx)*IkConstraint.radDeg-0-bone.transform.skX;
+			if (bone.transform.scX < 0)rotationIK+=180;
+			if (rotationIK > 180)
+				rotationIK-=360;
+			else if (rotationIK <-180)rotationIK+=360;
+			bone.transform.skX=bone.transform.skY=bone.transform.skX+rotationIK *alpha;
+			bone.update();
+		}
+
+		__proto.updatePos=function(x,y){
+			if (this._sp){
+				this._sp.pos(x,y);
+			}
+		}
+
+		__proto._applyIk2=function(parent,child,targetX,targetY,bendDir,alpha){
+			if (alpha==0){
+				return;
+			};
+			var px=parent.resultTransform.x,py=parent.resultTransform.y;
+			var psx=parent.transform.scX,psy=parent.transform.scY;
+			var csx=child.transform.scX;
+			var os1=0,os2=0,s2=0;
+			if (psx < 0){
+				psx=-psx;
+				os1=180;
+				s2=-1;
+				}else {
+				os1=0;
+				s2=1;
+			}
+			if (psy < 0){
+				psy=-psy;
+				s2=-s2;
+			}
+			if (csx < 0){
+				csx=-csx;
+				os2=180;
+				}else {
+				os2=0
+			};
+			var cx=child.resultTransform.x,cy=NaN,cwx=NaN,cwy=NaN;
+			var a=parent.resultMatrix.a,b=parent.resultMatrix.c;
+			var c=parent.resultMatrix.b,d=parent.resultMatrix.d;
+			var u=Math.abs(psx-psy)<=0.0001;
+			if (!u){
+				cy=0;
+				cwx=a *cx+parent.resultMatrix.tx;
+				cwy=c *cx+parent.resultMatrix.ty;
+				}else {
+				cy=child.resultTransform.y;
+				cwx=a *cx+b *cy+parent.resultMatrix.tx;
+				cwy=c *cx+d *cy+parent.resultMatrix.ty;
+			}
+			if (this.isDebug){
+				if (!this._sp){
+					this._sp=new Sprite();
+					Laya.stage.addChild(this._sp);
+				}
+				this._sp.graphics.clear();
+				this._sp.graphics.drawCircle(targetX,targetY,15,"#ffff00");
+				this._sp.graphics.drawCircle(cwx,cwy,15,"#ff00ff");
+			}
+			parent.setRotation(Math.atan2(cwy-parent.resultMatrix.ty,cwx-parent.resultMatrix.tx));
+			var pp=parent.parentBone;
+			a=pp.resultMatrix.a;
+			b=pp.resultMatrix.c;
+			c=pp.resultMatrix.b;
+			d=pp.resultMatrix.d;
+			var id=1 / (a *d-b *c);
+			var x=targetX-pp.resultMatrix.tx,y=targetY-pp.resultMatrix.ty;
+			var tx=(x *d-y *b)*id-px;
+			var ty=(y *a-x *c)*id-py;
+			x=cwx-pp.resultMatrix.tx;
+			y=cwy-pp.resultMatrix.ty;
+			var dx=(x *d-y *b)*id-px;
+			var dy=(y *a-x *c)*id-py;
+			var l1=Math.sqrt(dx *dx+dy *dy);
+			var l2=child.length *csx;
+			var a1=NaN,a2=NaN;
+			if (u){
+				l2 *=psx;
+				var cos=(tx *tx+ty *ty-l1 *l1-l2 *l2)/ (2 *l1 *l2);
+				if (cos <-1)
+					cos=-1;
+				else if (cos > 1)cos=1;
+				a2=Math.acos(cos)*bendDir;
+				a=l1+l2 *cos;
+				b=l2 *Math.sin(a2);
+				a1=Math.atan2(ty *a-tx *b,tx *a+ty *b);
+				}else {
+				a=psx *l2;
+				b=psy *l2;
+				var aa=a *a,bb=b *b,dd=tx *tx+ty *ty,ta=Math.atan2(ty,tx);
+				c=bb *l1 *l1+aa *dd-aa *bb;
+				var c1=-2 *bb *l1,c2=bb-aa;
+				d=c1 *c1-4 *c2 *c;
+				if (d > 0){
+					var q=Math.sqrt(d);
+					if (c1 < 0)q=-q;
+					q=-(c1+q)/ 2;
+					var r0=q / c2,r1=c / q;
+					var r=Math.abs(r0)< Math.abs(r1)? r0 :r1;
+					if (r *r <=dd){
+						y=Math.sqrt(dd-r *r)*bendDir;
+						a1=ta-Math.atan2(y,r);
+						a2=Math.atan2(y / psy,(r-l1)/ psx);
+					}
+				};
+				var minAngle=0,minDist=Number.MAX_VALUE,minX=0,minY=0;
+				var maxAngle=0,maxDist=0,maxX=0,maxY=0;
+				x=l1+a;
+				d=x *x;
+				if (d > maxDist){
+					maxAngle=0;
+					maxDist=d;
+					maxX=x;
+				}
+				x=l1-a;
+				d=x *x;
+				if (d < minDist){
+					minAngle=Math.PI;
+					minDist=d;
+					minX=x;
+				};
+				var angle=Math.acos(-a *l1 / (aa-bb));
+				x=a *Math.cos(angle)+l1;
+				y=b *Math.sin(angle);
+				d=x *x+y *y;
+				if (d < minDist){
+					minAngle=angle;
+					minDist=d;
+					minX=x;
+					minY=y;
+				}
+				if (d > maxDist){
+					maxAngle=angle;
+					maxDist=d;
+					maxX=x;
+					maxY=y;
+				}
+				if (dd <=(minDist+maxDist)/ 2){
+					a1=ta-Math.atan2(minY *bendDir,minX);
+					a2=minAngle *bendDir;
+					}else {
+					a1=ta-Math.atan2(maxY *bendDir,maxX);
+					a2=maxAngle *bendDir;
+				}
+			};
+			var os=Math.atan2(cy,cx)*s2;
+			var rotation=parent.resultTransform.skX;
+			a1=(a1-os)*IkConstraint.radDeg+os1-rotation;
+			if (a1 > 180)
+				a1-=360;
+			else if (a1 <-180)a1+=360;
+			parent.resultTransform.x=px;
+			parent.resultTransform.y=py;
+			parent.resultTransform.skX=parent.resultTransform.skY=rotation+a1 *alpha;
+			rotation=child.resultTransform.skX;
+			rotation=rotation % 360;
+			a2=((a2+os)*IkConstraint.radDeg-0)*s2+os2-rotation;
+			if (a2 > 180)
+				a2-=360;
+			else if (a2 <-180)a2+=360;
+			child.resultTransform.x=cx;
+			child.resultTransform.y=cy;
+			child.resultTransform.skX=child.resultTransform.skY=child.resultTransform.skY+a2 *alpha;
+			parent.update();
+		}
+
+		__proto._applyIk3=function(parent,child,targetX,targetY,bendDir,alpha){
+			if (alpha==0){
+				return;
+			};
+			var cwx=NaN,cwy=NaN;
+			var x=child.resultMatrix.a *child.length;
+			var y=child.resultMatrix.b *child.length;
+			var lLL=x *x+y *y;
+			var lL=Math.sqrt(lLL);
+			var parentX=parent.resultMatrix.tx;
+			var parentY=parent.resultMatrix.ty;
+			var childX=child.resultMatrix.tx;
+			var childY=child.resultMatrix.ty;
+			var dX=childX-parentX;
+			var dY=childY-parentY;
+			var lPP=dX *dX+dY *dY;
+			var lP=Math.sqrt(lPP);
+			dX=targetX-parent.resultMatrix.tx;
+			dY=targetY-parent.resultMatrix.ty;
+			var lTT=dX *dX+dY *dY;
+			var lT=Math.sqrt(lTT);
+			var ikRadianA=0;
+			if (lL+lP <=lT || lT+lL <=lP || lT+lP <=lL){
+				var rate=NaN;
+				if (lL+lP <=lT){
+					rate=1;
+					}else{
+					rate=-1;
+				}
+				childX=parentX+rate*(targetX-parentX)*lP / lT;
+				childY=parentY+rate*(targetY-parentY)*lP / lT;
+			}
+			else{
+				var h=(lPP-lLL+lTT)/ (2 *lTT);
+				var r=Math.sqrt(lPP-h *h *lTT)/ lT;
+				var hX=parentX+(dX *h);
+				var hY=parentY+(dY *h);
+				var rX=-dY *r;
+				var rY=dX *r;
+				if (bendDir>0){
+					childX=hX-rX;
+					childY=hY-rY;
+				}
+				else{
+					childX=hX+rX;
+					childY=hY+rY;
+				}
+			}
+			cwx=childX;
+			cwy=childY;
+			if (this.isDebug){
+				if (!this._sp){
+					this._sp=new Sprite();
+					Laya.stage.addChild(this._sp);
+				}
+				this._sp.graphics.clear();
+				this._sp.graphics.drawCircle(parentX,parentY,15,"#ff00ff");
+				this._sp.graphics.drawCircle(targetX,targetY,15,"#ffff00");
+				this._sp.graphics.drawCircle(cwx,cwy,15,"#ff00ff");
+			};
+			var pRotation=NaN;
+			pRotation=Math.atan2(cwy-parent.resultMatrix.ty,cwx-parent.resultMatrix.tx);
+			parent.setRotation(pRotation);
+			var pTarMatrix;
+			pTarMatrix=IkConstraint._tempMatrix;
+			pTarMatrix.identity();
+			pTarMatrix.rotate(pRotation);
+			pTarMatrix.scale(parent.resultMatrix.getScaleX(),parent.resultMatrix.getScaleY());
+			pTarMatrix.translate(parent.resultMatrix.tx,parent.resultMatrix.ty);
+			pTarMatrix.copyTo(parent.resultMatrix);
+			parent.updateChild();
+			var childRotation=NaN;
+			childRotation=Math.atan2(targetY-cwy,targetX-cwx);
+			child.setRotation(childRotation);
+			var childTarMatrix;
+			childTarMatrix=IkConstraint._tempMatrix;
+			childTarMatrix.identity();
+			childTarMatrix.rotate(childRotation);
+			childTarMatrix.scale(child.resultMatrix.getScaleX(),child.resultMatrix.getScaleY());
+			childTarMatrix.translate(cwx,cwy);
+			pTarMatrix.copyTo(child.resultMatrix);
+			child.updateChild();
+		}
+
+		__static(IkConstraint,
+		['radDeg',function(){return this.radDeg=180 / Math.PI;},'degRad',function(){return this.degRad=Math.PI / 180;},'_tempMatrix',function(){return this._tempMatrix=new Matrix();}
+		]);
+		return IkConstraint;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.IkConstraintData
+	var IkConstraintData=(function(){
+		function IkConstraintData(){
+			this.name=null;
+			this.targetBoneName=null;
+			this.bendDirection=1;
+			this.mix=1;
+			this.isSpine=true;
+			this.targetBoneIndex=-1;
+			this.boneNames=[];
+			this.boneIndexs=[];
+		}
+
+		__class(IkConstraintData,'laya.ani.bone.IkConstraintData');
+		return IkConstraintData;
+	})()
+
+
+	/**
+	*@private
+	*路径作用器
+	*1，生成根据骨骼计算控制点
+	*2，根据控制点生成路径，并计算路径上的节点
+	*3，根据节点，重新调整骨骼位置
+	*/
+	//class laya.ani.bone.PathConstraint
+	var PathConstraint=(function(){
+		function PathConstraint(data,bones){
+			this.target=null;
+			this.data=null;
+			this.bones=null;
+			this.position=NaN;
+			this.spacing=NaN;
+			this.rotateMix=NaN;
+			this.translateMix=NaN;
+			this._debugKey=false;
+			this._spaces=null;
+			this._segments=[];
+			this._curves=[];
+			this.data=data;
+			this.position=data.position;
+			this.spacing=data.spacing;
+			this.rotateMix=data.rotateMix;
+			this.translateMix=data.translateMix;
+			this.bones=[];
+			var tBoneIds=this.data.bones;
+			for (var i=0,n=tBoneIds.length;i < n;i++){
+				this.bones.push(bones[tBoneIds[i]]);
+			}
+		}
+
+		__class(PathConstraint,'laya.ani.bone.PathConstraint');
+		var __proto=PathConstraint.prototype;
+		/**
+		*计算骨骼在路径上的节点
+		*@param boneSlot
+		*@param boneMatrixArray
+		*@param graphics
+		*/
+		__proto.apply=function(boneList,graphics){
+			var tTranslateMix=this.translateMix;
+			var tRotateMix=this.translateMix;
+			var tTranslate=tTranslateMix > 0;
+			var tRotate=tRotateMix > 0;
+			var tSpacingMode=this.data.spacingMode;
+			var tLengthSpacing=tSpacingMode=="length";
+			var tRotateMode=this.data.rotateMode;
+			var tTangents=tRotateMode=="tangent";
+			var tScale=tRotateMode=="chainScale";
+			var lengths=[];
+			var boneCount=this.bones.length;
+			var spacesCount=tTangents ? boneCount :boneCount+1;
+			var spaces=[];
+			this._spaces=spaces;
+			spaces[0]=this.position;
+			var spacing=this.spacing;
+			if (tScale || tLengthSpacing){
+				for (var i=0,n=spacesCount-1;i < n;){
+					var bone=this.bones[i];
+					var length=bone.length;
+					var x=length *bone.resultMatrix.a;
+					var y=length *bone.resultMatrix.b;
+					length=Math.sqrt(x *x+y *y);
+					if (tScale)lengths[i]=length;
+					spaces[++i]=tLengthSpacing ? Math.max(0,length+spacing):spacing;
+				}
+				}else {
+				for (i=1;i < spacesCount;i++){
+					spaces[i]=spacing;
+				}
+			};
+			var positions=this.computeWorldPositions(this.target,boneList,graphics,spacesCount,tTangents,this.data.positionMode=="percent",tSpacingMode=="percent");
+			if (this._debugKey){
+				for (i=0;i < positions.length;i++){
+					graphics.drawCircle(positions[i++],positions[i++],5,"#00ff00");
+				};
+				var tLinePos=[];
+				for (i=0;i < positions.length;i++){
+					tLinePos.push(positions[i++],positions[i++]);
+				}
+				graphics.drawLines(0,0,tLinePos,"#ff0000");
+			};
+			var skeletonX=NaN;
+			var skeletonY=NaN;
+			var boneX=positions[0];
+			var boneY=positions[1];
+			var offsetRotation=this.data.offsetRotation;
+			var tip=tRotateMode=="chain" && offsetRotation==0;
+			var p=NaN;
+			for (i=0,p=3;i < boneCount;i++,p+=3){
+				bone=this.bones[i];
+				bone.resultMatrix.tx+=(boneX-bone.resultMatrix.tx)*tTranslateMix;
+				bone.resultMatrix.ty+=(boneY-bone.resultMatrix.ty)*tTranslateMix;
+				x=positions[p];
+				y=positions[p+1];
+				var dx=x-boneX,dy=y-boneY;
+				if (tScale){
+					length=lengths[i];
+					if (length !=0){
+						var s=(Math.sqrt(dx *dx+dy *dy)/ length-1)*tRotateMix+1;
+						bone.resultMatrix.a *=s;
+						bone.resultMatrix.c *=s;
+					}
+				}
+				boneX=x;
+				boneY=y;
+				if (tRotate){
+					var a=bone.resultMatrix.a;
+					var b=bone.resultMatrix.c;
+					var c=bone.resultMatrix.b;
+					var d=bone.resultMatrix.d;
+					var r=NaN;
+					var cos=NaN;
+					var sin=NaN;
+					if (tTangents){
+						r=positions[p-1];
+						}else if (spaces[i+1]==0){
+						r=positions[p+2];
+						}else {
+						r=Math.atan2(dy,dx);
+					}
+					r-=Math.atan2(c,a)-offsetRotation / 180 *Math.PI;
+					if (tip){
+						cos=Math.cos(r);
+						sin=Math.sin(r);
+						length=bone.length;
+						boneX+=(length *(cos *a-sin *c)-dx)*tRotateMix;
+						boneY+=(length *(sin *a+cos *c)-dy)*tRotateMix;
+					}
+					if (r > Math.PI){
+						r-=(Math.PI *2);
+						}else if (r <-Math.PI){
+						r+=(Math.PI *2);
+					}
+					r *=tRotateMix;
+					cos=Math.cos(r);
+					sin=Math.sin(r);
+					bone.resultMatrix.a=cos *a-sin *c;
+					bone.resultMatrix.c=cos *b-sin *d;
+					bone.resultMatrix.b=sin *a+cos *c;
+					bone.resultMatrix.d=sin *b+cos *d;
+				}
+			}
+		}
+
+		/**
+		*计算顶点的世界坐标
+		*@param boneSlot
+		*@param boneList
+		*@param start
+		*@param count
+		*@param worldVertices
+		*@param offset
+		*/
+		__proto.computeWorldVertices2=function(boneSlot,boneList,start,count,worldVertices,offset){
+			var tBones=boneSlot.currDisplayData.bones;
+			var tWeights=boneSlot.currDisplayData.weights;
+			var tTriangles=boneSlot.currDisplayData.triangles;
+			var tMatrix;
+			var i=0;
+			var v=0;
+			var skip=0;
+			var n=0;
+			var w=0;
+			var b=0;
+			var wx=0;
+			var wy=0;
+			var vx=0;
+			var vy=0;
+			for (i=0;i < start;i+=2){
+				n=tBones[v];
+				v+=n+1;
+				skip+=n;
+			};
+			var skeletonBones=boneList;
+			for (w=offset,b=skip *3;w < count;w+=2){
+				wx=0,wy=0;
+				n=tBones[v++];
+				n+=v;
+				for (;v < n;v++,b+=3){
+					tMatrix=skeletonBones[tBones[v]].resultMatrix;
+					vx=tWeights[b];
+					vy=tWeights[b+1];
+					var weight=tWeights[b+2];
+					wx+=(vx *tMatrix.a+vy *tMatrix.c+tMatrix.tx)*weight;
+					wy+=(vx *tMatrix.b+vy *tMatrix.d+tMatrix.ty)*weight;
+				}
+				worldVertices[w]=wx;
+				worldVertices[w+1]=wy;
+			}
+		}
+
+		/**
+		*计算路径上的节点
+		*@param boneSlot
+		*@param boneList
+		*@param graphics
+		*@param spacesCount
+		*@param tangents
+		*@param percentPosition
+		*@param percentSpacing
+		*@return
+		*/
+		__proto.computeWorldPositions=function(boneSlot,boneList,graphics,spacesCount,tangents,percentPosition,percentSpacing){
+			var tBones=boneSlot.currDisplayData.bones;
+			var tWeights=boneSlot.currDisplayData.weights;
+			var tTriangles=boneSlot.currDisplayData.triangles;
+			var tRx=0;
+			var tRy=0;
+			var nn=0;
+			var tMatrix;
+			var tX=NaN;
+			var tY=NaN;
+			var tB=0;
+			var tWeight=0;
+			var tVertices=[];
+			var i=0,j=0,n=0;
+			var verticesLength=boneSlot.currDisplayData.verLen;
+			var target=boneSlot;
+			var position=this.position;
+			var spaces=this._spaces;
+			var world=[];
+			var out=[];
+			var closed=false;
+			var curveCount=verticesLength / 6;
+			var prevCurve=-1;
+			var pathLength=NaN;
+			var o=0,curve=0;
+			var p=NaN;
+			var space=NaN;
+			var prev=NaN;
+			var length=NaN;
+			if (!true){
+				var lengths=boneSlot.currDisplayData.lengths;
+				curveCount-=closed ? 1 :2;
+				pathLength=lengths[curveCount];
+				if (percentPosition)position *=pathLength;
+				if (percentSpacing){
+					for (i=0;i < spacesCount;i++)
+					spaces[i] *=pathLength;
+				}
+				world.length=8;
+				for (i=0,o=0,curve=0;i < spacesCount;i++,o+=3){
+					space=spaces[i];
+					position+=space;
+					p=position;
+					if (closed){
+						p %=pathLength;
+						if (p < 0)p+=pathLength;
+						curve=0;
+						}else if (p < 0){
+						if (prevCurve !=PathConstraint.BEFORE){
+							prevCurve=PathConstraint.BEFORE;
+							this.computeWorldVertices2(target,boneList,2,4,world,0);
+						}
+						this.addBeforePosition(p,world,0,out,o);
+						continue ;
+						}else if (p > pathLength){
+						if (prevCurve !=PathConstraint.AFTER){
+							prevCurve=PathConstraint.AFTER;
+							this.computeWorldVertices2(target,boneList,verticesLength-6,4,world,0);
+						}
+						this.addAfterPosition(p-pathLength,world,0,out,o);
+						continue ;
+					}
+					for (;;curve++){
+						length=lengths[curve];
+						if (p > length)continue ;
+						if (curve==0)
+							p /=length;
+						else {
+							prev=lengths[curve-1];
+							p=(p-prev)/ (length-prev);
+						}
+						break ;
+					}
+					if (curve !=prevCurve){
+						prevCurve=curve;
+						if (closed && curve==curveCount){
+							this.computeWorldVertices2(target,boneList,verticesLength-4,4,world,0);
+							this.computeWorldVertices2(target,boneList,0,4,world,4);
+						}else
+						this.computeWorldVertices2(target,boneList,curve *6+2,8,world,0);
+					}
+					this.addCurvePosition(p,world[0],world[1],world[2],world[3],world[4],world[5],world[6],world[7],out,o,tangents || (i > 0 && space==0));
+				}
+				return out;
+			}
+			if (closed){
+				verticesLength+=2;
+				world[verticesLength-2]=world[0];
+				world[verticesLength-1]=world[1];
+				}else {
+				curveCount--;
+				verticesLength-=4;
+				this.computeWorldVertices2(boneSlot,boneList,2,verticesLength,tVertices,0);
+				if (this._debugKey){
+					for (i=0;i < tVertices.length;){
+						graphics.drawCircle(tVertices[i++],tVertices[i++],10,"#ff0000");
+					}
+				}
+				world=tVertices;
+			}
+			this._curves.length=curveCount;
+			var curves=this._curves;
+			pathLength=0;
+			var x1=world[0],y1=world[1],cx1=0,cy1=0,cx2=0,cy2=0,x2=0,y2=0;
+			var tmpx=NaN,tmpy=NaN,dddfx=NaN,dddfy=NaN,ddfx=NaN,ddfy=NaN,dfx=NaN,dfy=NaN;
+			var w=0;
+			for (i=0,w=2;i < curveCount;i++,w+=6){
+				cx1=world[w];
+				cy1=world[w+1];
+				cx2=world[w+2];
+				cy2=world[w+3];
+				x2=world[w+4];
+				y2=world[w+5];
+				tmpx=(x1-cx1 *2+cx2)*0.1875;
+				tmpy=(y1-cy1 *2+cy2)*0.1875;
+				dddfx=((cx1-cx2)*3-x1+x2)*0.09375;
+				dddfy=((cy1-cy2)*3-y1+y2)*0.09375;
+				ddfx=tmpx *2+dddfx;
+				ddfy=tmpy *2+dddfy;
+				dfx=(cx1-x1)*0.75+tmpx+dddfx *0.16666667;
+				dfy=(cy1-y1)*0.75+tmpy+dddfy *0.16666667;
+				pathLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+				dfx+=ddfx;
+				dfy+=ddfy;
+				ddfx+=dddfx;
+				ddfy+=dddfy;
+				pathLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+				dfx+=ddfx;
+				dfy+=ddfy;
+				pathLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+				dfx+=ddfx+dddfx;
+				dfy+=ddfy+dddfy;
+				pathLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+				curves[i]=pathLength;
+				x1=x2;
+				y1=y2;
+			}
+			if (percentPosition)position *=pathLength;
+			if (percentSpacing){
+				for (i=0;i < spacesCount;i++)
+				spaces[i] *=pathLength;
+			};
+			var segments=this._segments;
+			var curveLength=0;
+			var segment=0;
+			for (i=0,o=0,curve=0,segment=0;i < spacesCount;i++,o+=3){
+				space=spaces[i];
+				position+=space;
+				p=position;
+				if (closed){
+					p %=pathLength;
+					if (p < 0)p+=pathLength;
+					curve=0;
+					}else if (p < 0){
+					this.addBeforePosition(p,world,0,out,o);
+					continue ;
+					}else if (p > pathLength){
+					this.addAfterPosition(p-pathLength,world,verticesLength-4,out,o);
+					continue ;
+				}
+				for (;;curve++){
+					length=curves[curve];
+					if (p > length)continue ;
+					if (curve==0)
+						p /=length;
+					else {
+						prev=curves[curve-1];
+						p=(p-prev)/ (length-prev);
+					}
+					break ;
+				}
+				if (curve !=prevCurve){
+					prevCurve=curve;
+					var ii=curve *6;
+					x1=world[ii];
+					y1=world[ii+1];
+					cx1=world[ii+2];
+					cy1=world[ii+3];
+					cx2=world[ii+4];
+					cy2=world[ii+5];
+					x2=world[ii+6];
+					y2=world[ii+7];
+					tmpx=(x1-cx1 *2+cx2)*0.03;
+					tmpy=(y1-cy1 *2+cy2)*0.03;
+					dddfx=((cx1-cx2)*3-x1+x2)*0.006;
+					dddfy=((cy1-cy2)*3-y1+y2)*0.006;
+					ddfx=tmpx *2+dddfx;
+					ddfy=tmpy *2+dddfy;
+					dfx=(cx1-x1)*0.3+tmpx+dddfx *0.16666667;
+					dfy=(cy1-y1)*0.3+tmpy+dddfy *0.16666667;
+					curveLength=Math.sqrt(dfx *dfx+dfy *dfy);
+					segments[0]=curveLength;
+					for (ii=1;ii < 8;ii++){
+						dfx+=ddfx;
+						dfy+=ddfy;
+						ddfx+=dddfx;
+						ddfy+=dddfy;
+						curveLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+						segments[ii]=curveLength;
+					}
+					dfx+=ddfx;
+					dfy+=ddfy;
+					curveLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+					segments[8]=curveLength;
+					dfx+=ddfx+dddfx;
+					dfy+=ddfy+dddfy;
+					curveLength+=Math.sqrt(dfx *dfx+dfy *dfy);
+					segments[9]=curveLength;
+					segment=0;
+				}
+				p *=curveLength;
+				for (;;segment++){
+					length=segments[segment];
+					if (p > length)continue ;
+					if (segment==0)
+						p /=length;
+					else {
+						prev=segments[segment-1];
+						p=segment+(p-prev)/ (length-prev);
+					}
+					break ;
+				}
+				this.addCurvePosition(p *0.1,x1,y1,cx1,cy1,cx2,cy2,x2,y2,out,o,tangents || (i > 0 && space==0));
+			}
+			return out;
+		}
+
+		__proto.addBeforePosition=function(p,temp,i,out,o){
+			var x1=temp[i],y1=temp[i+1],dx=temp[i+2]-x1,dy=temp[i+3]-y1,r=Math.atan2(dy,dx);
+			out[o]=x1+p *Math.cos(r);
+			out[o+1]=y1+p *Math.sin(r);
+			out[o+2]=r;
+		}
+
+		__proto.addAfterPosition=function(p,temp,i,out,o){
+			var x1=temp[i+2],y1=temp[i+3],dx=x1-temp[i],dy=y1-temp[i+1],r=Math.atan2(dy,dx);
+			out[o]=x1+p *Math.cos(r);
+			out[o+1]=y1+p *Math.sin(r);
+			out[o+2]=r;
+		}
+
+		__proto.addCurvePosition=function(p,x1,y1,cx1,cy1,cx2,cy2,x2,y2,out,o,tangents){
+			if (p==0)p=0.0001;
+			var tt=p *p,ttt=tt *p,u=1-p,uu=u *u,uuu=uu *u;
+			var ut=u *p,ut3=ut *3,uut3=u *ut3,utt3=ut3 *p;
+			var x=x1 *uuu+cx1 *uut3+cx2 *utt3+x2 *ttt,y=y1 *uuu+cy1 *uut3+cy2 *utt3+y2 *ttt;
+			out[o]=x;
+			out[o+1]=y;
+			if (tangents){
+				out[o+2]=Math.atan2(y-(y1 *uu+cy1 *ut *2+cy2 *tt),x-(x1 *uu+cx1 *ut *2+cx2 *tt));
+				}else {
+				out[o+2]=0;
+			}
+		}
+
+		PathConstraint.NONE=-1;
+		PathConstraint.BEFORE=-2;
+		PathConstraint.AFTER=-3;
+		return PathConstraint;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.PathConstraintData
+	var PathConstraintData=(function(){
+		function PathConstraintData(){
+			this.name=null;
+			this.target=null;
+			this.positionMode=null;
+			this.spacingMode=null;
+			this.rotateMode=null;
+			this.offsetRotation=NaN;
+			this.position=NaN;
+			this.spacing=NaN;
+			this.rotateMix=NaN;
+			this.translateMix=NaN;
+			this.bones=[];
+		}
+
+		__class(PathConstraintData,'laya.ani.bone.PathConstraintData');
+		return PathConstraintData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.SkinData
+	var SkinData=(function(){
+		function SkinData(){
+			this.name=null;
+			this.slotArr=[];
+		}
+
+		__class(SkinData,'laya.ani.bone.SkinData');
+		return SkinData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.SkinSlotDisplayData
+	var SkinSlotDisplayData=(function(){
+		function SkinSlotDisplayData(){
+			this.name=null;
+			this.attachmentName=null;
+			this.type=0;
+			this.transform=null;
+			this.width=NaN;
+			this.height=NaN;
+			this.texture=null;
+			this.bones=null;
+			this.uvs=null;
+			this.weights=null;
+			this.triangles=null;
+			this.vertices=null;
+			this.lengths=null;
+			this.verLen=0;
+		}
+
+		__class(SkinSlotDisplayData,'laya.ani.bone.SkinSlotDisplayData');
+		var __proto=SkinSlotDisplayData.prototype;
+		__proto.createTexture=function(currTexture){
+			if (this.texture)return this.texture;
+			this.texture=new Texture(currTexture.bitmap,this.uvs);
+			if (this.uvs[0] > this.uvs[4]
+				&& this.uvs[1] > this.uvs[5]){
+				this.texture.width=currTexture.height;
+				this.texture.height=currTexture.width;
+				this.texture.offsetX=-currTexture.offsetX;
+				this.texture.offsetY=-currTexture.offsetY;
+				this.texture.sourceWidth=currTexture.sourceHeight;
+				this.texture.sourceHeight=currTexture.sourceWidth;
+				}else {
+				this.texture.width=currTexture.width;
+				this.texture.height=currTexture.height;
+				this.texture.offsetX=-currTexture.offsetX;
+				this.texture.offsetY=-currTexture.offsetY;
+				this.texture.sourceWidth=currTexture.sourceWidth;
+				this.texture.sourceHeight=currTexture.sourceHeight;
+			}
+			return this.texture;
+		}
+
+		__proto.destory=function(){
+			if (this.texture)this.texture.destroy();
+		}
+
+		return SkinSlotDisplayData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.SlotData
+	var SlotData=(function(){
+		function SlotData(){
+			this.name=null;
+			this.displayArr=[];
+		}
+
+		__class(SlotData,'laya.ani.bone.SlotData');
+		var __proto=SlotData.prototype;
+		__proto.getDisplayByName=function(name){
+			var tDisplay;
+			for (var i=0,n=this.displayArr.length;i < n;i++){
+				tDisplay=this.displayArr[i];
+				if (tDisplay.attachmentName==name){
+					return i;
+				}
+			}
+			return-1;
+		}
+
+		return SlotData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.TfConstraint
+	var TfConstraint=(function(){
+		function TfConstraint(data,bones){
+			this._data=null;
+			this._bones=null;
+			this.target=null;
+			this.rotateMix=NaN;
+			this.translateMix=NaN;
+			this.scaleMix=NaN;
+			this.shearMix=NaN;
+			this._temp=__newvec(2,0);
+			this._data=data;
+			if (this._bones==null){
+				this._bones=[];
+			}
+			this.target=bones[data.targetIndex];
+			var j=0,n=0;
+			for (j=0,n=data.boneIndexs.length;j < n;j++){
+				this._bones.push(bones[data.boneIndexs[j]]);
+			}
+			this.rotateMix=data.rotateMix;
+			this.translateMix=data.translateMix;
+			this.scaleMix=data.scaleMix;
+			this.shearMix=data.shearMix;
+		}
+
+		__class(TfConstraint,'laya.ani.bone.TfConstraint');
+		var __proto=TfConstraint.prototype;
+		__proto.apply=function(){
+			var tTfBone;
+			var ta=this.target.resultMatrix.a,tb=this.target.resultMatrix.b,tc=this.target.resultMatrix.c,td=this.target.resultMatrix.d;
+			for (var j=0,n=this._bones.length;j < n;j++){
+				tTfBone=this._bones[j];
+				if (this.rotateMix > 0){
+					var a=tTfBone.resultMatrix.a,b=tTfBone.resultMatrix.b,c=tTfBone.resultMatrix.c,d=tTfBone.resultMatrix.d;
+					var r=Math.atan2(tc,ta)-Math.atan2(c,a)+this._data.offsetRotation *Math.PI / 180;
+					if (r > Math.PI)
+						r-=Math.PI *2;
+					else if (r <-Math.PI)r+=Math.PI *2;
+					r *=this.rotateMix;
+					var cos=Math.cos(r),sin=Math.sin(r);
+					tTfBone.resultMatrix.a=cos *a-sin *c;
+					tTfBone.resultMatrix.b=cos *b-sin *d;
+					tTfBone.resultMatrix.c=sin *a+cos *c;
+					tTfBone.resultMatrix.d=sin *b+cos *d;
+				}
+				if (this.translateMix){
+					this._temp[0]=this._data.offsetX;
+					this._temp[1]=this._data.offsetY;
+					this.target.localToWorld(this._temp);
+					tTfBone.resultMatrix.tx+=(this._temp[0]-tTfBone.resultMatrix.tx)*this.translateMix;
+					tTfBone.resultMatrix.ty+=(this._temp[1]-tTfBone.resultMatrix.ty)*this.translateMix;
+					tTfBone.updateChild();
+				}
+				if (this.scaleMix > 0){
+					var bs=Math.sqrt(tTfBone.resultMatrix.a *tTfBone.resultMatrix.a+tTfBone.resultMatrix.c *tTfBone.resultMatrix.c);
+					var ts=Math.sqrt(ta *ta+tc *tc);
+					var s=bs > 0.00001 ? (bs+(ts-bs+this._data.offsetScaleX)*this.scaleMix)/ bs :0;
+					tTfBone.resultMatrix.a *=s;
+					tTfBone.resultMatrix.c *=s;
+					bs=Math.sqrt(tTfBone.resultMatrix.b *tTfBone.resultMatrix.b+tTfBone.resultMatrix.d *tTfBone.resultMatrix.d);
+					ts=Math.sqrt(tb *tb+td *td);
+					s=bs > 0.00001 ? (bs+(ts-bs+this._data.offsetScaleY)*this.scaleMix)/ bs :0;
+					tTfBone.resultMatrix.b *=s;
+					tTfBone.resultMatrix.d *=s;
+				}
+				if (this.shearMix > 0){
+					b=tTfBone.resultMatrix.b,d=tTfBone.resultMatrix.d;
+					var by=Math.atan2(d,b);
+					r=Math.atan2(td,tb)-Math.atan2(tc,ta)-(by-Math.atan2(tTfBone.resultMatrix.c,tTfBone.resultMatrix.a));
+					if (r > Math.PI)
+						r-=Math.PI *2;
+					else if (r <-Math.PI)r+=Math.PI *2;
+					r=by+(r+this._data.offsetShearY *Math.PI / 180)*this.shearMix;
+					s=Math.sqrt(b *b+d *d);
+					tTfBone.resultMatrix.b=Math.cos(r)*s;
+					tTfBone.resultMatrix.d=Math.sin(r)*s;
+				}
+			}
+		}
+
+		return TfConstraint;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.TfConstraintData
+	var TfConstraintData=(function(){
+		function TfConstraintData(){
+			this.name=null;
+			this.targetIndex=0;
+			this.rotateMix=NaN;
+			this.translateMix=NaN;
+			this.scaleMix=NaN;
+			this.shearMix=NaN;
+			this.offsetRotation=NaN;
+			this.offsetX=NaN;
+			this.offsetY=NaN;
+			this.offsetScaleX=NaN;
+			this.offsetScaleY=NaN;
+			this.offsetShearY=NaN;
+			this.boneIndexs=[];
+		}
+
+		__class(TfConstraintData,'laya.ani.bone.TfConstraintData');
+		return TfConstraintData;
+	})()
+
+
+	/**
+	*@private
+	*/
+	//class laya.ani.bone.Transform
+	var Transform=(function(){
+		function Transform(){
+			this.skX=0;
+			this.skY=0;
+			this.scX=1;
+			this.scY=1;
+			this.x=0;
+			this.y=0;
+			this.skewX=0;
+			this.skewY=0;
+			this.mMatrix=null;
+		}
+
+		__class(Transform,'laya.ani.bone.Transform');
+		var __proto=Transform.prototype;
+		__proto.initData=function(data){
+			if (data.x !=undefined){
+				this.x=data.x;
+			}
+			if (data.y !=undefined){
+				this.y=data.y;
+			}
+			if (data.skX !=undefined){
+				this.skX=data.skX;
+			}
+			if (data.skY !=undefined){
+				this.skY=data.skY;
+			}
+			if (data.scX !=undefined){
+				this.scX=data.scX;
+			}
+			if (data.scY !=undefined){
+				this.scY=data.scY;
+			}
+		}
+
+		__proto.getMatrix=function(){
+			var tMatrix;
+			if (this.mMatrix){
+				tMatrix=this.mMatrix;
+				}else {
+				tMatrix=this.mMatrix=new Matrix();
+			}
+			tMatrix.identity();
+			tMatrix.scale(this.scX,this.scY);
+			if (this.skewX || this.skewY){
+				this.skew(tMatrix,this.skewX *Math.PI / 180,this.skewY *Math.PI / 180);
+			}
+			tMatrix.rotate(this.skX *Math.PI / 180);
+			tMatrix.translate(this.x,this.y);
+			return tMatrix;
+		}
+
+		__proto.skew=function(m,x,y){
+			var sinX=Math.sin(y);
+			var cosX=Math.cos(y);
+			var sinY=Math.sin(x);
+			var cosY=Math.cos(x);
+			m.setTo(m.a *cosY-m.b *sinX,
+			m.a *sinY+m.b *cosX,
+			m.c *cosY-m.d *sinX,
+			m.c *sinY+m.d *cosX,
+			m.tx *cosY-m.ty *sinX,
+			m.tx *sinY+m.ty *cosX);
+			return m;
+		}
+
+		return Transform;
+	})()
+
+
+	/**
+	*用于UV转换的工具类
+	*@private
+	*/
+	//class laya.ani.bone.UVTools
+	var UVTools=(function(){
+		function UVTools(){}
+		__class(UVTools,'laya.ani.bone.UVTools');
+		UVTools.getRelativeUV=function(bigUV,smallUV,rst){
+			var startX=bigUV[0];
+			var width=bigUV[2]-bigUV[0];
+			var startY=bigUV[1];
+			var height=bigUV[5]-bigUV[1];
+			if(!rst)rst=[];
+			rst.length=smallUV.length;
+			var i=0,len=0;
+			len=rst.length;
+			for (i=0;i < len;i+=2){
+				rst[i]=(smallUV[i]-startX)/ width;
+				rst[i+1]=(smallUV[i+1]-startY)/ height;
+			}
+			return rst;
+		}
+
+		UVTools.getAbsoluteUV=function(bigUV,smallUV,rst){
+			if (bigUV[0]==0 && bigUV[1]==0 && bigUV[4]==1 && bigUV[5]==1){
+				if (rst){
+					Utils.copyArray(rst,smallUV);
+					return rst;
+					}else{
+					return smallUV;
+				}
+			};
+			var startX=bigUV[0];
+			var width=bigUV[2]-bigUV[0];
+			var startY=bigUV[1];
+			var height=bigUV[5]-bigUV[1];
+			if(!rst)rst=[];
+			rst.length=smallUV.length;
+			var i=0,len=0;
+			len=rst.length;
+			for (i=0;i < len;i+=2){
+				rst[i]=smallUV[i]*width+startX;
+				rst[i+1]=smallUV[i+1]*height+startY;
+			}
+			return rst;
+		}
+
+		return UVTools;
 	})()
 
 
@@ -1048,7 +2945,7 @@ var Laya=window.Laya=(function(window,document){
 			this._cmds=null;
 			this._temp && (this._temp.length=0);
 			this._sp && (this._sp._renderType &=~0x01);
-			this._sp && (this._sp._renderType &=~0x100);
+			this._sp && (this._sp._renderType &=~0x200);
 			this._repaint();
 			if (this._vectorgraphArray){
 				for (var i=0,n=this._vectorgraphArray.length;i < n;i++){
@@ -1122,12 +3019,12 @@ var Laya=window.Laya=(function(window,document){
 			for (var i=0,n=cmds.length;i < n;i++){
 				cmd=cmds[i];
 				switch (cmd.callee){
-					case context.save:
+					case context._save:
 					case 7:
 						matrixs.push(tMatrix);
 						tMatrix=tMatrix.clone();
 						break ;
-					case context.restore:
+					case context._restore:
 					case 8:
 						tMatrix=matrixs.pop();
 						break ;
@@ -1179,14 +3076,20 @@ var Laya=window.Laya=(function(window,document){
 							Graphics._addPointArrToRst(rst,Rectangle._getBoundPointS(cmd[1],cmd[2],tex.width,tex.height),tMatrix);
 						}
 						break ;
-					case context._drawTextureWithTransform:
-						tMatrix.copyTo(tempMatrix);
-						tempMatrix.concat(cmd[5]);
+					case context._drawTextureWithTransform:;
+						var drawMatrix;
+						if (cmd[5]){
+							tMatrix.copyTo(tempMatrix);
+							tempMatrix.concat(cmd[5]);
+							drawMatrix=tempMatrix;
+							}else {
+							drawMatrix=tMatrix;
+						}
 						if (cmd[3] && cmd[4]){
-							Graphics._addPointArrToRst(rst,Rectangle._getBoundPointS(cmd[1],cmd[2],cmd[3],cmd[4]),tempMatrix);
+							Graphics._addPointArrToRst(rst,Rectangle._getBoundPointS(cmd[1],cmd[2],cmd[3],cmd[4]),drawMatrix);
 							}else {
 							tex=cmd[0];
-							Graphics._addPointArrToRst(rst,Rectangle._getBoundPointS(cmd[1],cmd[2],tex.width,tex.height),tempMatrix);
+							Graphics._addPointArrToRst(rst,Rectangle._getBoundPointS(cmd[1],cmd[2],tex.width,tex.height),drawMatrix);
 						}
 						break ;
 					case context._drawRect:
@@ -1253,6 +3156,8 @@ var Laya=window.Laya=(function(window,document){
 		*@param m 矩阵信息。
 		*/
 		__proto.drawTexture=function(tex,x,y,width,height,m,alpha){
+			(x===void 0)&& (x=0);
+			(y===void 0)&& (y=0);
 			(width===void 0)&& (width=0);
 			(height===void 0)&& (height=0);
 			(alpha===void 0)&& (alpha=1);
@@ -1264,9 +3169,9 @@ var Laya=window.Laya=(function(window,document){
 			if (tex.loaded && (width <=0 || height <=0))return;
 			x+=tex.offsetX;
 			y+=tex.offsetY;
-			this._sp && (this._sp._renderType |=0x100);
+			this._sp && (this._sp._renderType |=0x200);
 			var args=[tex,x,y,width,height,m,alpha];
-			args.callee=(m || alpha!=1)? Render._context._drawTextureWithTransform :Render._context._drawTexture;
+			args.callee=(m || alpha !=1)? Render._context._drawTextureWithTransform :Render._context._drawTexture;
 			if (this._one==null && !m && alpha==1){
 				this._one=args;
 				this._render=this._renderOneImg;
@@ -1277,6 +3182,32 @@ var Laya=window.Laya=(function(window,document){
 				tex.once("loaded",this,this._textureLoaded,[tex,args]);
 			}
 			this._repaint();
+		}
+
+		/**
+		*@private 清理贴图并替换为最新的
+		*@param tex
+		*/
+		__proto.cleanByTexture=function(tex,x,y,width,height){
+			(width===void 0)&& (width=0);
+			(height===void 0)&& (height=0);
+			if (!tex)return this.clear();
+			if (this._one && this._render===this._renderOneImg){
+				if (!width)width=tex.sourceWidth;
+				if (!height)height=tex.sourceHeight;
+				width=width-tex.sourceWidth+tex.width;
+				height=height-tex.sourceHeight+tex.height;
+				x+=tex.offsetX;
+				y+=tex.offsetY;
+				this._one[0]=tex;
+				this._one[1]=x;
+				this._one[2]=y;
+				this._one[3]=width;
+				this._one[4]=height;
+				}else {
+				this.clear();
+				tex && this.drawTexture(tex,x,y,width,height);
+			}
 		}
 
 		/**
@@ -1305,13 +3236,9 @@ var Laya=window.Laya=(function(window,document){
 			(height===void 0)&& (height=0);
 			(type===void 0)&& (type="repeat");
 			if (!tex)return;
-			var args=[tex,x,y,width,height,type,offset];
+			var args=[tex,x,y,width,height,type,offset || Point.EMPTY,{}];
 			if (!tex.loaded){
 				tex.once("loaded",this,this._textureLoaded,[tex,args]);
-			}
-			if (Render.isWebGL){
-				var tFillTextureSprite=RunDriver.fillTextureShader(tex,x,y,width,height);
-				args.push(tFillTextureSprite);
 			}
 			this._saveToCmd(Render._context._fillTexture,args);
 		}
@@ -1327,7 +3254,7 @@ var Laya=window.Laya=(function(window,document){
 		*保存到命令流。
 		*/
 		__proto._saveToCmd=function(fun,args){
-			this._sp && (this._sp._renderType |=0x100);
+			this._sp && (this._sp._renderType |=0x200);
 			if (this._one==null){
 				this._one=args;
 				this._render=this._renderOne;
@@ -1417,7 +3344,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
-		*旋转当前绘图。
+		*旋转当前绘图。(推荐使用transform，性能更高)
 		*@param angle 旋转角度，以弧度计。
 		*@param pivotX 水平方向轴心点坐标。
 		*@param pivotY 垂直方向轴心点坐标。
@@ -1429,7 +3356,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
-		*缩放当前绘图至更大或更小。
+		*缩放当前绘图至更大或更小。(推荐使用transform，性能更高)
 		*@param scaleX 水平方向缩放值。
 		*@param scaleY 垂直方向缩放值。
 		*@param pivotX 水平方向轴心点坐标。
@@ -1593,7 +3520,8 @@ var Laya=window.Laya=(function(window,document){
 				if (this._vectorgraphArray==null)this._vectorgraphArray=[];
 				this._vectorgraphArray.push(tId);
 			};
-			var arr=[fromX+0.5,fromY+0.5,toX+0.5,toY+0.5,lineColor,lineWidth,tId];
+			var offset=lineWidth % 2===0 ? 0 :0.5;
+			var arr=[fromX+offset,fromY+offset,toX+offset,toY+offset,lineColor,lineWidth,tId];
 			this._saveToCmd(Render._context._drawLine,arr);
 		}
 
@@ -1613,7 +3541,8 @@ var Laya=window.Laya=(function(window,document){
 				if (this._vectorgraphArray==null)this._vectorgraphArray=[];
 				this._vectorgraphArray.push(tId);
 			};
-			var arr=[x+0.5,y+0.5,points,lineColor,lineWidth,tId];
+			var offset=lineWidth % 2===0 ? 0 :0.5;
+			var arr=[x+offset,y+offset,points,lineColor,lineWidth,tId];
 			this._saveToCmd(Render._context._drawLines,arr);
 		}
 
@@ -1627,7 +3556,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.drawCurves=function(x,y,points,lineColor,lineWidth){
 			(lineWidth===void 0)&& (lineWidth=1);
-			var arr=[x+0.5,y+0.5,points,lineColor,lineWidth];
+			var arr=[x,y,points,lineColor,lineWidth];
 			this._saveToCmd(Render._context._drawCurves,arr);
 		}
 
@@ -1643,8 +3572,9 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.drawRect=function(x,y,width,height,fillColor,lineColor,lineWidth){
 			(lineWidth===void 0)&& (lineWidth=1);
-			var offset=lineColor ? 0.5 :0;
-			var arr=[x+offset,y+offset,width,height,fillColor,lineColor,lineWidth];
+			var offset=lineColor ? lineWidth / 2 :0;
+			var lineOffset=lineColor ? lineWidth :0;
+			var arr=[x+offset,y+offset,width-lineOffset,height-lineOffset,fillColor,lineColor,lineWidth];
 			this._saveToCmd(Render._context._drawRect,arr);
 		}
 
@@ -1659,14 +3589,14 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.drawCircle=function(x,y,radius,fillColor,lineColor,lineWidth){
 			(lineWidth===void 0)&& (lineWidth=1);
-			var offset=lineColor ? 0.5 :0;
+			var offset=lineColor ? lineWidth / 2 :0;
 			var tId=0;
 			if (Render.isWebGL){
 				tId=VectorGraphManager.getInstance().getId();
 				if (this._vectorgraphArray==null)this._vectorgraphArray=[];
 				this._vectorgraphArray.push(tId);
 			};
-			var arr=[x+offset,y+offset,radius,fillColor,lineColor,lineWidth,tId];
+			var arr=[x,y,radius-offset,fillColor,lineColor,lineWidth,tId];
 			this._saveToCmd(Render._context._drawCircle,arr);
 		}
 
@@ -1683,14 +3613,15 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.drawPie=function(x,y,radius,startAngle,endAngle,fillColor,lineColor,lineWidth){
 			(lineWidth===void 0)&& (lineWidth=1);
-			var offset=lineColor ? 0.5 :0;
+			var offset=lineColor ? lineWidth / 2 :0;
+			var lineOffset=lineColor ? lineWidth :0;
 			var tId=0;
 			if (Render.isWebGL){
 				tId=VectorGraphManager.getInstance().getId();
 				if (this._vectorgraphArray==null)this._vectorgraphArray=[];
 				this._vectorgraphArray.push(tId);
 			};
-			var arr=[x+offset,y+offset,radius,startAngle,endAngle,fillColor,lineColor,lineWidth,tId];
+			var arr=[x+offset,y+offset,radius-lineOffset,startAngle,endAngle,fillColor,lineColor,lineWidth,tId];
 			arr[3]=Utils.toRadian(startAngle);
 			arr[4]=Utils.toRadian(endAngle);
 			this._saveToCmd(Render._context._drawPie,arr);
@@ -1722,7 +3653,6 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.drawPoly=function(x,y,points,fillColor,lineColor,lineWidth){
 			(lineWidth===void 0)&& (lineWidth=1);
-			var offset=lineColor ? 0.5 :0;
 			var tId=0;
 			if (Render.isWebGL){
 				tId=VectorGraphManager.getInstance().getId();
@@ -1735,6 +3665,7 @@ var Laya=window.Laya=(function(window,document){
 					tIsConvexPolygon=true;
 				}
 			};
+			var offset=lineColor ? (lineWidth % 2===0 ? 0 :0.5):0;
 			var arr=[x+offset,y+offset,points,fillColor,lineColor,lineWidth,tId,tIsConvexPolygon];
 			this._saveToCmd(Render._context._drawPoly,arr);
 		}
@@ -1766,7 +3697,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param pen 画笔定义，支持以下设置{strokeStyle,lineWidth,lineJoin,lineCap,miterLimit}。
 		*/
 		__proto.drawPath=function(x,y,paths,brush,pen){
-			var arr=[x+0.5,y+0.5,paths,brush,pen];
+			var arr=[x,y,paths,brush,pen];
 			this._saveToCmd(Render._context._drawPath,arr);
 		}
 
@@ -1778,7 +3709,7 @@ var Laya=window.Laya=(function(window,document){
 		__getset(0,__proto,'cmds',function(){
 			return this._cmds;
 			},function(value){
-			this._sp && (this._sp._renderType |=0x100);
+			this._sp && (this._sp._renderType |=0x200);
 			this._cmds=value;
 			this._render=this._renderAll;
 			this._repaint();
@@ -1788,12 +3719,22 @@ var Laya=window.Laya=(function(window,document){
 			if (Render.isConchNode){
 				var from=laya.display.Graphics.prototype;
 				var to=ConchGraphics.prototype;
-				var list=["clear","destroy","alpha","rotate","transform","scale","translate","save","restore","clipRect","blendMode","fillText","fillBorderText","_fands","drawRect","drawCircle","drawPie","drawPoly","drawPath","drawImageM","drawLine","drawLines","_drawPs","drawCurves","replaceText","replaceTextColor","_fillImage","fillTexture"];
+				var list=["clear","destroy","alpha","rotate","transform","scale","translate","save","restore","clipRect","blendMode","fillText","fillBorderText","_fands","drawRect","drawCircle","drawPie","drawPoly","drawPath","drawImageM","drawLine","drawLines","_drawPs","drawCurves","replaceText","replaceTextColor","_fillImage","fillTexture","setSkinMesh","drawParticle","drawImageS"];
 				for (var i=0,len=list.length;i <=len;i++){
 					var temp=list[i];
 					from[temp]=to[temp];
 				}
 				from._saveToCmd=null;
+				if (to.drawImageS){
+					from.drawTextures=function (tex,pos){
+						if (!tex)return;
+						if (!(tex.loaded && tex.bitmap && tex.source)){
+							return;
+						};
+						var uv=tex.uv,w=tex.bitmap.width,h=tex.bitmap.height;
+						this.drawImageS(tex.bitmap.source,uv[0] *w,uv[1] *h,(uv[2]-uv[0])*w,(uv[5]-uv[3])*h,tex.offsetX,tex.offsetY,tex.width,tex.height,pos);
+					}
+				}
 				from.drawTexture=function (tex,x,y,width,height,m){
 					(x===void 0)&& (x=0);
 					(y===void 0)&& (y=0);
@@ -1812,6 +3753,7 @@ var Laya=window.Laya=(function(window,document){
 					y+=tex.offsetY;
 					var uv=tex.uv,w=tex.bitmap.width,h=tex.bitmap.height;
 					this.drawImageM(tex.bitmap.source,uv[0] *w,uv[1] *h,(uv[2]-uv[0])*w,(uv[5]-uv[3])*h,x,y,width,height,m);
+					this._repaint();
 				}
 				from.fillTexture=function (tex,x,y,width,height,type,offset){
 					(width===void 0)&& (width=0);
@@ -1868,23 +3810,69 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*...
+	*@author ww
+	*/
+	//class laya.ani.math.BezierLerp
+	var BezierLerp=(function(){
+		function BezierLerp(){}
+		__class(BezierLerp,'laya.ani.math.BezierLerp');
+		BezierLerp.getBezierRate=function(t,px0,py0,px1,py1){
+			var key=BezierLerp._getBezierParamKey(px0,py0,px1,py1);
+			var vKey=key *100+t;
+			if (BezierLerp._bezierResultCache[vKey])return BezierLerp._bezierResultCache[vKey];
+			var points=BezierLerp._getBezierPoints(px0,py0,px1,py1,key);
+			var i=0,len=0;
+			len=points.length;
+			for (i=0;i < len;i+=2){
+				if (t <=points[i]){
+					BezierLerp._bezierResultCache[vKey]=points[i+1];
+					return points[i+1];
+				}
+			}
+			BezierLerp._bezierResultCache[vKey]=1;
+			return 1;
+		}
+
+		BezierLerp._getBezierParamKey=function(px0,py0,px1,py1){
+			return (((px0 *100+py0)*100+px1)*100+py1)*100;
+		}
+
+		BezierLerp._getBezierPoints=function(px0,py0,px1,py1,key){
+			if (BezierLerp._bezierPointsCache[key])return BezierLerp._bezierPointsCache[key];
+			var controlPoints;
+			controlPoints=[0,0,px0,py0,px1,py1,1,1];
+			var bz;
+			bz=new Bezier();
+			var points;
+			points=bz.getBezierPoints(controlPoints,100,3);
+			BezierLerp._bezierPointsCache[key]=points;
+			return points;
+		}
+
+		BezierLerp._bezierResultCache={};
+		BezierLerp._bezierPointsCache={};
+		return BezierLerp;
+	})()
+
+
+	/**
 	*<code>BitmapFont</code> 是位图字体类，用于定义位图字体信息。
 	*/
 	//class laya.display.BitmapFont
 	var BitmapFont=(function(){
 		function BitmapFont(){
-			this.fontSize=12;
-			this.autoScaleSize=false;
 			this._texture=null;
 			this._fontCharDic={};
+			this._fontWidthMap={};
 			this._complete=null;
 			this._path=null;
-			this._maxHeight=0;
 			this._maxWidth=0;
 			this._spaceWidth=10;
-			this._leftPadding=0;
-			this._rightPadding=0;
-			this._letterSpacing=0;
+			this._padding=null;
+			this.fontSize=12;
+			this.autoScaleSize=false;
+			this.letterSpacing=0;
 		}
 
 		__class(BitmapFont,'laya.display.BitmapFont');
@@ -1900,6 +3888,9 @@ var Laya=window.Laya=(function(window,document){
 			Laya.loader.load([{url:this._path,type:"xml"},{url:this._path.replace(".fnt",".png"),type:"image"}],Handler.create(this,this.onLoaded));
 		}
 
+		/**
+		*@private
+		*/
 		__proto.onLoaded=function(){
 			this.parseFont(Loader.getRes(this._path),Loader.getRes(this._path.replace(".fnt",".png")));
 			this._complete && this._complete.run();
@@ -1919,10 +3910,7 @@ var Laya=window.Laya=(function(window,document){
 			this.fontSize=parseInt(tInfo[0].attributes["size"].nodeValue);
 			var tPadding=tInfo[0].attributes["padding"].nodeValue;
 			var tPaddingArray=tPadding.split(",");
-			var tUpPadding=parseInt(tPaddingArray[0]);
-			var tDownPadding=parseInt(tPaddingArray[2]);
-			this._leftPadding=parseInt(tPaddingArray[3]);
-			this._rightPadding=parseInt(tPaddingArray[1]);
+			this._padding=[parseInt(tPaddingArray[0]),parseInt(tPaddingArray[1]),parseInt(tPaddingArray[2]),parseInt(tPaddingArray[3])];
 			var chars=xml.getElementsByTagName("char");
 			var i=0;
 			for (i=0;i < chars.length;i++){
@@ -1937,11 +3925,10 @@ var Laya=window.Laya=(function(window,document){
 				region.width=parseInt(tAttribute["width"].nodeValue);
 				region.height=parseInt(tAttribute["height"].nodeValue);
 				var tTexture=Texture.create(texture,region.x,region.y,region.width,region.height,xOffset,yOffset);
-				this._maxHeight=Math.max(this._maxHeight,tUpPadding+tDownPadding+tTexture.height);
-				this._maxWidth=Math.max(this._maxWidth,tTexture.width);
+				this._maxWidth=Math.max(this._maxWidth,xAdvance+this.letterSpacing);
 				this._fontCharDic[tId]=tTexture;
+				this._fontWidthMap[tId]=xAdvance;
 			}
-			if (this.getCharTexture(" "))this.setSpaceWidth(this.getCharWidth(" "));
 		}
 
 		/**
@@ -1957,13 +3944,16 @@ var Laya=window.Laya=(function(window,document){
 		*销毁位图字体，调用Text.unregisterBitmapFont 时，默认会销毁。
 		*/
 		__proto.destroy=function(){
-			var tTexture=null;
-			for (var p in this._fontCharDic){
-				tTexture=this._fontCharDic[p];
-				if (tTexture)tTexture.destroy();
-				delete this._fontCharDic[p];
+			if (this._texture){
+				for (var p in this._fontCharDic){
+					var tTexture=this._fontCharDic[p];
+					if (tTexture)tTexture.destroy();
+				}
+				this._texture.destroy();
+				this._fontCharDic=null;
+				this._fontWidthMap=null;
+				this._texture=null;
 			}
-			this._texture.destroy();
 		}
 
 		/**
@@ -1980,9 +3970,9 @@ var Laya=window.Laya=(function(window,document){
 		*@return 宽度。
 		*/
 		__proto.getCharWidth=function(char){
-			if (char==" ")return this._spaceWidth+this._letterSpacing;
-			var tTexture=this.getCharTexture(char)
-			if (tTexture)return tTexture.width+tTexture.offsetX *2+this._letterSpacing;
+			var code=char.charCodeAt(0);
+			if (this._fontWidthMap[code])return this._fontWidthMap[code]+this.letterSpacing;
+			if (char==" ")return this._spaceWidth+this.letterSpacing;
 			return 0;
 		}
 
@@ -2003,14 +3993,14 @@ var Laya=window.Laya=(function(window,document){
 		*获取最大字符宽度。
 		*/
 		__proto.getMaxWidth=function(){
-			return this._maxWidth+this._letterSpacing;
+			return this._maxWidth;
 		}
 
 		/**
 		*获取最大字符高度。
 		*/
 		__proto.getMaxHeight=function(){
-			return this._maxHeight;
+			return this._padding[0]+this._padding[2]+this.fontSize;
 		}
 
 		/**
@@ -2018,33 +4008,20 @@ var Laya=window.Laya=(function(window,document){
 		*将指定的文本绘制到指定的显示对象上。
 		*/
 		__proto.drawText=function(text,sprite,drawX,drawY,align,width){
-			var tWidth=0;
+			var tWidth=this.getTextWidth(text);
 			var tTexture;
-			for (var i=0,n=text.length;i < n;i++){
-				tWidth+=this.getCharWidth(text.charAt(i));
-			};
-			var dx=this._leftPadding;
+			var dx=0;
 			align==="center" && (dx=(width-tWidth)/ 2);
-			align==="right" && (dx=(width-tWidth)-this._rightPadding);
+			align==="right" && (dx=(width-tWidth));
 			var tX=0;
-			for (i=0,n=text.length;i < n;i++){
+			for (var i=0,n=text.length;i < n;i++){
 				tTexture=this.getCharTexture(text.charAt(i));
-				if (tTexture)sprite.graphics.drawTexture(tTexture,drawX+tX+dx,drawY,tTexture.width,tTexture.height);
-				tX+=this.getCharWidth(text.charAt(i));
+				if (tTexture){
+					sprite.graphics.drawTexture(tTexture,drawX+tX+dx,drawY+this._padding[0]);
+					tX+=this.getCharWidth(text.charAt(i));
+				}
 			}
 		}
-
-		/**
-		*设置字符之间的间距（以像素为单位）。
-		*/
-		/**
-		*获取字符之间的间距（以像素为单位）。
-		*/
-		__getset(0,__proto,'letterSpacing',function(){
-			return this._letterSpacing;
-			},function(value){
-			this._letterSpacing=value;
-		});
 
 		return BitmapFont;
 	})()
@@ -2076,37 +4053,37 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.setTranslateX=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.translateX=value;
 		}
 
 		__proto.setTranslateY=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.translateY=value;
 		}
 
 		__proto.setScaleX=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.scaleX=value;
 		}
 
 		__proto.setScaleY=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.scaleY=value;
 		}
 
 		__proto.setRotate=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.rotate=value;
 		}
 
 		__proto.setSkewX=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.skewX=value;
 		}
 
 		__proto.setSkewY=function(value){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.skewY=value;
 		}
 
@@ -2204,12 +4181,8 @@ var Laya=window.Laya=(function(window,document){
 		});
 
 		Style.__init__=function(){
-			Style._TF_EMPTY=Style._createTransform();
+			Style._TF_EMPTY=new TransformInfo();
 			Style.EMPTY=new Style();
-		}
-
-		Style._createTransform=function(){
-			return {translateX:0,translateY:0,scaleX:1,scaleY:1,rotate:0,skewX:0,skewY:0};
 		}
 
 		Style.EMPTY=null
@@ -2396,6 +4369,26 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*@private
+	*/
+	//class laya.display.css.TransformInfo
+	var TransformInfo=(function(){
+		function TransformInfo(){
+			this.translateX=0;
+			this.translateY=0;
+			this.scaleX=1;
+			this.scaleY=1;
+			this.rotate=0;
+			this.skewX=0;
+			this.skewY=0;
+		}
+
+		__class(TransformInfo,'laya.display.css.TransformInfo');
+		return TransformInfo;
+	})()
+
+
+	/**
 	*<code>Event</code> 是事件类型的集合。
 	*/
 	//class laya.events.Event
@@ -2451,11 +4444,13 @@ var Laya=window.Laya=(function(window,document){
 		__getset(0,__proto,'touches',function(){
 			var arr=this.nativeEvent.touches;
 			if (arr){
+				var stage=Laya.stage;
 				for (var i=0,n=arr.length;i < n;i++){
 					var e=arr[i];
 					var point=Point.TEMP;
 					point.setTo(e.clientX,e.clientY);
-					Laya.stage._canvasTransform.invertTransformPoint(point);
+					stage._canvasTransform.invertTransformPoint(point);
+					stage.transform.invertTransformPoint(point);
 					e.stageX=point.x;
 					e.stageY=point.y;
 				}
@@ -2538,6 +4533,8 @@ var Laya=window.Laya=(function(window,document){
 		Event.SELECT="select";
 		Event.BLUR="blur";
 		Event.FOCUS="focus";
+		Event.VISIBILITY_CHANGE="visibilitychange";
+		Event.FOCUS_CHANGE="focuschange";
 		Event.PLAYED="played";
 		Event.PAUSED="paused";
 		Event.STOPPED="stopped";
@@ -2560,9 +4557,7 @@ var Laya=window.Laya=(function(window,document){
 		Event.MATERIAL_CHANGED="materialchanged";
 		Event.RENDERQUEUE_CHANGED="renderqueuechanged";
 		Event.WORLDMATRIX_NEEDCHANGE="worldmatrixneedchanged";
-		Event.ANIMATION_CHANGED="actionchanged";
-		Event.INSTAGE_CHANGED="instagechanged";
-		Event.CACHEFRAMEINDEX_CHANGED="cacheframeindexchanged";
+		Event.ANIMATION_CHANGED="animationchanged";
 		return Event;
 	})()
 
@@ -2639,6 +4634,8 @@ var Laya=window.Laya=(function(window,document){
 			this._isDoubleClick=false;
 			this._isLeftMouse=false;
 			this._eventList=[];
+			this._touchIDs={};
+			this._id=1;
 			this._event=new Event();
 			this._matrix=new Matrix();
 			this._point=new Point();
@@ -2727,7 +4724,7 @@ var Laya=window.Laya=(function(window,document){
 			this._stage._canvasTransform.invertTransformPoint(this._point);
 			_this.mouseX=this._point.x;
 			_this.mouseY=this._point.y;
-			_this._event.touchId=e.identifier;
+			_this._event.touchId=e.identifier || 0;
 		}
 
 		__proto.checkMouseWheel=function(e){
@@ -2745,7 +4742,7 @@ var Laya=window.Laya=(function(window,document){
 				var ele=this._lastOvers[i];
 				if (!ele.destroyed && this._currOvers.indexOf(ele)< 0){
 					ele._set$P("$_MOUSEOVER",false);
-					ele.event("mouseout",this._event.setTo("mouseout",ele,this._target));
+					ele.event("mouseout",this._event.setTo("mouseout",ele,ele));
 				}
 			};
 			var temp=this._lastOvers;
@@ -2785,10 +4782,10 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto._onMouseDown=function(ele){
 			if (this._isLeftMouse){
-				ele._set$P("$_MOUSEDOWN",true);
+				ele._set$P("$_MOUSEDOWN",this._touchIDs[this._event.touchId]);
 				ele.event("mousedown",this._event.setTo("mousedown",ele,this._target));
 				}else {
-				ele._set$P("$_RIGHTMOUSEDOWN",true);
+				ele._set$P("$_RIGHTMOUSEDOWN",this._touchIDs[this._event.touchId]);
 				ele.event("rightmousedown",this._event.setTo("rightmousedown",ele,this._target));
 			}
 			!this._event._stoped && ele.parent && this.onMouseDown(ele.parent);
@@ -2808,12 +4805,12 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.sendClick=function(ele,type){
 			if (ele.destroyed)return;
-			if (type==="mouseup" && ele._get$P("$_MOUSEDOWN")){
-				ele._set$P("$_MOUSEDOWN",false);
+			if (type==="mouseup" && ele._get$P("$_MOUSEDOWN")===this._touchIDs[this._event.touchId]){
+				ele._set$P("$_MOUSEDOWN",-1);
 				ele.event("click",this._event.setTo("click",ele,this._target));
 				this._isDoubleClick && ele.event("doubleclick",this._event.setTo("doubleclick",ele,this._target));
-				}else if (type==="rightmouseup" && ele._get$P("$_RIGHTMOUSEDOWN")){
-				ele._set$P("$_RIGHTMOUSEDOWN",false);
+				}else if (type==="rightmouseup" && ele._get$P("$_RIGHTMOUSEDOWN")===this._touchIDs[this._event.touchId]){
+				ele._set$P("$_RIGHTMOUSEDOWN",-1);
 				ele.event("rightclick",this._event.setTo("rightclick",ele,this._target));
 			}
 			!this._event._stoped && ele.parent && this.sendClick(ele.parent,type);
@@ -2899,6 +4896,7 @@ var Laya=window.Laya=(function(window,document){
 				if (evt.type!=='mousemove')this._prePoint.x=this._prePoint.y=-1000000;
 				switch (evt.type){
 					case 'mousedown':
+						this._touchIDs[0]=this._id++;
 						if (!MouseManager._isTouchRespond){
 							_this._isLeftMouse=evt.button===0;
 							_this.initEvent(evt);
@@ -2928,7 +4926,10 @@ var Laya=window.Laya=(function(window,document){
 						_this._isLeftMouse=true;
 						var touches=evt.changedTouches;
 						for (var j=0,n=touches.length;j < n;j++){
-							_this.initEvent(touches[j],evt);
+							var touch=touches[j];
+							if (this._id % 200===0)this._touchIDs={};
+							this._touchIDs[touch.identifier]=this._id++;
+							_this.initEvent(touch,evt);
 							_this.check(_this._stage,_this.mouseX,_this.mouseY,_this.onMouseDown);
 						}
 						break ;
@@ -3157,6 +5158,9 @@ var Laya=window.Laya=(function(window,document){
 				default :
 					return [];
 				}
+			while(this._controlPoints.length<=count){
+				this._controlPoints.push(new Point());
+			}
 			for (i=0;i < count *2;i+=2){
 				this._switchPoint(pList[i],pList[i+1]);
 			}
@@ -3664,6 +5668,51 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
+		*对矩阵应用缩放转换。反向相乘
+		*@param x 用于沿 x 轴缩放对象的乘数。
+		*@param y 用于沿 y 轴缩放对象的乘数。
+		*/
+		__proto.scaleEx=function(x,y){
+			var ba=this.a,bb=this.b,bc=this.c,bd=this.d;
+			if (bb!==0 || bc!==0){
+				this.a=x *ba;
+				this.b=x *bb;
+				this.c=y *bc;
+				this.d=y *bd;
+			}
+			else{
+				this.a=x *ba;
+				this.b=0 *bd;
+				this.c=0 *ba;
+				this.d=y *bd;
+			}
+			this.bTransform=true;
+		}
+
+		/**
+		*对 Matrix 对象应用旋转转换。反向相乘
+		*@param angle 以弧度为单位的旋转角度。
+		*/
+		__proto.rotateEx=function(angle){
+			var cos=Math.cos(angle);
+			var sin=Math.sin(angle);
+			var ba=this.a,bb=this.b,bc=this.c,bd=this.d;
+			if (bb!==0 || bc!==0){
+				this.a=cos *ba+sin *bc;
+				this.b=cos *bb+sin *bd;
+				this.c=-sin *ba+cos *bc;
+				this.d=-sin *bb+cos *bd;
+			}
+			else{
+				this.a=cos *ba;
+				this.b=sin *bd;
+				this.c=-sin *ba;
+				this.d=cos *bd;
+			}
+			this.bTransform=true;
+		}
+
+		/**
 		*返回一个新的 Matrix 对象，它是此矩阵的克隆，带有与所含对象完全相同的副本。
 		*@return 一个 Matrix 对象。
 		*/
@@ -3735,6 +5784,27 @@ var Laya=window.Laya=(function(window,document){
 				out.d=ad *bd;
 				out.tx=ba *atx+btx;
 				out.ty=bd *aty+bty;
+			}
+			return out;
+		}
+
+		Matrix.mul16=function(m1,m2,out){
+			var aa=m1.a,ab=m1.b,ac=m1.c,ad=m1.d,atx=m1.tx,aty=m1.ty;
+			var ba=m2.a,bb=m2.b,bc=m2.c,bd=m2.d,btx=m2.tx,bty=m2.ty;
+			if (bb!==0 || bc!==0){
+				out[0]=aa *ba+ab *bc;
+				out[1]=aa *bb+ab *bd;
+				out[4]=ac *ba+ad *bc;
+				out[5]=ac *bb+ad *bd;
+				out[12]=ba *atx+bc *aty+btx;
+				out[13]=bb *atx+bd *aty+bty;
+				}else {
+				out[0]=aa *ba;
+				out[1]=ab *bd;
+				out[4]=ac *ba;
+				out[5]=ad *bd;
+				out[12]=ba *atx+btx;
+				out[13]=bd *aty+bty;
 			}
 			return out;
 		}
@@ -4183,11 +6253,13 @@ var Laya=window.Laya=(function(window,document){
 					SoundManager._musicCompleteHandler=SoundManager._musicChannel.completeHandler;
 					SoundManager._musicPosition=SoundManager._musicChannel.position;
 					SoundManager._musicChannel.stop();
+					Laya.stage.once("mousedown",null,SoundManager._stageOnFocus);
 				}
 			}
 		}
 
 		SoundManager._stageOnFocus=function(){
+			Laya.stage.off("mousedown",null,SoundManager._stageOnFocus);
 			if (SoundManager._blurPaused){
 				SoundManager.playMusic(SoundManager._tMusic,SoundManager._musicLoops,SoundManager._musicCompleteHandler,SoundManager._musicPosition);
 				SoundManager._blurPaused=false;
@@ -4199,6 +6271,7 @@ var Laya=window.Laya=(function(window,document){
 			(startTime===void 0)&& (startTime=0);
 			if (SoundManager._muted)
 				return null;
+			url=URL.formatURL(url);
 			if (url==SoundManager._tMusic){
 				if (SoundManager._musicMuted)return null;
 				}else {
@@ -4230,6 +6303,7 @@ var Laya=window.Laya=(function(window,document){
 		SoundManager.playMusic=function(url,loops,complete,startTime){
 			(loops===void 0)&& (loops=0);
 			(startTime===void 0)&& (startTime=0);
+			url=URL.formatURL(url);
 			SoundManager._tMusic=url;
 			if (SoundManager._musicChannel)
 				SoundManager._musicChannel.stop();
@@ -4237,6 +6311,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		SoundManager.stopSound=function(url){
+			url=URL.formatURL(url);
 			var i=0;
 			var channel;
 			for (i=SoundManager._channels.length-1;i >=0;i--){
@@ -4256,6 +6331,17 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
+		SoundManager.stopAllSound=function(){
+			var i=0;
+			var channel;
+			for (i=SoundManager._channels.length-1;i >=0;i--){
+				channel=SoundManager._channels[i];
+				if (channel.url !=SoundManager._tMusic){
+					channel.stop();
+				}
+			}
+		}
+
 		SoundManager.stopMusic=function(){
 			if (SoundManager._musicChannel)
 				SoundManager._musicChannel.stop();
@@ -4263,6 +6349,7 @@ var Laya=window.Laya=(function(window,document){
 
 		SoundManager.setSoundVolume=function(volume,url){
 			if (url){
+				url=URL.formatURL(url);
 				SoundManager._setVolume(url,volume);
 				}else {
 				SoundManager.soundVolume=volume;
@@ -4287,6 +6374,7 @@ var Laya=window.Laya=(function(window,document){
 
 		SoundManager.musicVolume=1;
 		SoundManager.soundVolume=1;
+		SoundManager.playbackRate=1;
 		SoundManager._muted=false;
 		SoundManager._soundMuted=false;
 		SoundManager._musicMuted=false;
@@ -4418,13 +6506,14 @@ var Laya=window.Laya=(function(window,document){
 		URL.formatURL=function(url,base){
 			if (URL.customFormat !=null)url=URL.customFormat(url,base);
 			if (!url)return "null path";
+			if (url.indexOf("data:image")===0)return url;
 			if (Render.isConchApp==false){
 				URL.version[url] && (url+="?v="+URL.version[url]);
 			}
 			if (url.charAt(0)=='~')return URL.rootPath+url.substring(1);
 			if (URL.isAbsolute(url))return url;
 			var retVal=(base || URL.basePath)+url;
-			return retVal;
+			return URL.formatRelativePath(retVal);
 		}
 
 		URL.formatRelativePath=function(value){
@@ -4583,53 +6672,7 @@ var Laya=window.Laya=(function(window,document){
 				if (args[0].loaded)this.ctx.drawTexture(args[0],args[1],args[2],args[3],args[4],x,y);
 			}
 			this._fillTexture=function(x,y,args){
-				if (args[0].loaded){
-					var texture=args[0];
-					var ctxi=this.ctx;
-					var pat;
-					if (Render.isWebGL){
-						var tSprite=args[7];
-						if (tSprite){
-							if (args[6]){
-								tSprite.initTexture(texture,args[1],args[2],args[3],args[4],args[6].x,args[6].y);
-								}else {
-								tSprite.initTexture(texture,args[1],args[2],args[3],args[4],0,0);
-							};
-							var ctx=this.ctx;
-							tSprite.render(ctx,x,y);
-						}
-						return;
-					}
-					if (!Render.isConchApp){
-						if (texture.uv !=Texture.DEF_UV){
-							var canvas=new HTMLCanvas("2D");
-							canvas.getContext('2d');
-							canvas.size(texture.width,texture.height);
-							canvas.context.drawTexture(texture,0,0,texture.width,texture.height,0,0);
-							args[0]=texture=new Texture(canvas);
-						}
-						pat=args[7] ? args[7] :args[7]=ctxi.createPattern(texture.bitmap.source,args[5]);
-						}else {
-						if (texture.uv !=Texture.DEF_UV){
-							var w=texture.bitmap.width,h=texture.bitmap.height,uv=texture.uv;
-							pat=args[7] ? args[7] :args[7]=ctxi.createPattern(texture.bitmap.source,args[5],uv[0] *w,uv[1] *h,(uv[2]-uv[0])*w,(uv[5]-uv[3])*h);
-							}else {
-							pat=args[7] ? args[7] :args[7]=ctxi.createPattern(texture.bitmap.source,args[5]);
-						}
-					};
-					var oX=x+args[1],oY=y+args[2];
-					var sX=0,sY=0;
-					if (args[6]){
-						oX+=args[6].x % texture.width;
-						oY+=args[6].y % texture.height;
-						sX-=args[6].x % texture.width;
-						sY-=args[6].y % texture.height;
-					}
-					ctxi.translate(oX,oY);
-					ctxi.fillStyle=pat;
-					ctxi.fillRect(sX,sY,args[3],args[4]);
-					ctxi.translate(-oX,-oY);
-				}else {}
+				if (args[0].loaded)this.ctx.fillTexture(args[0],args[1]+x,args[2]+y,args[3],args[4],args[5],args[6],args[7]);
 			}
 			this._drawTextureWithTransform=function(x,y,args){
 				if (args[0].loaded)this.ctx.drawTextureWithTransform(args[0],args[1],args[2],args[3],args[4],args[5],x,y,args[6]);
@@ -4733,19 +6776,7 @@ var Laya=window.Laya=(function(window,document){
 				this.ctx.drawLines(x+this.x+args[0],y+this.y+args[1],args[2],args[3],args[4]);
 			}
 			this._drawCurves=function(x,y,args){
-				var ctx=this.ctx;
-				Render.isWebGL && ctx.setPathId(-1);
-				ctx.beginPath();
-				ctx.strokeStyle=args[3];
-				ctx.lineWidth=args[4];
-				var points=args[2];
-				x+=args[0],y+=args[1];
-				ctx.moveTo(x+points[0],y+points[1]);
-				var i=2,n=points.length;
-				while (i < n){
-					ctx.quadraticCurveTo(x+points[i++],y+points[i++],x+points[i++],y+points[i++]);
-				}
-				ctx.stroke();
+				this.ctx.drawCurves(x,y,args);
 			}
 			this._draw=function(x,y,args){
 				args[0].call(null,this,x,y);
@@ -5113,34 +7144,37 @@ var Laya=window.Laya=(function(window,document){
 				case 0x04:
 					this._fun=this._transform;
 					return;
-				case 0x20:
+				case 0x08:
 					this._fun=this._blend;
 					return;
-				case 0x08:
+				case 0x10:
 					this._fun=this._canvas;
 					return;
 				case 0x40:
-					this._fun=this._clip;
+					this._fun=this._mask;
 					return;
 				case 0x80:
-					this._fun=this._style;
+					this._fun=this._clip;
 					return;
 				case 0x100:
+					this._fun=this._style;
+					return;
+				case 0x200:
 					this._fun=this._graphics;
 					return;
 				case 0x800:
 					this._fun=this._childs;
 					return;
-				case 0x200:
+				case 0x400:
 					this._fun=this._custom;
 					return;
-				case 0x01 | 0x100:
+				case 0x01 | 0x200:
 					this._fun=this._image2;
 					return;
-				case 0x01 | 0x04 | 0x100:
+				case 0x01 | 0x04 | 0x200:
 					this._fun=this._image2;
 					return;
-				case 0x10:
+				case 0x20:
 					this._fun=Filter._filter;
 					return;
 				case 0x11111:
@@ -5181,6 +7215,12 @@ var Laya=window.Laya=(function(window,document){
 			if (style.blendMode){
 				context.ctx.globalCompositeOperation=style.blendMode;
 			};
+			var next=this._next;
+			next._fun.call(next,sprite,context,x,y);
+			context.ctx.globalCompositeOperation="source-over";
+		}
+
+		__proto._mask=function(sprite,context,x,y){
 			var next=this._next;
 			next._fun.call(next,sprite,context,x,y);
 			var mask=sprite.mask;
@@ -5238,24 +7278,26 @@ var Laya=window.Laya=(function(window,document){
 			var style=sprite._style;
 			x+=-style._tf.translateX+style.paddingLeft;
 			y+=-style._tf.translateY+style.paddingTop;
-			var words=sprite._getWords();
-			words && context.fillWords(words,x,y,(style).font,(style).color);
+			if (style._calculation){
+				var words=sprite._getWords();
+				words && context.fillWords(words,x,y,(style).font,(style).color);
+			};
 			var childs=sprite._childs,n=childs.length,ele;
-			if (!sprite.viewport || !sprite.optimizeScrollRect){
-				for (var i=0;i < n;++i)
-				(ele=(childs [i]))._style.visible && ele.render(context,x,y);
-				}else {
-				var rect=sprite.viewport;
+			if (sprite.viewport || (sprite.optimizeScrollRect && sprite._style.scrollRect)){
+				var rect=sprite.viewport || sprite._style.scrollRect;
 				var left=rect.x;
 				var top=rect.y;
 				var right=rect.right;
 				var bottom=rect.bottom;
-				var _x=0,_y=0;
+				var _x=NaN,_y=NaN;
 				for (i=0;i < n;++i){
-					if ((ele=childs [i])._style.visible && ((_x=ele.x)< right && (_x+ele.width)> left && (_y=ele.y)< bottom && (_y+ele.height)> top)){
+					if ((ele=childs [i]).visible && ((_x=ele._x)< right && (_x+ele.width)> left && (_y=ele._y)< bottom && (_y+ele.height)> top)){
 						ele.render(context,x,y);
 					}
 				}
+				}else {
+				for (var i=0;i < n;++i)
+				(ele=(childs [i]))._style.visible && ele.render(context,x,y);
 			}
 		}
 
@@ -5278,25 +7320,20 @@ var Laya=window.Laya=(function(window,document){
 					_cacheCanvas._cacheRec=new Rectangle();
 				var w,h;
 				tRec=sprite.getSelfBounds();
-				if (Render.isWebGL && _cacheCanvas.type==='bitmap' && (tRec.width > 2048 || tRec.height > 2048)){
-					console.log("cache bitmap size larger than 2048,cache ignored");
-					_next._fun.call(_next,sprite,tx,x,y);
-					return;
-				}
 				tRec.x-=sprite.pivotX;
 				tRec.y-=sprite.pivotY;
-				tRec.x-=10;
-				tRec.y-=10;
-				tRec.width+=20;
-				tRec.height+=20;
+				tRec.x-=16;
+				tRec.y-=16;
+				tRec.width+=32;
+				tRec.height+=32;
 				tRec.x=Math.floor(tRec.x+x)-x;
 				tRec.y=Math.floor(tRec.y+y)-y;
 				tRec.width=Math.floor(tRec.width);
 				tRec.height=Math.floor(tRec.height);
 				_cacheCanvas._cacheRec.copyFrom(tRec);
 				tRec=_cacheCanvas._cacheRec;
-				var scaleX=Render.isWebGL?1:Browser.pixelRatio *Laya.stage.clientScaleX;
-				var scaleY=Render.isWebGL?1:Browser.pixelRatio *Laya.stage.clientScaleY;
+				var scaleX=Render.isWebGL ? 1 :Browser.pixelRatio *Laya.stage.clientScaleX;
+				var scaleY=Render.isWebGL ? 1 :Browser.pixelRatio *Laya.stage.clientScaleY;
 				if (!Render.isWebGL){
 					var chainScaleX=1;
 					var chainScaleY=1;
@@ -5307,15 +7344,29 @@ var Laya=window.Laya=(function(window,document){
 						chainScaleY *=tar.scaleY;
 						tar=tar.parent;
 					}
-					if (chainScaleX > 1)scaleX *=chainScaleX;
-					if (chainScaleY > 1)scaleY *=chainScaleY;
+					if (Render.isWebGL){
+						if (chainScaleX < 1)scaleX *=chainScaleX;
+						if (chainScaleY < 1)scaleY *=chainScaleY;
+						}else {
+						if (chainScaleX > 1)scaleX *=chainScaleX;
+						if (chainScaleY > 1)scaleY *=chainScaleY;
+					}
 				}
 				w=tRec.width *scaleX;
 				h=tRec.height *scaleY;
 				left=tRec.x;
 				top=tRec.y;
+				if (Render.isWebGL && _cacheCanvas.type==='bitmap' && (w > 2048 || h > 2048)){
+					console.log("cache bitmap size larger than 2048,cache ignored");
+					if (_cacheCanvas.ctx){
+						Pool.recover("RenderContext",_cacheCanvas.ctx);
+						_cacheCanvas.ctx=null;
+					}
+					_next._fun.call(_next,sprite,context,x,y);
+					return;
+				}
 				if (!tx){
-					tx=_cacheCanvas.ctx=Pool.getItem("RenderContext")||new RenderContext(w,h,HTMLCanvas.create("AUTO"));
+					tx=_cacheCanvas.ctx=Pool.getItem("RenderContext")|| new RenderContext(w,h,HTMLCanvas.create("AUTO"));
 					tx.ctx.sprite=sprite;
 				}
 				canvas=tx.canvas;
@@ -5323,25 +7374,25 @@ var Laya=window.Laya=(function(window,document){
 				canvas.clear();
 				(canvas.width !=w || canvas.height !=h)&& canvas.size(w,h);
 				var t;
-				if (scaleX!=1||scaleY!=1){
+				if (scaleX !=1 || scaleY !=1){
 					var ctx=(tx).ctx;
 					ctx.save();
 					ctx.scale(scaleX,scaleY);
-					if (!Render.isConchWebGL&&Render.isConchApp){
+					if (!Render.isConchWebGL && Render.isConchApp){
 						t=sprite._$P.cf;
-						t&&ctx.setFilterMatrix&&ctx.setFilterMatrix(t._mat,t._alpha);
+						t && ctx.setFilterMatrix && ctx.setFilterMatrix(t._mat,t._alpha);
 					}
 					_next._fun.call(_next,sprite,tx,-left,-top);
 					ctx.restore();
-					if(!Render.isConchApp||Render.isConchWebGL)sprite._applyFilters();
+					if (!Render.isConchApp || Render.isConchWebGL)sprite._applyFilters();
 					}else {
 					ctx=(tx).ctx;
-					if (!Render.isConchWebGL&&Render.isConchApp){
+					if (!Render.isConchWebGL && Render.isConchApp){
 						t=sprite._$P.cf;
-						t&&ctx.setFilterMatrix&&ctx.setFilterMatrix(t._mat,t._alpha);
+						t && ctx.setFilterMatrix && ctx.setFilterMatrix(t._mat,t._alpha);
 					}
 					_next._fun.call(_next,sprite,tx,-left,-top);
-					if(!Render.isConchApp||Render.isConchWebGL)sprite._applyFilters();
+					if (!Render.isConchApp || Render.isConchWebGL)sprite._applyFilters();
 				}
 				if (sprite._$P.staticCache)_cacheCanvas.reCache=false;
 				Stat.canvasReCache++;
@@ -5369,9 +7420,9 @@ var Laya=window.Laya=(function(window,document){
 					RenderSprite.renders[n]=o;
 				}
 			}
-			_initSame([0x01,0x100,0x04,0x02],new RenderSprite(0x01,null));
-			RenderSprite.renders[0x01 | 0x100]=RunDriver.createRenderSprite(0x01 | 0x100,null);
-			RenderSprite.renders[0x01 | 0x04 | 0x100]=new RenderSprite(0x01 | 0x04 | 0x100,null);
+			_initSame([0x01,0x200,0x04,0x02],new RenderSprite(0x01,null));
+			RenderSprite.renders[0x01 | 0x200]=RunDriver.createRenderSprite(0x01 | 0x200,null);
+			RenderSprite.renders[0x01 | 0x04 | 0x200]=new RenderSprite(0x01 | 0x04 | 0x200,null);
 		}
 
 		RenderSprite._initRenderFun=function(sprite,context,x,y){
@@ -5394,13 +7445,14 @@ var Laya=window.Laya=(function(window,document){
 		RenderSprite.IMAGE=0x01;
 		RenderSprite.ALPHA=0x02;
 		RenderSprite.TRANSFORM=0x04;
-		RenderSprite.CANVAS=0x08;
-		RenderSprite.FILTERS=0x10;
-		RenderSprite.BLEND=0x20;
-		RenderSprite.CLIP=0x40;
-		RenderSprite.STYLE=0x80;
-		RenderSprite.GRAPHICS=0x100;
-		RenderSprite.CUSTOM=0x200;
+		RenderSprite.BLEND=0x08;
+		RenderSprite.CANVAS=0x10;
+		RenderSprite.FILTERS=0x20;
+		RenderSprite.MASK=0x40;
+		RenderSprite.CLIP=0x80;
+		RenderSprite.STYLE=0x100;
+		RenderSprite.GRAPHICS=0x200;
+		RenderSprite.CUSTOM=0x400;
 		RenderSprite.CHILDS=0x800;
 		RenderSprite.INIT=0x11111;
 		RenderSprite.renders=[];
@@ -5548,6 +7600,30 @@ var Laya=window.Laya=(function(window,document){
 			if (alphaChanged)this.globalAlpha=temp;
 		}
 
+		__proto.fillTexture=function(texture,x,y,width,height,type,offset,other){
+			if (!other.pat){
+				if (texture.uv !=Texture.DEF_UV){
+					var canvas=new HTMLCanvas("2D");
+					canvas.getContext('2d');
+					canvas.size(texture.width,texture.height);
+					canvas.context.drawTexture(texture,0,0,texture.width,texture.height,0,0);
+					texture=new Texture(canvas);
+				}
+				other.pat=this.createPattern(texture.bitmap.source,type);
+			};
+			var oX=x,oY=y;
+			var sX=0,sY=0;
+			if (offset){
+				oX+=offset.x % texture.width;
+				oY+=offset.y % texture.height;
+				sX-=offset.x % texture.width;
+				sY-=offset.y % texture.height;
+			}
+			this.translate(oX,oY);
+			this.fillRect(sX,sY,width,height,other.pat);
+			this.translate(-oX,-oY);
+		}
+
 		/***@private */
 		__proto.flush=function(){
 			return 0;
@@ -5577,13 +7653,27 @@ var Laya=window.Laya=(function(window,document){
 			this._repaint=false;
 		}
 
+		__proto.drawCurves=function(x,y,args){
+			this.beginPath();
+			this.strokeStyle=args[3];
+			this.lineWidth=args[4];
+			var points=args[2];
+			x+=args[0],y+=args[1];
+			this.moveTo(x+points[0],y+points[1]);
+			var i=2,n=points.length;
+			while (i < n){
+				this.quadraticCurveTo(x+points[i++],y+points[i++],x+points[i++],y+points[i++]);
+			}
+			this.stroke();
+		}
+
 		Context.__init__=function(to){
 			var from=laya.resource.Context.prototype;
 			to=to || CanvasRenderingContext2D.prototype;
 			to.__fillText=to.fillText;
 			to.__fillRect=to.fillRect;
 			to.__strokeText=to.strokeText;
-			var funs=['drawTextures','fillWords','setIsMainContext','fillRect','strokeText','fillText','transformByMatrix','setTransformByMatrix','clipRect','drawTexture','drawTexture2','drawTextureWithTransform','flush','clear','destroy','drawCanvas','fillBorderText'];
+			var funs=['drawTextures','fillWords','setIsMainContext','fillRect','strokeText','fillTexture','fillText','transformByMatrix','setTransformByMatrix','clipRect','drawTexture','drawTexture2','drawTextureWithTransform','flush','clear','destroy','drawCanvas','fillBorderText','drawCurves'];
 			funs.forEach(function(i){
 				to[i]=from[i] || to[i];
 			});
@@ -6018,9 +8108,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		UIUtils.toColor=function(color){
-			var str=color.toString("16");
-			while (str.length < 6)str="0"+str;
-			return "#"+str;
+			return Utils.toHexColor(color);
 		}
 
 		UIUtils.gray=function(traget,isGray){
@@ -6106,7 +8194,6 @@ var Laya=window.Laya=(function(window,document){
 			if (!Browser._container){
 				Browser._container=Browser.createElement("div");
 				Browser._container.id="layaContainer";
-				Browser._container.style.cssText="width:100%;height:100%";
 				Browser.document.body.appendChild(Browser._container);
 			}
 			return Browser._container;
@@ -6125,6 +8212,9 @@ var Laya=window.Laya=(function(window,document){
 			if (Browser._window)return;
 			Browser._window=RunDriver.getWindow();
 			Browser._document=Browser.window.document;
+			Browser._window.addEventListener('message',function(e){
+				laya.utils.Browser._onMessage(e);
+			},false);
 			Browser.document.__createElement=Browser.document.createElement;
 			window.requestAnimationFrame=(function(){return window.requestAnimationFrame || window.webkitRequestAnimationFrame ||window.mozRequestAnimationFrame || window.oRequestAnimationFrame ||function (c){return window.setTimeout(c,1000 / 60);};})();
 			var $BS=window.document.body.style;$BS.margin=0;$BS.overflow='hidden';;
@@ -6144,7 +8234,7 @@ var Laya=window.Laya=(function(window,document){
 			Browser.onMQQBrowser=/*[SAFE]*/ Browser.u.indexOf("MQQBrowser")>-1;
 			Browser.onWeiXin=/*[SAFE]*/ Browser.u.indexOf('MicroMessenger')>-1;
 			Browser.onPC=/*[SAFE]*/ !Browser.onMobile;
-			Browser.onSafari=/*[SAFE]*/ !!Browser.u.match(/Version\/\d\.\d\x20Mobile\/\S+\x20Safari/);
+			Browser.onSafari=/*[SAFE]*/ !!Browser.u.match(/Version\/\d+\.\d\x20Mobile\/\S+\x20Safari/);
 			Browser.httpProtocol=/*[SAFE]*/ Browser.window.location.protocol=="http:";
 			Browser.webAudioEnabled=/*[SAFE]*/ Browser.window["AudioContext"] || Browser.window["webkitAudioContext"] || Browser.window["mozAudioContext"] ? true :false;
 			Browser.soundType=/*[SAFE]*/ Browser.webAudioEnabled ? "WEBAUDIOSOUND" :"AUDIOSOUND";
@@ -6186,6 +8276,23 @@ var Laya=window.Laya=(function(window,document){
 			if (Browser.canvas)return;
 			Browser.canvas=HTMLCanvas.create('2D');
 			Browser.context=Browser.canvas.getContext('2d');
+		}
+
+		Browser._onMessage=function(e){
+			if (!e.data)return;
+			if (e.data.name=="size"){
+				Browser.window.innerWidth=e.data.width;
+				Browser.window.innerHeight=e.data.height;
+				Browser.window.__innerHeight=e.data.clientHeight;
+				if (!Browser.document.createEvent){
+					console.log("no document.createEvent");
+					return;
+				};
+				var evt=Browser.document.createEvent("HTMLEvents");
+				evt.initEvent("resize",false,false);
+				Browser.window.dispatchEvent(evt);
+				return;
+			}
 		}
 
 		Browser.createElement=function(type){
@@ -6234,6 +8341,524 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		return Browser;
+	})()
+
+
+	/**
+	*
+	*<code>Byte</code> 类提供用于优化读取、写入以及处理二进制数据的方法和属性。
+	*/
+	//class laya.utils.Byte
+	var Byte=(function(){
+		function Byte(data){
+			this._xd_=true;
+			this._allocated_=8;
+			//this._d_=null;
+			//this._u8d_=null;
+			this._pos_=0;
+			this._length=0;
+			if (data){
+				this._u8d_=new Uint8Array(data);
+				this._d_=new DataView(this._u8d_.buffer);
+				this._length=this._d_.byteLength;
+				}else {
+				this.___resizeBuffer(this._allocated_);
+			}
+		}
+
+		__class(Byte,'laya.utils.Byte');
+		var __proto=Byte.prototype;
+		/**@private */
+		__proto.___resizeBuffer=function(len){
+			try {
+				var newByteView=new Uint8Array(len);
+				if (this._u8d_ !=null){
+					if (this._u8d_.length <=len)newByteView.set(this._u8d_);
+					else newByteView.set(this._u8d_.subarray(0,len));
+				}
+				this._u8d_=newByteView;
+				this._d_=new DataView(newByteView.buffer);
+				}catch (err){
+				throw "___resizeBuffer err:"+len;
+			}
+		}
+
+		/**
+		*读取字符型值。
+		*@return
+		*/
+		__proto.getString=function(){
+			return this.rUTF(this.getUint16());
+		}
+
+		/**
+		*从指定的位置读取指定长度的数据用于创建一个 Float32Array 对象并返回此对象。
+		*@param start 开始位置。
+		*@param len 需要读取的字节长度。
+		*@return 读出的 Float32Array 对象。
+		*/
+		__proto.getFloat32Array=function(start,len){
+			var v=new Float32Array(this._d_.buffer.slice(start,start+len));
+			this._pos_+=len;
+			return v;
+		}
+
+		/**
+		*从指定的位置读取指定长度的数据用于创建一个 Uint8Array 对象并返回此对象。
+		*@param start 开始位置。
+		*@param len 需要读取的字节长度。
+		*@return 读出的 Uint8Array 对象。
+		*/
+		__proto.getUint8Array=function(start,len){
+			var v=new Uint8Array(this._d_.buffer.slice(start,start+len));
+			this._pos_+=len;
+			return v;
+		}
+
+		/**
+		*从指定的位置读取指定长度的数据用于创建一个 Int16Array 对象并返回此对象。
+		*@param start 开始位置。
+		*@param len 需要读取的字节长度。
+		*@return 读出的 Uint8Array 对象。
+		*/
+		__proto.getInt16Array=function(start,len){
+			var v=new Int16Array(this._d_.buffer.slice(start,start+len));
+			this._pos_+=len;
+			return v;
+		}
+
+		/**
+		*在指定字节偏移量位置处读取 Float32 值。
+		*@return Float32 值。
+		*/
+		__proto.getFloat32=function(){
+			var v=this._d_.getFloat32(this._pos_,this._xd_);
+			this._pos_+=4;
+			return v;
+		}
+
+		__proto.getFloat64=function(){
+			var v=this._d_.getFloat64(this._pos_,this._xd_);
+			this._pos_+=8;
+			return v;
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Float32 值。
+		*@param value 需要写入的 Float32 值。
+		*/
+		__proto.writeFloat32=function(value){
+			this.ensureWrite(this._pos_+4);
+			this._d_.setFloat32(this._pos_,value,this._xd_);
+			this._pos_+=4;
+		}
+
+		__proto.writeFloat64=function(value){
+			this.ensureWrite(this._pos_+8);
+			this._d_.setFloat64(this._pos_,value,this._xd_);
+			this._pos_+=8;
+		}
+
+		/**
+		*在当前字节偏移量位置处读取 Int32 值。
+		*@return Int32 值。
+		*/
+		__proto.getInt32=function(){
+			var float=this._d_.getInt32(this._pos_,this._xd_);
+			this._pos_+=4;
+			return float;
+		}
+
+		/**
+		*在当前字节偏移量位置处读取 Uint32 值。
+		*@return Uint32 值。
+		*/
+		__proto.getUint32=function(){
+			var v=this._d_.getUint32(this._pos_,this._xd_);
+			this._pos_+=4;
+			return v;
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Int32 值。
+		*@param value 需要写入的 Int32 值。
+		*/
+		__proto.writeInt32=function(value){
+			this.ensureWrite(this._pos_+4);
+			this._d_.setInt32(this._pos_,value,this._xd_);
+			this._pos_+=4;
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Uint32 值。
+		*@param value 需要写入的 Uint32 值。
+		*/
+		__proto.writeUint32=function(value){
+			this.ensureWrite(this._pos_+4);
+			this._d_.setUint32(this._pos_,value,this._xd_);
+			this._pos_+=4;
+		}
+
+		/**
+		*在当前字节偏移量位置处读取 Int16 值。
+		*@return Int16 值。
+		*/
+		__proto.getInt16=function(){
+			var us=this._d_.getInt16(this._pos_,this._xd_);
+			this._pos_+=2;
+			return us;
+		}
+
+		/**
+		*在当前字节偏移量位置处读取 Uint16 值。
+		*@return Uint16 值。
+		*/
+		__proto.getUint16=function(){
+			var us=this._d_.getUint16(this._pos_,this._xd_);
+			this._pos_+=2;
+			return us;
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Uint16 值。
+		*@param value 需要写入的Uint16 值。
+		*/
+		__proto.writeUint16=function(value){
+			this.ensureWrite(this._pos_+2);
+			this._d_.setUint16(this._pos_,value,this._xd_);
+			this._pos_+=2;
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Int16 值。
+		*@param value 需要写入的 Int16 值。
+		*/
+		__proto.writeInt16=function(value){
+			this.ensureWrite(this._pos_+2);
+			this._d_.setInt16(this._pos_,value,this._xd_);
+			this._pos_+=2;
+		}
+
+		/**
+		*在当前字节偏移量位置处读取 Uint8 值。
+		*@return Uint8 值。
+		*/
+		__proto.getUint8=function(){
+			return this._d_.getUint8(this._pos_++);
+		}
+
+		/**
+		*在当前字节偏移量位置处写入 Uint8 值。
+		*@param value 需要写入的 Uint8 值。
+		*/
+		__proto.writeUint8=function(value){
+			this.ensureWrite(this._pos_+1);
+			this._d_.setUint8(this._pos_,value,this._xd_);
+			this._pos_++;
+		}
+
+		/**
+		*@private
+		*在指定位置处读取 Uint8 值。
+		*@param pos 字节读取位置。
+		*@return Uint8 值。
+		*/
+		__proto._getUInt8=function(pos){
+			return this._d_.getUint8(pos);
+		}
+
+		/**
+		*@private
+		*在指定位置处读取 Uint16 值。
+		*@param pos 字节读取位置。
+		*@return Uint16 值。
+		*/
+		__proto._getUint16=function(pos){
+			return this._d_.getUint16(pos,this._xd_);
+		}
+
+		/**
+		*@private
+		*使用 getFloat32()读取6个值，用于创建并返回一个 Matrix 对象。
+		*@return Matrix 对象。
+		*/
+		__proto._getMatrix=function(){
+			var rst=new Matrix(this.getFloat32(),this.getFloat32(),this.getFloat32(),this.getFloat32(),this.getFloat32(),this.getFloat32());
+			return rst;
+		}
+
+		/**
+		*@private
+		*读取指定长度的 UTF 型字符串。
+		*@param len 需要读取的长度。
+		*@return 读出的字符串。
+		*/
+		__proto.rUTF=function(len){
+			var v="",max=this._pos_+len,c=0,c2=0,c3=0,f=String.fromCharCode;
+			var u=this._u8d_,i=0;
+			while (this._pos_ < max){
+				c=u[this._pos_++];
+				if (c < 0x80){
+					if (c !=0){
+						v+=f(c);
+					}
+					}else if (c < 0xE0){
+					v+=f(((c & 0x3F)<< 6)| (u[this._pos_++] & 0x7F));
+					}else if (c < 0xF0){
+					c2=u[this._pos_++];
+					v+=f(((c & 0x1F)<< 12)| ((c2 & 0x7F)<< 6)| (u[this._pos_++] & 0x7F));
+					}else {
+					c2=u[this._pos_++];
+					c3=u[this._pos_++];
+					v+=f(((c & 0x0F)<< 18)| ((c2 & 0x7F)<< 12)| ((c3 << 6)& 0x7F)| (u[this._pos_++] & 0x7F));
+				}
+				i++;
+			}
+			return v;
+		}
+
+		/**
+		*字符串读取。
+		*@param len
+		*@return
+		*/
+		__proto.getCustomString=function(len){
+			var v="",ulen=0,c=0,c2=0,f=String.fromCharCode;
+			var u=this._u8d_,i=0;
+			while (len > 0){
+				c=u[this._pos_];
+				if (c < 0x80){
+					v+=f(c);
+					this._pos_++;
+					len--;
+					}else {
+					ulen=c-0x80;
+					this._pos_++;
+					len-=ulen;
+					while (ulen > 0){
+						c=u[this._pos_++];
+						c2=u[this._pos_++];
+						v+=f((c2 << 8)| c);
+						ulen--;
+					}
+				}
+			}
+			return v;
+		}
+
+		/**
+		*清除数据。
+		*/
+		__proto.clear=function(){
+			this._pos_=0;
+			this.length=0;
+		}
+
+		/**
+		*@private
+		*获取此对象的 ArrayBuffer 引用。
+		*@return
+		*/
+		__proto.__getBuffer=function(){
+			return this._d_.buffer;
+		}
+
+		/**
+		*写入字符串，该方法写的字符串要使用 readUTFBytes 方法读取。
+		*@param value 要写入的字符串。
+		*/
+		__proto.writeUTFBytes=function(value){
+			value=value+"";
+			for (var i=0,sz=value.length;i < sz;i++){
+				var c=value.charCodeAt(i);
+				if (c <=0x7F){
+					this.writeByte(c);
+					}else if (c <=0x7FF){
+					this.writeByte(0xC0 | (c >> 6));
+					this.writeByte(0x80 | (c & 63));
+					}else if (c <=0xFFFF){
+					this.writeByte(0xE0 | (c >> 12));
+					this.writeByte(0x80 | ((c >> 6)& 63));
+					this.writeByte(0x80 | (c & 63));
+					}else {
+					this.writeByte(0xF0 | (c >> 18));
+					this.writeByte(0x80 | ((c >> 12)& 63));
+					this.writeByte(0x80 | ((c >> 6)& 63));
+					this.writeByte(0x80 | (c & 63));
+				}
+			}
+		}
+
+		/**
+		*将 UTF-8 字符串写入字节流。
+		*@param value 要写入的字符串值。
+		*/
+		__proto.writeUTFString=function(value){
+			var tPos=0;
+			tPos=this.pos;
+			this.writeUint16(1);
+			this.writeUTFBytes(value);
+			var dPos=0;
+			dPos=this.pos-tPos-2;
+			this._d_.setUint16(tPos,dPos,this._xd_);
+		}
+
+		/**
+		*@private
+		*读取 UTF-8 字符串。
+		*@return 读出的字符串。
+		*/
+		__proto.readUTFString=function(){
+			var tPos=0;
+			tPos=this.pos;
+			var len=0;
+			len=this.getUint16();
+			return this.readUTFBytes(len);
+		}
+
+		/**
+		*读取 UTF-8 字符串。
+		*@return 读出的字符串。
+		*/
+		__proto.getUTFString=function(){
+			return this.readUTFString();
+		}
+
+		/**
+		*@private
+		*读字符串，必须是 writeUTFBytes 方法写入的字符串。
+		*@param len 要读的buffer长度,默认将读取缓冲区全部数据。
+		*@return 读取的字符串。
+		*/
+		__proto.readUTFBytes=function(len){
+			(len===void 0)&& (len=-1);
+			if(len==0)return "";
+			len=len > 0 ? len :this.bytesAvailable;
+			return this.rUTF(len);
+		}
+
+		/**
+		*读字符串，必须是 writeUTFBytes 方法写入的字符串。
+		*@param len 要读的buffer长度,默认将读取缓冲区全部数据。
+		*@return 读取的字符串。
+		*/
+		__proto.getUTFBytes=function(len){
+			(len===void 0)&& (len=-1);
+			return this.readUTFBytes(len);
+		}
+
+		/**
+		*在字节流中写入一个字节。
+		*@param value
+		*/
+		__proto.writeByte=function(value){
+			this.ensureWrite(this._pos_+1);
+			this._d_.setInt8(this._pos_,value);
+			this._pos_+=1;
+		}
+
+		/**
+		*@private
+		*在字节流中读一个字节。
+		*/
+		__proto.readByte=function(){
+			return this._d_.getInt8(this._pos_++);
+		}
+
+		/**
+		*在字节流中读一个字节。
+		*/
+		__proto.getByte=function(){
+			return this.readByte();
+		}
+
+		/**
+		*指定该字节流的长度。
+		*@param lengthToEnsure 指定的长度。
+		*/
+		__proto.ensureWrite=function(lengthToEnsure){
+			if (this._length < lengthToEnsure)this._length=lengthToEnsure;
+			if (this._allocated_ < lengthToEnsure)this.length=lengthToEnsure;
+		}
+
+		/**
+		*写入指定的 Arraybuffer 对象。
+		*@param arraybuffer 需要写入的 Arraybuffer 对象。
+		*@param offset 偏移量（以字节为单位）
+		*@param length 长度（以字节为单位）
+		*/
+		__proto.writeArrayBuffer=function(arraybuffer,offset,length){
+			(offset===void 0)&& (offset=0);
+			(length===void 0)&& (length=0);
+			if (offset < 0 || length < 0)throw "writeArrayBuffer error - Out of bounds";
+			if (length==0)length=arraybuffer.byteLength-offset;
+			this.ensureWrite(this._pos_+length);
+			var uint8array=new Uint8Array(arraybuffer);
+			this._u8d_.set(uint8array.subarray(offset,offset+length),this._pos_);
+			this._pos_+=length;
+		}
+
+		/**
+		*获取此对象的 ArrayBuffer数据,数据只包含有效数据部分 。
+		*/
+		__getset(0,__proto,'buffer',function(){
+			var rstBuffer=this._d_.buffer;
+			if (rstBuffer.byteLength==this.length)return rstBuffer;
+			return rstBuffer.slice(0,this.length);
+		});
+
+		/**
+		*字节顺序。
+		*/
+		__getset(0,__proto,'endian',function(){
+			return this._xd_ ? "littleEndian" :"bigEndian";
+			},function(endianStr){
+			this._xd_=(endianStr=="littleEndian");
+		});
+
+		/**
+		*字节长度。
+		*/
+		__getset(0,__proto,'length',function(){
+			return this._length;
+			},function(value){
+			if (this._allocated_ < value)
+				this.___resizeBuffer(this._allocated_=Math.floor(Math.max(value,this._allocated_ *2)));
+			else if (this._allocated_ > value)
+			this.___resizeBuffer(this._allocated_=value);
+			this._length=value;
+		});
+
+		/**
+		*当前读取到的位置。
+		*/
+		__getset(0,__proto,'pos',function(){
+			return this._pos_;
+			},function(value){
+			this._pos_=value;
+			this._d_.byteOffset=value;
+		});
+
+		/**
+		*可从字节流的当前位置到末尾读取的数据的字节数。
+		*/
+		__getset(0,__proto,'bytesAvailable',function(){
+			return this.length-this._pos_;
+		});
+
+		Byte.getSystemEndian=function(){
+			if (!Byte._sysEndian){
+				var buffer=new ArrayBuffer(2);
+				new DataView(buffer).setInt16(0,256,true);
+				Byte._sysEndian=(new Int16Array(buffer))[0]===256 ? "littleEndian" :"bigEndian";
+			}
+			return Byte._sysEndian;
+		}
+
+		Byte.BIG_ENDIAN="bigEndian";
+		Byte.LITTLE_ENDIAN="littleEndian";
+		Byte._sysEndian=null;
+		return Byte;
 	})()
 
 
@@ -6333,7 +8958,7 @@ var Laya=window.Laya=(function(window,document){
 				json=JSON.parse(json);
 			var props=json.props;
 			if (!node){
-				node=instanceHandler ? instanceHandler.runWith(json.instanceParams):ClassUtils.getInstance(props.runtime || json.type);
+				node=instanceHandler ? instanceHandler.runWith(json):ClassUtils.getInstance(props.runtime || json.type);
 				if (!node)
 					return null;
 			};
@@ -6372,13 +8997,9 @@ var Laya=window.Laya=(function(window,document){
 						node[prop]=value;
 					}
 				}
-			};
-			var customProps=json.customProps;
-			if (customHandler && customProps){
-				for (prop in customProps){
-					value=customProps[prop];
-					customHandler.runWith([node,prop,value]);
-				}
+			}
+			if (customHandler && json.customProps){
+				customHandler.runWith([node,json]);
 			}
 			if (node["created"])
 				node.created();
@@ -6476,12 +9097,15 @@ var Laya=window.Laya=(function(window,document){
 			var m;
 			var params=ClassUtils._getParams(propsO,drawConfig[1],drawConfig[2],drawConfig[3]);
 			m=ClassUtils._tM;
-			if (m){
+			if (m || ClassUtils._alpha !=1){
 				g.save();
-				g.transform(m);
+				if (m)
+					g.transform(m);
+				if (ClassUtils._alpha !=1)
+					g.alpha(ClassUtils._alpha);
 			}
 			g[drawConfig[0]].apply(g,params);
-			if (m){
+			if (m || ClassUtils._alpha !=1){
 				g.restore();
 			}
 		}
@@ -6517,7 +9141,8 @@ var Laya=window.Laya=(function(window,document){
 			len=params.length;
 			for (i=0;i < len;i++){
 				rst[i]=ClassUtils._getObjVar(obj,params[i][0],params[i][1]);
-			};
+			}
+			ClassUtils._alpha=ClassUtils._getObjVar(obj,"alpha",1);
 			var m;
 			m=ClassUtils._getTransformData(obj);
 			if (m){
@@ -6553,7 +9178,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		ClassUtils._temParam=[];
-		ClassUtils._classMap={'Sprite':'laya.display.Sprite','Text':'laya.display.Text','Animation':'laya.display.Animation','Skeleton':'laya.ani.bone.Skeleton','Particle2D':'laya.particle.Particle2D','div':'laya.html.dom.HTMLDivElement','img':'laya.html.dom.HTMLImageElement','span':'laya.html.dom.HTMLElement','br':'laya.html.dom.HTMLBrElement','style':'laya.html.dom.HTMLStyleElement','font':'laya.html.dom.HTMLElement','a':'laya.html.dom.HTMLElement','#text':'laya.html.dom.HTMLElement'};
+		ClassUtils._classMap={'Sprite':'laya.display.Sprite','Text':'laya.display.Text','Animation':'laya.display.Animation','Skeleton':'laya.ani.bone.Skeleton','Particle2D':'laya.particle.Particle2D','div':'laya.html.dom.HTMLDivElement','p':'laya.html.dom.HTMLElement','img':'laya.html.dom.HTMLImageElement','span':'laya.html.dom.HTMLElement','br':'laya.html.dom.HTMLBrElement','style':'laya.html.dom.HTMLStyleElement','font':'laya.html.dom.HTMLElement','a':'laya.html.dom.HTMLElement','#text':'laya.html.dom.HTMLElement'};
 		ClassUtils.getClass=function(className){
 			var classObject=ClassUtils._classMap[className] || className;
 			if ((typeof classObject=='string'))
@@ -6562,6 +9187,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		ClassUtils._tM=null
+		ClassUtils._alpha=NaN
 		__static(ClassUtils,
 		['DrawTypeDic',function(){return this.DrawTypeDic={"Rect":["drawRect",[["x",0],["y",0],["width",0],["height",0],["fillColor",null],["lineColor",null],["lineWidth",1]]],"Circle":["drawCircle",[["x",0],["y",0],["radius",0],["fillColor",null],["lineColor",null],["lineWidth",1]]],"Pie":["drawPie",[["x",0],["y",0],["radius",0],["startAngle",0],["endAngle",0],["fillColor",null],["lineColor",null],["lineWidth",1]]],"Image":["drawTexture",[["x",0],["y",0],["width",0],["height",0]]],"Texture":["drawTexture",[["skin",null],["x",0],["y",0],["width",0],["height",0]],1,"_adptTextureData"],"FillTexture":["fillTexture",[["skin",null],["x",0],["y",0],["width",0],["height",0],["repeat",null]],1,"_adptTextureData"],"FillText":["fillText",[["text",""],["x",0],["y",0],["font",null],["color",null],["textAlign",null]],1],"Line":["drawLine",[["x",0],["y",0],["toX",0],["toY",0],["lineColor",null],["lineWidth",0]],0,"_adptLineData"],"Lines":["drawLines",[["x",0],["y",0],["points",""],["lineColor",null],["lineWidth",0]],0,"_adptLinesData"],"Curves":["drawCurves",[["x",0],["y",0],["points",""],["lineColor",null],["lineWidth",0]],0,"_adptLinesData"],"Poly":["drawPoly",[["x",0],["y",0],["points",""],["fillColor",null],["lineColor",null],["lineWidth",1]],0,"_adptLinesData"]};}
 		]);
@@ -6755,16 +9381,19 @@ var Laya=window.Laya=(function(window,document){
 		*@param elasticBackTime 橡皮筋回弹时间，单位为毫秒。
 		*@param data 事件携带数据。
 		*@param disableMouseEvent 鼠标事件是否有效。
+		*@param ratio 惯性阻尼系数
 		*/
-		__proto.start=function(target,area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent){
+		__proto.start=function(target,area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent,ratio){
+			(ratio===void 0)&& (ratio=0.92);
 			this.clearTimer();
 			this.target=target;
 			this.area=area;
 			this.hasInertia=hasInertia;
-			this.elasticDistance=elasticDistance;
+			this.elasticDistance=area ? elasticDistance :0;
 			this.elasticBackTime=elasticBackTime;
 			this.data=data;
 			this._disableMouseEvent=disableMouseEvent;
+			this.ratio=ratio;
 			if (target.globalScaleX !=1 || target.globalScaleY !=1){
 				this._parent=target.parent;
 				}else {
@@ -7191,6 +9820,16 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
+		*检测对象是否包含指定的点。
+		*@param x 点的 X 轴坐标值（水平位置）。
+		*@param y 点的 Y 轴坐标值（垂直位置）。
+		*@return 如果包含指定的点，则值为 true；否则为 false。
+		*/
+		__proto.contains=function(x,y){
+			return this.isHit(x,y);
+		}
+
+		/**
 		*可点击区域，可以设置绘制一系列矢量图作为点击区域（目前只支持圆形，矩形，多边形）
 		*/
 		__getset(0,__proto,'hit',function(){
@@ -7283,8 +9922,6 @@ var Laya=window.Laya=(function(window,document){
 				p1y=areaPoints[i+1];
 				p2x=areaPoints[(i+2)% len];
 				p2y=areaPoints[(i+3)% len];
-				var p1=areaPoints[i];
-				var p2=areaPoints[(i+1)% areaPoints.length];
 				if (p1y==p2y)
 					continue ;
 				if (p.y < Math.min(p1y,p2y))
@@ -7804,6 +10441,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param caller 执行域(this)。
 		*/
 		__proto.clearAll=function(caller){
+			if (!caller)return;
 			for (var i=0,n=this._handlers.length;i < n;i++){
 				var handler=this._handlers[i];
 				if (handler.caller===caller){
@@ -8261,6 +10899,20 @@ var Laya=window.Laya=(function(window,document){
 				}
 				array[j+1]=c;
 				i++;
+			};
+			var model=c.parent.conchModel;
+			if (model){
+				if (model.updateZOrder !=null){
+					model.updateZOrder();
+				}
+				else{
+					for (i=0;i < len;i++){
+						model.removeChild(array[i].conchModel);
+					}
+					for (i=0;i < len;i++){
+						model.addChildAt(array[i].conchModel,i);
+					}
+				}
 			}
 			return true;
 		}
@@ -8280,9 +10932,19 @@ var Laya=window.Laya=(function(window,document){
 			return result;
 		}
 
+		Utils.getFileExtension=function(path){
+			Utils._extReg.lastIndex=path.lastIndexOf(".");
+			var result=Utils._extReg.exec(path);
+			if (result && result.length > 1){
+				return result[1].toLowerCase();
+			}
+			return null;
+		}
+
 		Utils._gid=1;
 		Utils._pi=180 / Math.PI;
 		Utils._pi2=Math.PI / 180;
+		Utils._extReg=/\.(\w+)\??/g;
 		Utils.parseXMLFromString=function(value){
 			var rst;
 			value=value.replace(/>\s+</g,'><');
@@ -8493,16 +11155,20 @@ var Laya=window.Laya=(function(window,document){
 			this.destroyed=false;
 			this._displayedInStage=false;
 			this._parent=null;
-			this.model=null;
+			this.conchModel=null;
 			Node.__super.call(this);
 			this._childs=Node.ARRAY_EMPTY;
 			this.timer=Laya.timer;
 			this._$P=Node.PROP_EMPTY;
-			this.model=Render.isConchNode ? new ConchNode():null;
+			this.conchModel=Render.isConchNode? this.createConchModel():null;
 		}
 
 		__class(Node,'laya.display.Node',_super);
 		var __proto=Node.prototype;
+		__proto.createConchModel=function(){
+			return null;
+		}
+
 		/**
 		*<p>销毁此对象。</p>
 		*@param destroyChild 是否同时销毁子节点，若值为true,则销毁子节点，否则不销毁子节点。
@@ -8541,17 +11207,18 @@ var Laya=window.Laya=(function(window,document){
 			if (node._parent===this){
 				this._childs.splice(this.getChildIndex(node),1);
 				this._childs.push(node);
-				if (this.model){
-					this.model.removeChild(node.model);
-					this.model.addChildAt(node.model,this._childs.length-1);
+				if (this.conchModel){
+					this.conchModel.removeChild(node.conchModel);
+					this.conchModel.addChildAt(node.conchModel,this._childs.length-1);
 				}
 				this._childChanged();
 				}else {
 				node.parent && node.parent.removeChild(node);
 				this._childs===Node.ARRAY_EMPTY && (this._childs=[]);
 				this._childs.push(node);
-				this.model && this.model.addChildAt(node.model,this._childs.length-1);
+				this.conchModel && this.conchModel.addChildAt(node.conchModel,this._childs.length-1);
 				node.parent=this;
+				this._childChanged();
 			}
 			return node;
 		}
@@ -8581,16 +11248,16 @@ var Laya=window.Laya=(function(window,document){
 					var oldIndex=this.getChildIndex(node);
 					this._childs.splice(oldIndex,1);
 					this._childs.splice(index,0,node);
-					if (this.model){
-						this.model.removeChild(node.model);
-						this.model.addChildAt(node.model,index);
+					if (this.conchModel){
+						this.conchModel.removeChild(node.conchModel);
+						this.conchModel.addChildAt(node.conchModel,index);
 					}
 					this._childChanged();
 					}else {
 					node.parent && node.parent.removeChild(node);
 					this._childs===Node.ARRAY_EMPTY && (this._childs=[]);
 					this._childs.splice(index,0,node);
-					this.model && this.model.addChildAt(node.model,index);
+					this.conchModel && this.conchModel.addChildAt(node.conchModel,index);
 					node.parent=this;
 				}
 				return node;
@@ -8629,8 +11296,10 @@ var Laya=window.Laya=(function(window,document){
 
 		/**@private */
 		__proto._set$P=function(key,value){
-			this._$P===Node.PROP_EMPTY && (this._$P={});
-			this._$P[key]=value;
+			if (!this.destroyed){
+				this._$P===Node.PROP_EMPTY && (this._$P={});
+				this._$P[key]=value;
+			}
 			return value;
 		}
 
@@ -8658,9 +11327,9 @@ var Laya=window.Laya=(function(window,document){
 			if (oldIndex < 0)throw new Error("setChildIndex:node is must child of this object.");
 			childs.splice(oldIndex,1);
 			childs.splice(index,0,node);
-			if (this.model){
-				this.model.removeChild(node.model);
-				this.model.addChildAt(node.model,index);
+			if (this.conchModel){
+				this.conchModel.removeChild(node.conchModel);
+				this.conchModel.addChildAt(node.conchModel,index);
 			}
 			this._childChanged();
 			return node;
@@ -8712,7 +11381,7 @@ var Laya=window.Laya=(function(window,document){
 			var node=this.getChildAt(index);
 			if (node){
 				this._childs.splice(index,1);
-				this.model && this.model.removeChild(node.model);
+				this.conchModel && this.conchModel.removeChild(node.conchModel);
 				node.parent=null;
 			}
 			return node;
@@ -8737,7 +11406,7 @@ var Laya=window.Laya=(function(window,document){
 				}
 				for (var i=0,n=arr.length;i < n;i++){
 					arr[i].parent=null;
-					this.model && this.model.removeChild(arr[i].model);
+					this.conchModel && this.conchModel.removeChild(arr[i].conchModel);
 				}
 			}
 			return this;
@@ -8754,9 +11423,9 @@ var Laya=window.Laya=(function(window,document){
 			var index=this._childs.indexOf(oldNode);
 			if (index >-1){
 				this._childs.splice(index,1,newNode);
-				if (this.model){
-					this.model.removeChild(oldNode.model);
-					this.model.addChildAt(newNode.model,index);
+				if (this.conchModel){
+					this.conchModel.removeChild(oldNode.conchModel);
+					this.conchModel.addChildAt(newNode.conchModel,index);
 				}
 				oldNode.parent=null;
 				newNode.parent=this;
@@ -8905,6 +11574,409 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*<code>AnimationPlayer</code> 类用于动画播放器。
+	*/
+	//class laya.ani.AnimationPlayer extends laya.events.EventDispatcher
+	var AnimationPlayer=(function(_super){
+		function AnimationPlayer(){
+			this._templet=null;
+			this._currentTime=NaN;
+			this._currentFrameTime=NaN;
+			this._playStart=NaN;
+			this._playEnd=NaN;
+			this._playDuration=NaN;
+			this._overallDuration=NaN;
+			this._stopWhenCircleFinish=false;
+			this._elapsedPlaybackTime=NaN;
+			this._startUpdateLoopCount=NaN;
+			this._currentAnimationClipIndex=0;
+			this._currentKeyframeIndex=0;
+			this._paused=false;
+			this._cacheFrameRate=0;
+			this._cacheFrameRateInterval=NaN;
+			this._cachePlayRate=NaN;
+			this._fullFrames=null;
+			this.isCache=true;
+			this.playbackRate=1.0;
+			this.returnToZeroStopped=true;
+			AnimationPlayer.__super.call(this);
+			this._currentAnimationClipIndex=-1;
+			this._currentKeyframeIndex=-1;
+			this._currentTime=0.0;
+			this._overallDuration=Number.MAX_VALUE;
+			this._stopWhenCircleFinish=false;
+			this._elapsedPlaybackTime=0;
+			this._startUpdateLoopCount=-1;
+			this._cachePlayRate=1.0;
+			this.cacheFrameRate=60;
+		}
+
+		__class(AnimationPlayer,'laya.ani.AnimationPlayer',_super);
+		var __proto=AnimationPlayer.prototype;
+		Laya.imps(__proto,{"laya.resource.IDestroy":true})
+		/**
+		*@private
+		*/
+		__proto._onTempletLoadedComputeFullKeyframeIndices=function(cachePlayRate,cacheFrameRate,templet){
+			if (this._templet===templet && this._cachePlayRate===cachePlayRate && this._cacheFrameRate===cacheFrameRate)
+				this._computeFullKeyframeIndices();
+		}
+
+		/**
+		*@private
+		*/
+		__proto._computeFullKeyframeIndices=function(){
+			var anifullFrames=this._fullFrames=[];
+			var templet=this._templet;
+			var cacheFrameInterval=this._cacheFrameRateInterval *this._cachePlayRate;
+			for (var i=0,iNum=templet.getAnimationCount();i < iNum;i++){
+				var aniFullFrame=[];
+				for (var j=0,jNum=templet.getAnimation(i).nodes.length;j < jNum;j++){
+					var node=templet.getAnimation(i).nodes[j];
+					var frameCount=Math.floor((node.playTime+0.000001)/ cacheFrameInterval);
+					var nodeFullFrames=new Uint16Array(frameCount+1);
+					var lastFrameIndex=-1;
+					for (var n=0,nNum=node.keyFrame.length;n < nNum;n++){
+						var keyFrame=node.keyFrame[n];
+						var tm=keyFrame.startTime;
+						var endTm=tm+keyFrame.duration+cacheFrameInterval;
+						do {
+							var frameIndex=Math.floor(tm / cacheFrameInterval+0.5);
+							for (var k=lastFrameIndex+1;k < frameIndex;k++)
+							nodeFullFrames[k]=n;
+							lastFrameIndex=frameIndex;
+							nodeFullFrames[frameIndex]=n;
+							tm+=cacheFrameInterval;
+						}while (tm <=endTm);
+					}
+					aniFullFrame.push(nodeFullFrames);
+				}
+				anifullFrames.push(aniFullFrame);
+			}
+		}
+
+		/**
+		*@private
+		*/
+		__proto._calculatePlayDuration=function(){
+			if (this.state!==0){
+				var oriDuration=this._templet.getAniDuration(this._currentAnimationClipIndex);
+				(this._playEnd===0)&& (this._playEnd=oriDuration);
+				if (this._playEnd> oriDuration)
+					this._playEnd=oriDuration;
+				this._playDuration=this._playEnd-this._playStart;
+			}
+		}
+
+		/**
+		*@private
+		*/
+		__proto._destroy=function(){
+			this.offAll();
+			this._templet=null;
+			this._fullFrames=null;
+		}
+
+		/**
+		*播放动画。
+		*@param index 动画索引。
+		*@param playbackRate 播放速率。
+		*@param duration 播放时长（0为1次,Number.MAX_VALUE为循环播放）。
+		*@param playStart 播放的起始时间位置。
+		*@param playEnd 播放的结束时间位置。（0为动画一次循环的最长结束时间位置）。
+		*/
+		__proto.play=function(index,playbackRate,overallDuration,playStart,playEnd){
+			(index===void 0)&& (index=0);
+			(playbackRate===void 0)&& (playbackRate=1.0);
+			(overallDuration===void 0)&& (overallDuration=2147483647);
+			(playStart===void 0)&& (playStart=0);
+			(playEnd===void 0)&& (playEnd=0);
+			if (!this._templet)
+				throw new Error("AnimationPlayer:templet must not be null,maybe you need to set url.");
+			if (overallDuration < 0 || playStart < 0 || playEnd < 0)
+				throw new Error("AnimationPlayer:overallDuration,playStart and playEnd must large than zero.");
+			if ((playEnd!==0)&& (playStart > playEnd))
+				throw new Error("AnimationPlayer:start must less than end.");
+			this._currentTime=0;
+			this._currentFrameTime=0;
+			this._elapsedPlaybackTime=0;
+			this.playbackRate=playbackRate;
+			this._overallDuration=overallDuration;
+			this._playStart=playStart;
+			this._playEnd=playEnd;
+			this._paused=false;
+			this._currentAnimationClipIndex=index;
+			this._currentKeyframeIndex=0;
+			this._startUpdateLoopCount=Stat.loopCount;
+			this.event("played");
+			if (this._templet.loaded)
+				this._calculatePlayDuration();
+			else
+			this._templet.once("loaded",this,this._calculatePlayDuration);
+			this.update(0);
+		}
+
+		/**
+		*播放动画。
+		*@param index 动画索引。
+		*@param playbackRate 播放速率。
+		*@param duration 播放时长（0为1次,Number.MAX_VALUE为循环播放）。
+		*@param playStartFrame 播放的原始起始帧率位置。
+		*@param playEndFrame 播放的原始结束帧率位置。（0为动画一次循环的最长结束时间位置）。
+		*/
+		__proto.playByFrame=function(index,playbackRate,overallDuration,playStartFrame,playEndFrame,fpsIn3DBuilder){
+			(index===void 0)&& (index=0);
+			(playbackRate===void 0)&& (playbackRate=1.0);
+			(overallDuration===void 0)&& (overallDuration=2147483647);
+			(playStartFrame===void 0)&& (playStartFrame=0);
+			(playEndFrame===void 0)&& (playEndFrame=0);
+			(fpsIn3DBuilder===void 0)&& (fpsIn3DBuilder=30);
+			var interval=1000.0 / fpsIn3DBuilder;
+			this.play(index,playbackRate,overallDuration,playStartFrame *interval,playEndFrame *interval);
+		}
+
+		/**
+		*停止播放当前动画
+		*@param immediate 是否立即停止
+		*/
+		__proto.stop=function(immediate){
+			(immediate===void 0)&& (immediate=true);
+			if (immediate){
+				this._currentAnimationClipIndex=-1;
+				this.event("stopped");
+				}else {
+				this._stopWhenCircleFinish=true;
+			}
+		}
+
+		/**更新动画播放器 */
+		__proto.update=function(elapsedTime){
+			if (this._currentAnimationClipIndex===-1 || this._paused || !this._templet || !this._templet.loaded)
+				return;
+			var cacheFrameInterval=this._cacheFrameRateInterval *this._cachePlayRate;
+			var time=0;
+			(this._startUpdateLoopCount!==Stat.loopCount)&& (time=elapsedTime *this.playbackRate,this._elapsedPlaybackTime+=time);
+			var currentAniClipPlayDuration=this.playDuration;
+			if ((this._overallDuration!==0 && this._elapsedPlaybackTime >=this._overallDuration)|| (this._overallDuration===0 && this._elapsedPlaybackTime >=currentAniClipPlayDuration)){
+				this._currentTime=currentAniClipPlayDuration;
+				this._currentKeyframeIndex=Math.floor((currentAniClipPlayDuration+0.000001)/ cacheFrameInterval);
+				this._currentFrameTime=this._currentKeyframeIndex *cacheFrameInterval;
+				this._currentAnimationClipIndex=-1;
+				this.event("stopped");
+				return;
+			}
+			time+=this._currentTime;
+			if (currentAniClipPlayDuration > 0){
+				while (time >=currentAniClipPlayDuration){
+					if (this._stopWhenCircleFinish){
+						this._currentAnimationClipIndex=-1;
+						this._stopWhenCircleFinish=false;
+						this.event("stopped");
+						return;
+					}
+					time-=currentAniClipPlayDuration;
+					this.event("complete");
+				}
+				this._currentTime=time;
+				this._currentKeyframeIndex=Math.floor((this.currentPlayTime)/ cacheFrameInterval);
+				this._currentFrameTime=this._currentKeyframeIndex *cacheFrameInterval;
+				}else {
+				if (this._stopWhenCircleFinish){
+					this._currentAnimationClipIndex=-1;
+					this._stopWhenCircleFinish=false;
+					this.event("stopped");
+					return;
+				}
+				this._currentTime=this._currentFrameTime=this._currentKeyframeIndex=0;
+				this.event("complete");
+			}
+		}
+
+		/**
+		*动画播放的结束时间位置。
+		*@return 结束时间位置。
+		*/
+		__getset(0,__proto,'playEnd',function(){
+			return this._playEnd;
+		});
+
+		/**
+		*设置动画数据模板,注意：修改此值会有计算开销。
+		*@param value 动画数据模板
+		*/
+		/**
+		*获取动画数据模板
+		*@param value 动画数据模板
+		*/
+		__getset(0,__proto,'templet',function(){
+			return this._templet;
+			},function(value){
+			if (!this.state===0)
+				this.stop(true);
+			if (this._templet!==value){
+				this._templet=value;
+				if (value.loaded)
+					this._computeFullKeyframeIndices();
+				else
+				value.once("loaded",this,this._onTempletLoadedComputeFullKeyframeIndices,[this._cachePlayRate,this._cacheFrameRate]);
+			}
+		});
+
+		/**
+		*动画播放的起始时间位置。
+		*@return 起始时间位置。
+		*/
+		__getset(0,__proto,'playStart',function(){
+			return this._playStart;
+		});
+
+		/**
+		*获取动画播放一次的总时间
+		*@return 动画播放一次的总时间
+		*/
+		__getset(0,__proto,'playDuration',function(){
+			return this._playDuration;
+		});
+
+		/**
+		*获取当前播放状态
+		*@return 当前播放状态
+		*/
+		__getset(0,__proto,'state',function(){
+			if (this._currentAnimationClipIndex===-1)
+				return 0;
+			if (this._paused)
+				return 1;
+			return 2;
+		});
+
+		/**
+		*获取当前帧数
+		*@return 当前帧数
+		*/
+		__getset(0,__proto,'currentKeyframeIndex',function(){
+			return this._currentKeyframeIndex;
+		});
+
+		/**
+		*获取动画播放的总总时间
+		*@return 动画播放的总时间
+		*/
+		__getset(0,__proto,'overallDuration',function(){
+			return this._overallDuration;
+		});
+
+		/**
+		*获取当前帧时间，不包括重播时间
+		*@return value 当前时间
+		*/
+		__getset(0,__proto,'currentFrameTime',function(){
+			return this._currentFrameTime;
+		});
+
+		/**
+		*获取当前动画索引
+		*@return value 当前动画索引
+		*/
+		__getset(0,__proto,'currentAnimationClipIndex',function(){
+			return this._currentAnimationClipIndex;
+		});
+
+		/**
+		*获取当前精确时间，不包括重播时间
+		*@return value 当前时间
+		*/
+		__getset(0,__proto,'currentPlayTime',function(){
+			return this._currentTime+this._playStart;
+		});
+
+		/**
+		*设置缓存播放速率,默认值为1.0,注意：修改此值会有计算开销。*
+		*@return value 缓存播放速率。
+		*/
+		/**
+		*获取缓存播放速率。*
+		*@return 缓存播放速率。
+		*/
+		__getset(0,__proto,'cachePlayRate',function(){
+			return this._cachePlayRate;
+			},function(value){
+			if (this._cachePlayRate!==value){
+				this._cachePlayRate=value;
+				if (this._templet)
+					if (this._templet.loaded)
+				this._computeFullKeyframeIndices();
+				else
+				this._templet.once("loaded",this,this._onTempletLoadedComputeFullKeyframeIndices,[value,this._cacheFrameRate]);
+			}
+		});
+
+		/**
+		*设置默认帧率,每秒60帧,注意：修改此值会有计算开销。*
+		*@return value 缓存帧率
+		*/
+		/**
+		*获取默认帧率*
+		*@return value 默认帧率
+		*/
+		__getset(0,__proto,'cacheFrameRate',function(){
+			return this._cacheFrameRate;
+			},function(value){
+			if (this._cacheFrameRate!==value){
+				this._cacheFrameRate=value;
+				this._cacheFrameRateInterval=1000.0 / this._cacheFrameRate;
+				if (this._templet)
+					if (this._templet.loaded)
+				this._computeFullKeyframeIndices();
+				else
+				this._templet.once("loaded",this,this._onTempletLoadedComputeFullKeyframeIndices,[this._cachePlayRate,value]);
+			}
+		});
+
+		/**
+		*设置当前播放位置
+		*@param value 当前时间
+		*/
+		__getset(0,__proto,'currentTime',null,function(value){
+			if (this._currentAnimationClipIndex===-1 || !this._templet || !this._templet.loaded)
+				return;
+			if (value < this._playStart || value > this._playEnd)
+				throw new Error("AnimationPlayer:value must large than playStartTime,small than playEndTime.");
+			this._startUpdateLoopCount=Stat.loopCount;
+			var cacheFrameInterval=this._cacheFrameRateInterval *this._cachePlayRate;
+			this._currentTime=value;
+			this._currentKeyframeIndex=Math.floor(this.currentPlayTime / cacheFrameInterval);
+			this._currentFrameTime=this._currentKeyframeIndex *cacheFrameInterval;
+		});
+
+		/**
+		*设置是否暂停
+		*@param value 是否暂停
+		*/
+		/**
+		*获取当前是否暂停
+		*@return 是否暂停
+		*/
+		__getset(0,__proto,'paused',function(){
+			return this._paused;
+			},function(value){
+			this._paused=value;
+			value && this.event("paused");
+		});
+
+		/**
+		*获取缓存帧率间隔时间
+		*@return 缓存帧率间隔时间
+		*/
+		__getset(0,__proto,'cacheFrameRateInterval',function(){
+			return this._cacheFrameRateInterval;
+		});
+
+		return AnimationPlayer;
+	})(EventDispatcher)
+
+
+	/**
 	*<code>Resource</code> 资源存取类。
 	*/
 	//class laya.resource.Resource extends laya.events.EventDispatcher
@@ -8914,7 +11986,9 @@ var Laya=window.Laya=(function(window,document){
 			this._lastUseFrameCount=0;
 			this._memorySize=0;
 			this._name=null;
+			this._loaded=false;
 			this._released=false;
+			this._disposed=false;
 			this._resourceManager=null;
 			this.lock=false;
 			Resource.__super.call(this);
@@ -8930,8 +12004,8 @@ var Laya=window.Laya=(function(window,document){
 
 		__class(Resource,'laya.resource.Resource',_super);
 		var __proto=Resource.prototype;
-		Laya.imps(__proto,{"laya.resource.IDispose":true})
-		/**重新创建资源。override it，同时修改memorySize属性、处理startCreate()和compoleteCreate()方法。*/
+		Laya.imps(__proto,{"laya.resource.ICreateResource":true,"laya.resource.IDispose":true})
+		/**重新创建资源,override it，同时修改memorySize属性、处理startCreate()和compoleteCreate()方法。*/
 		__proto.recreateResource=function(){
 			this.startCreate();
 			this.completeCreate();
@@ -8994,12 +12068,20 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
-		*<p>彻底清理资源。</p>
+		*@private
+		*/
+		__proto.onAsynLoaded=function(url,data,params){
+			throw new Error("Resource: must override this function!");
+		}
+
+		/**
+		*<p>彻底处理资源，处理后不能恢复。</p>
 		*<p><b>注意：</b>会强制解锁清理。</p>
 		*/
 		__proto.dispose=function(){
 			if (this._resourceManager!==null)
 				throw new Error("附属于resourceManager的资源不能独立释放！");
+			this._disposed=true;
 			this.lock=false;
 			this.releaseResource();
 			var index=Resource._loadedResources.indexOf(this);
@@ -9020,11 +12102,22 @@ var Laya=window.Laya=(function(window,document){
 			this.event("recovered",this);
 		}
 
+		__getset(0,__proto,'loaded',function(){
+			return this._loaded;
+		});
+
 		/**
 		*获取唯一标识ID(通常用于优化或识别)。
 		*/
 		__getset(0,__proto,'id',function(){
 			return this._$1__id;
+		});
+
+		/**
+		*是否已处理。
+		*/
+		__getset(0,__proto,'disposed',function(){
+			return this._disposed;
 		});
 
 		/**
@@ -9119,14 +12212,39 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
-		Resource.animationCache={};
-		Resource.meshCache={};
-		Resource.materialCache={};
 		Resource._uniqueIDCounter=0;
 		Resource._loadedResources=[];
 		Resource._isLoadedResourcesSorted=false;
 		return Resource;
 	})(EventDispatcher)
+
+
+	//class laya.ani.GraphicsAni extends laya.display.Graphics
+	var GraphicsAni=(function(_super){
+		function GraphicsAni(){
+			GraphicsAni.__super.call(this);
+			if (Render.isConchNode){
+				this["drawSkin"]=function (skin){
+					skin.transform || (skin.transform=Matrix.EMPTY);
+					this.setSkinMesh&&this.setSkinMesh(skin._ps,skin.mVBData,skin.mEleNum,0,skin.mTexture,skin.transform);
+				};
+			}
+		}
+
+		__class(GraphicsAni,'laya.ani.GraphicsAni',_super);
+		var __proto=GraphicsAni.prototype;
+		/**
+		*@private
+		*画自定义蒙皮动画
+		*@param skin
+		*/
+		__proto.drawSkin=function(skin){
+			var arr=[skin];
+			this._saveToCmd(Render._context._drawSkin,arr);
+		}
+
+		return GraphicsAni;
+	})(Graphics)
 
 
 	/**
@@ -9144,7 +12262,6 @@ var Laya=window.Laya=(function(window,document){
 			this._loaders=[];
 			this._loaderCount=0;
 			this._resInfos=[];
-			this._resMap={};
 			this._infoPool=[];
 			this._maxPriority=5;
 			this._failRes={};
@@ -9155,6 +12272,79 @@ var Laya=window.Laya=(function(window,document){
 		__class(LoaderManager,'laya.net.LoaderManager',_super);
 		var __proto=LoaderManager.prototype;
 		/**
+		*根据clas定义创建一个资源空壳，随后进行异步加载，资源加载完成后，会调用资源类的onAsynLoaded方法回调真正的数据,套嵌资源的子资源会保留资源路径"?"后的部分
+		*@param url 资源地址或者数组，比如[{url:xx,clas:xx,priority:xx,params:xx},{url:xx,clas:xx,priority:xx,params:xx}]
+		*@param progress 进度回调，回调参数为当前文件加载的进度信息(0-1)。
+		*@param clas 资源类名，比如Texture
+		*@param type 资源类型
+		*@param priority 优先级
+		*@param cache 是否缓存
+		*@return 返回资源对象
+		*/
+		__proto.create=function(url,complete,progress,clas,params,priority,cache){
+			(priority===void 0)&& (priority=1);
+			(cache===void 0)&& (cache=true);
+			if ((url instanceof Array)){
+				var items=url;
+				var itemCount=items.length;
+				var loadedCount=0;
+				if (progress){
+					var progress2=Handler.create(progress.caller,progress.method,progress.args,false);
+				}
+				for (var i=0;i < itemCount;i++){
+					var item=items[i];
+					if ((typeof item=='string'))item=items[i]={url:item};
+					item.progress=0;
+					var progressHandler=progress ? Handler.create(null,onProgress,[item],false):null;
+					var completeHandler=(progress || complete)? Handler.create(null,onComplete,[item]):null;
+					this._create(item.url,completeHandler,progressHandler,item.clas || clas,item.params || params,item.priority || priority,cache);
+				}
+				function onComplete (item,content){
+					loadedCount++;
+					item.progress=1;
+					if (loadedCount===itemCount && complete){
+						complete.run();
+					}
+				}
+				function onProgress (item,value){
+					item.progress=value;
+					var num=0;
+					for (var j=0;j < itemCount;j++){
+						var item1=items[j];
+						num+=item1.progress;
+					};
+					var v=num / itemCount;
+					progress2.runWith(v);
+				}
+				return true;
+			}else return this._create(url,complete,progress,clas,params,priority,cache);
+		}
+
+		__proto._create=function(url,complete,progress,clas,params,priority,cache){
+			(priority===void 0)&& (priority=1);
+			(cache===void 0)&& (cache=true);
+			var item=this.getRes(url);
+			if (!item){
+				var extension=Utils.getFileExtension(url);
+				var creatItem=LoaderManager.createMap[extension];
+				if (!clas)clas=creatItem[0];
+				var type=creatItem[1];
+				if (clas===Texture)type="htmlimage";
+				item=clas ? new clas():null;
+				this.load(url,Handler.create(null,onLoaded),progress,type,priority,false,null,true);
+				function onLoaded (data){
+					item && item.onAsynLoaded.call(item,url,data,params);
+					if (complete)complete.run();
+				}
+				if (cache)LoaderManager.cacheRes(url,item);
+				}else {
+				progress && progress.runWith(1);
+				complete && complete.run();
+			}
+			return item;
+		}
+
+		/**
 		*加载资源。
 		*@param url 地址，或者资源对象数组(简单数组：["a.png","b.png"]，复杂数组[{url:"a.png",type:Loader.IMAGE,size:100,priority:1},{url:"b.json",type:Loader.JSON,size:50,priority:1}])。
 		*@param complete 结束回调，如果加载失败，则返回 null 。
@@ -9163,34 +12353,38 @@ var Laya=window.Laya=(function(window,document){
 		*@param priority 优先级，0-4，五个优先级，0优先级最高，默认为1。
 		*@param cache 是否缓存加载结果。
 		*@param group 分组。
+		*@param ignoreCache 是否忽略缓存，强制重新加载
 		*@return 此 LoaderManager 对象。
 		*/
-		__proto.load=function(url,complete,progress,type,priority,cache,group){
+		__proto.load=function(url,complete,progress,type,priority,cache,group,ignoreCache){
 			(priority===void 0)&& (priority=1);
 			(cache===void 0)&& (cache=true);
+			(ignoreCache===void 0)&& (ignoreCache=false);
 			if ((url instanceof Array))return this._loadAssets(url,complete,progress,type,priority,cache,group);
-			url=Loader._parseURL(url);
+			url=URL.formatURL(url);
 			var content=Loader.getRes(url);
 			if (content !=null){
+				progress && progress.runWith(1);
 				complete && complete.runWith(content);
 				this._loaderCount || this.event("complete");
 				}else {
-				var info=this._resMap[url];
+				var info=LoaderManager._resMap[url];
 				if (!info){
 					info=this._infoPool.length ? this._infoPool.pop():new ResInfo();
 					info.url=url;
 					info.type=type;
 					info.cache=cache;
 					info.group=group;
+					info.ignoreCache=ignoreCache;
 					complete && info.on("complete",complete.caller,complete.method,complete.args);
 					progress && info.on("progress",progress.caller,progress.method,progress.args);
-					this._resMap[url]=info;
+					LoaderManager._resMap[url]=info;
 					priority=priority < this._maxPriority ? priority :this._maxPriority-1;
 					this._resInfos[priority].push(info);
 					this._next();
 					}else {
-					complete && info.on("complete",complete.caller,complete.method,complete.args);
-					progress && info.on("progress",progress.caller,progress.method,progress.args);
+					complete && info._createListener("complete",complete.caller,complete.method,complete.args,false,false);
+					progress && info._createListener("progress",progress.caller,progress.method,progress.args,false,false);
 				}
 			}
 			return this;
@@ -9223,11 +12417,11 @@ var Laya=window.Laya=(function(window,document){
 				loader.offAll();
 				loader._data=null;
 				_this._loaders.push(loader);
-				_this._endLoad(resInfo,data);
+				_this._endLoad(resInfo,(data instanceof Array)? [data] :data);
 				_this._loaderCount--;
 				_this._next();
 			}
-			loader.load(resInfo.url,resInfo.type,resInfo.cache,resInfo.group);
+			loader.load(resInfo.url,resInfo.type,resInfo.cache,resInfo.group,resInfo.ignoreCache);
 		}
 
 		__proto._endLoad=function(resInfo,content){
@@ -9243,7 +12437,7 @@ var Laya=window.Laya=(function(window,document){
 					this.event("error",resInfo.url);
 				}
 			}
-			delete this._resMap[resInfo.url];
+			delete LoaderManager._resMap[resInfo.url];
 			resInfo.event("complete",content);
 			resInfo.offAll();
 			this._infoPool.push(resInfo);
@@ -9282,7 +12476,7 @@ var Laya=window.Laya=(function(window,document){
 				infos.length=0;
 			}
 			this._loaderCount=0;
-			this._resMap={};
+			LoaderManager._resMap={};
 		}
 
 		/**
@@ -9313,7 +12507,7 @@ var Laya=window.Laya=(function(window,document){
 					}
 				}
 			}
-			if (this._resMap[url])delete this._resMap[url];
+			if (LoaderManager._resMap[url])delete LoaderManager._resMap[url];
 		}
 
 		/**
@@ -9324,7 +12518,7 @@ var Laya=window.Laya=(function(window,document){
 			(priority===void 0)&& (priority=1);
 			(cache===void 0)&& (cache=true);
 			var itemCount=arr.length;
-			var loadedSize=0;
+			var loadedCount=0;
 			var totalSize=0;
 			var items=[];
 			var defaultType=type || "image";
@@ -9335,13 +12529,14 @@ var Laya=window.Laya=(function(window,document){
 				item.progress=0;
 				totalSize+=item.size;
 				items.push(item);
-				var progressHandler=progress ? Handler.create(this,loadProgress,[item],false):null;
-				this.load(item.url,Handler.create(item,loadComplete,[item]),progressHandler,item.type,item.priority || 1,cache,item.group||group);
+				var progressHandler=progress ? Handler.create(null,loadProgress,[item],false):null;
+				var completeHandler=(complete || progress)? Handler.create(null,loadComplete,[item]):null;
+				this.load(item.url,completeHandler,progressHandler,item.type,item.priority || 1,cache,item.group || group);
 			}
 			function loadComplete (item,content){
-				loadedSize++;
+				loadedCount++;
 				item.progress=1;
-				if (loadedSize===itemCount && complete){
+				if (loadedCount===itemCount && complete){
 					complete.run();
 				}
 			}
@@ -9349,8 +12544,7 @@ var Laya=window.Laya=(function(window,document){
 				if (progress !=null){
 					item.progress=value;
 					var num=0;
-					var count=items.length;
-					for (var j=0;j < count;j++){
+					for (var j=0;j < items.length;j++){
 						var item1=items[j];
 						num+=item1.size *item1.progress;
 					};
@@ -9365,6 +12559,10 @@ var Laya=window.Laya=(function(window,document){
 			Loader.cacheRes(url,data);
 		}
 
+		LoaderManager._resMap={};
+		__static(LoaderManager,
+		['createMap',function(){return this.createMap={atlas:[null,"atlas"]};}
+		]);
 		LoaderManager.__init$=function(){
 			//class ResInfo extends laya.events.EventDispatcher
 			ResInfo=(function(_super){
@@ -9373,6 +12571,7 @@ var Laya=window.Laya=(function(window,document){
 					this.type=null;
 					this.cache=false;
 					this.group=null;
+					this.ignoreCache=false;
 					ResInfo.__super.call(this);
 				}
 				__class(ResInfo,'',_super);
@@ -9445,7 +12644,11 @@ var Laya=window.Laya=(function(window,document){
 				ad.removeEventListener("error",onErr);
 			}
 			this.audio=ad;
-			ad.load();
+			if (ad.load){
+				ad.load();
+				}else {
+				onErr();
+			}
 		}
 
 		/**
@@ -9473,6 +12676,17 @@ var Laya=window.Laya=(function(window,document){
 			SoundManager.addChannel(channel);
 			return channel;
 		}
+
+		/**
+		*获取总时间。
+		*/
+		__getset(0,__proto,'duration',function(){
+			var ad;
+			ad=AudioSound._audioCache[this.url];
+			if (!ad)
+				return 0;
+			return ad.duration;
+		});
 
 		AudioSound._audioCache={};
 		return AudioSound;
@@ -9527,6 +12741,13 @@ var Laya=window.Laya=(function(window,document){
 			return 0;
 		});
 
+		/**
+		*获取总时间。
+		*/
+		__getset(0,__proto,'duration',function(){
+			return 0;
+		});
+
 		return SoundChannel;
 	})(EventDispatcher)
 
@@ -9565,6 +12786,13 @@ var Laya=window.Laya=(function(window,document){
 		*
 		*/
 		__proto.dispose=function(){}
+		/**
+		*获取总时间。
+		*/
+		__getset(0,__proto,'duration',function(){
+			return 0;
+		});
+
 		return Sound;
 	})(EventDispatcher)
 
@@ -9686,6 +12914,13 @@ var Laya=window.Laya=(function(window,document){
 			delete WebAudioSound._dataCache[this.url];
 			delete WebAudioSound.__loadingSound[this.url];
 		}
+
+		__getset(0,__proto,'duration',function(){
+			if (this.audioBuffer){
+				return this.audioBuffer.duration;
+			}
+			return 0;
+		});
 
 		WebAudioSound.decode=function(){
 			if (WebAudioSound.buffs.length <=0 || WebAudioSound.isDecoding){
@@ -9859,6 +13094,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.complete=function(){
 			this.clear();
+			var flag=true;
 			try {
 				if (this._responseType==="json"){
 					this._data=JSON.parse(this._http.responseText);
@@ -9867,10 +13103,11 @@ var Laya=window.Laya=(function(window,document){
 					}else {
 					this._data=this._http.response || this._http.responseText;
 				}
-				this.event("complete",(this._data instanceof Array)? [this._data] :this._data);
 				}catch (e){
+				flag=false;
 				this.error(e.message);
 			}
+			flag && this.event("complete",(this._data instanceof Array)? [this._data] :this._data);
 		}
 
 		/**
@@ -9885,6 +13122,11 @@ var Laya=window.Laya=(function(window,document){
 		/**请求的地址。*/
 		__getset(0,__proto,'url',function(){
 			return this._http.responseURL;
+		});
+
+		/**原生XMLHttpRequest引用*/
+		__getset(0,__proto,'http',function(){
+			return this._http;
 		});
 
 		/**返回的数据。*/
@@ -9918,15 +13160,18 @@ var Laya=window.Laya=(function(window,document){
 		*@param type 类型，如果为null，则根据文件后缀，自动分析类型。
 		*@param cache 是否缓存数据。
 		*@param group 分组。
+		*@param ignoreCache 是否忽略缓存，强制重新加载
 		*/
-		__proto.load=function(url,type,cache,group){
+		__proto.load=function(url,type,cache,group,ignoreCache){
 			(cache===void 0)&& (cache=true);
-			url=Loader._parseURL(url);
+			(ignoreCache===void 0)&& (ignoreCache=false);
+			if (url.indexOf("data:image")===0)this._type="image";
+			url=URL.formatURL(url);
 			this._url=url;
 			this._type=type || (type=this.getTypeFromUrl(url));
 			this._cache=cache;
 			this._data=null;
-			if (Loader.loadedMap[url]){
+			if (!ignoreCache && Loader.loadedMap[url]){
 				this._data=Loader.loadedMap[url];
 				this.event("progress",1);
 				this.event("complete",this._data);
@@ -9945,8 +13190,19 @@ var Laya=window.Laya=(function(window,document){
 				this._http.on("progress",this,this.onProgress);
 				this._http.on("error",this,this.onError);
 				this._http.on("complete",this,this.onLoaded);
-			}
-			this._http.send(url,null,"get",type!=="atlas" ? type :"json");
+			};
+			var contentType;
+			switch (type){
+				case "atlas":
+					contentType="json";
+					break ;
+				case "font":
+					contentType="xml";
+					break ;
+				default :
+					contentType=type;
+				}
+			this._http.send(url,null,"get",contentType);
 		}
 
 		/**
@@ -9955,11 +13211,8 @@ var Laya=window.Laya=(function(window,document){
 		*@return 数据类型。
 		*/
 		__proto.getTypeFromUrl=function(url){
-			Loader._extReg.lastIndex=url.lastIndexOf(".");
-			var result=Loader._extReg.exec(url);
-			if (result && result.length > 1){
-				return Loader.typeMap[result[1].toLowerCase()];
-			}
+			var type=Utils.getFileExtension(url);
+			if (type)return Loader.typeMap[type];
 			console.log("Not recognize the resources suffix",url);
 			return "text";
 		}
@@ -10075,7 +13328,8 @@ var Laya=window.Laya=(function(window,document){
 						return this._loadImage(URL.formatURL(this._data.toLoads.pop()));
 					};
 					var frames=this._data.frames;
-					var directory=(this._data.meta && this._data.meta.prefix)? URL.basePath+this._data.meta.prefix :this._url.substring(0,this._url.lastIndexOf("."))+"/";
+					var cleanUrl=this._url.split("?")[0];
+					var directory=(this._data.meta && this._data.meta.prefix)? URL.basePath+this._data.meta.prefix :cleanUrl.substring(0,cleanUrl.lastIndexOf("."))+"/";
 					var pics=this._data.pics;
 					var map=Loader.atlasMap[this._url] || (Loader.atlasMap[this._url]=[]);
 					map.dir=directory;
@@ -10083,10 +13337,25 @@ var Laya=window.Laya=(function(window,document){
 						var obj=frames[name];
 						var tPic=pics[obj.frame.idx ? obj.frame.idx :0];
 						var url=directory+name;
-						Loader.loadedMap[url]=Texture.create(tPic,obj.frame.x,obj.frame.y,obj.frame.w,obj.frame.h,obj.spriteSourceSize.x,obj.spriteSourceSize.y,obj.sourceSize.w,obj.sourceSize.h);
+						Loader.cacheRes(url,Texture.create(tPic,obj.frame.x,obj.frame.y,obj.frame.w,obj.frame.h,obj.spriteSourceSize.x,obj.spriteSourceSize.y,obj.sourceSize.w,obj.sourceSize.h));
 						Loader.loadedMap[url].url=url;
 						map.push(url);
 					}
+					this.complete(this._data);
+				}
+				}else if (type=="font"){
+				if (!data.src){
+					this._data=data;
+					this.event("progress",0.5);
+					return this._loadImage(URL.formatURL(this._url.replace(".fnt",".png")));
+					}else {
+					var bFont;
+					bFont=new BitmapFont();
+					bFont.parseFont(this._data,data);
+					var tArr=this._url.split(".fnt")[0].split("/");
+					var fontName=tArr[tArr.length-1];
+					Text.registerBitmapFont(fontName,bFont);
+					this._data=bFont;
 					this.complete(this._data);
 				}
 				}else {
@@ -10110,7 +13379,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.endLoad=function(content){
 			content && (this._data=content);
-			if (this._cache)Loader.loadedMap[this._url]=this._data;
+			if (this._cache)Loader.cacheRes(this._url,this._data);
 			this.event("progress",1);
 			this.event("complete",(this.data instanceof Array)? [this.data] :this.data);
 		}
@@ -10154,20 +13423,6 @@ var Laya=window.Laya=(function(window,document){
 			Loader._isWorking=false;
 		}
 
-		Loader._parseURL=function(url){
-			if (!url)return url;
-			if (url.indexOf("data:image")==0)return url;
-			if (url.indexOf(",")< 0){
-				url=URL.formatURL(url);
-				}else {
-				var arr=url.split(",");
-				for (var i=arr.length-1;i >-1;i--)
-				arr[i]=URL.formatURL(arr[i]);
-				url=arr.join(",");
-			}
-			return url
-		}
-
 		Loader.clearRes=function(url,forceDispose){
 			(forceDispose===void 0)&& (forceDispose=false);
 			url=URL.formatURL(url);
@@ -10192,7 +13447,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		Loader.getRes=function(url){
-			return Loader.loadedMap[Loader._parseURL(url)];
+			return Loader.loadedMap[URL.formatURL(url)];
 		}
 
 		Loader.getAtlas=function(url){
@@ -10200,7 +13455,12 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		Loader.cacheRes=function(url,data){
-			Loader.loadedMap[URL.formatURL(url)]=data;
+			url=URL.formatURL(url);
+			if (Loader.loadedMap[url] !=null){
+				console.log("Resources already exist,is repeated loading:",url);
+				}else {
+				Loader.loadedMap[url]=data;
+			}
 		}
 
 		Loader.setGroup=function(url,group){
@@ -10224,9 +13484,8 @@ var Laya=window.Laya=(function(window,document){
 		Loader.IMAGE="image";
 		Loader.SOUND="sound";
 		Loader.ATLAS="atlas";
-		Loader.TEXTURE2D="texture2d";
-		Loader.TEXTURECUBE="texturecube";
-		Loader.typeMap={"png":"image","jpg":"image","jpeg":"image","txt":"text","json":"json","xml":"xml","als":"atlas","mp3":"sound","ogg":"sound","wav":"sound","part":"json"};
+		Loader.FONT="font";
+		Loader.typeMap={"png":"image","jpg":"image","jpeg":"image","txt":"text","json":"json","xml":"xml","als":"atlas","mp3":"sound","ogg":"sound","wav":"sound","part":"json","fnt":"font"};
 		Loader.parserMap={};
 		Loader.loadedMap={};
 		Loader.groupMap={};
@@ -10235,7 +13494,6 @@ var Laya=window.Laya=(function(window,document){
 		Loader._loaders=[];
 		Loader._isWorking=false;
 		Loader._startIndex=0;
-		Loader._extReg=/\.(\w+)\??/g;
 		return Loader;
 	})(EventDispatcher)
 
@@ -10316,7 +13574,7 @@ var Laya=window.Laya=(function(window,document){
 					}
 				}
 				this.bitmap=null;
-				if (this.url && this===Laya.loader.getRes(this.url))Laya.loader.clearRes(this.url);
+				if (this.url && this===Laya.loader.getRes(this.url))Laya.loader.clearRes(this.url,forceDispose);
 				this._loaded=false;
 			}
 		}
@@ -10329,9 +13587,7 @@ var Laya=window.Laya=(function(window,document){
 			var _$this=this;
 			this._loaded=false;
 			var fileBitmap=(this.bitmap || (this.bitmap=HTMLImage.create(URL.formatURL(url))));
-			if (fileBitmap){
-				fileBitmap.useNum++;
-			};
+			if (fileBitmap)fileBitmap.useNum++;
 			var _this=this;
 			fileBitmap.onload=function (){
 				fileBitmap.onload=null;
@@ -10360,11 +13616,18 @@ var Laya=window.Laya=(function(window,document){
 			if (Render.isWebGL){
 				return RunDriver.getTexturePixels(this,x,y,width,height);
 				}else {
-				Browser.canvas.size(x+width,y+height);
-				Browser.context.drawImage(this.bitmap.source,0,0);
-				var info=Browser.context.getImageData(x,y,width,height);
+				Browser.canvas.size(width,height);
+				Browser.canvas.clear();
+				Browser.context.drawTexture(this,-x,-y,this.width,this.height,0,0);
+				var info=Browser.context.getImageData(0,0,width,height);
 			}
 			return info.data;
+		}
+
+		/**@private */
+		__proto.onAsynLoaded=function(url,bitmap){
+			if (bitmap)bitmap.useNum++;
+			this.setTo(bitmap,this.uv);
 		}
 
 		/**激活并获取资源。*/
@@ -10549,8 +13812,7 @@ var Laya=window.Laya=(function(window,document){
 			var sw=source.sourceWidth;
 			var sh=source.sourceHeight;
 			if (!sizeGrid || (sw===width && sh===height)){
-				this.clear();
-				this.drawTexture(source,this._offset ? this._offset[0] :0,this._offset ? this._offset[1] :0,width,height);
+				this.cleanByTexture(source,this._offset ? this._offset[0] :0,this._offset ? this._offset[1] :0,width,height);
 				}else {
 				source.$_GID || (source.$_GID=Utils.getGID());
 				var key=source.$_GID+"."+width+"."+height+"."+sizeGrid.join(".");
@@ -10749,6 +14011,9 @@ var Laya=window.Laya=(function(window,document){
 			return (this._type & 0x8)!=0;
 		}
 
+		/**
+		*@private
+		*/
 		__proto._calculation=function(type,value){
 			if (value.indexOf('%')< 0)return false;
 			var ower=this._ower;
@@ -10882,7 +14147,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param y Y 轴平移量。
 		*/
 		__proto.translate=function(x,y){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.translateX=x;
 			this._tf.translateY=y;
 		}
@@ -10893,7 +14158,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param y Y 轴缩放值。
 		*/
 		__proto.scale=function(x,y){
-			this._tf===Style._TF_EMPTY && (this._tf=Style._createTransform());
+			this._tf===Style._TF_EMPTY && (this._tf=new TransformInfo());
 			this._tf.scaleX=x;
 			this._tf.scaleY=y;
 		}
@@ -11083,9 +14348,9 @@ var Laya=window.Laya=(function(window,document){
 			}
 			this._bgground || (this._bgground={});
 			this._bgground.color=value;
-			this._ower.model && this._ower.model.bgColor(value);
+			this._ower.conchModel && this._ower.conchModel.bgColor(value);
 			this._type |=0x4000;
-			this._ower._renderType |=0x80;
+			this._ower._renderType |=0x100;
 		});
 
 		/**
@@ -11124,8 +14389,8 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			if (value==='none')this._bgground=null;
 			else (this._bgground || (this._bgground={}),this._bgground.color=value);
-			this._ower.model && this._ower.model.bgColor(value);
-			this._ower._renderType |=0x80;
+			this._ower.conchModel && this._ower.conchModel.bgColor(value);
+			this._ower._renderType |=0x100;
 		});
 
 		/**
@@ -11206,7 +14471,7 @@ var Laya=window.Laya=(function(window,document){
 		});
 
 		/**
-		*边框属性。
+		*边框属性，比如border="5px solid red"
 		*/
 		__getset(0,__proto,'border',function(){
 			return this._border ? this._border.value :"";
@@ -11230,7 +14495,7 @@ var Laya=window.Laya=(function(window,document){
 				i++;
 			}else this._border.size=1;
 			this._border.type=values[i];
-			this._ower._renderType |=0x80;
+			this._ower._renderType |=0x100;
 		});
 
 		/**
@@ -11245,8 +14510,8 @@ var Laya=window.Laya=(function(window,document){
 			}
 			this._border || (this._border={size:1,type:'solid'});
 			this._border.color=(value==null)? null :Color.create(value);
-			this._ower.model && this._ower.model.border(this._border.color.strColor);
-			this._ower._renderType |=0x80;
+			this._ower.conchModel && this._ower.conchModel.border(this._border.color.strColor);
+			this._ower._renderType |=0x100;
 		});
 
 		/**
@@ -11418,7 +14683,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.callNative=function(sp){
 			var t=sp._$P.cf=this;
-			sp.model && sp.model.setFilterMatrix&&sp.model.setFilterMatrix(this._mat,this._alpha);
+			sp.conchModel && sp.conchModel.setFilterMatrix&&sp.conchModel.setFilterMatrix(this._mat,this._alpha);
 		}
 
 		/**@private */
@@ -11614,14 +14879,16 @@ var Laya=window.Laya=(function(window,document){
 			this._width=0;
 			this._height=0;
 			this._repaint=1;
+			this._changeType=0;
 			this._mouseEnableState=0;
 			this._zOrder=0;
 			this._graphics=null;
 			this._renderType=0;
 			this.autoSize=false;
 			this.hitTestPrior=false;
-			this._optimizeScrollRect=false;
 			this.viewport=null;
+			this._optimizeScrollRect=false;
+			this._texture=null;
 			Sprite.__super.call(this);
 			this._style=Style.EMPTY;
 		}
@@ -11629,6 +14896,10 @@ var Laya=window.Laya=(function(window,document){
 		__class(Sprite,'laya.display.Sprite',_super);
 		var __proto=Sprite.prototype;
 		Laya.imps(__proto,{"laya.display.ILayout":true})
+		__proto.createConchModel=function(){
+			return new ConchNode();
+		}
+
 		/**@inheritDoc */
 		__proto.destroy=function(destroyChild){
 			(destroyChild===void 0)&& (destroyChild=true);
@@ -11910,7 +15181,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param y Y轴坐标。
 		*/
 		__proto.customRender=function(context,x,y){
-			this._renderType |=0x200;
+			this._renderType |=0x400;
 		}
 
 		/**
@@ -12116,7 +15387,7 @@ var Laya=window.Laya=(function(window,document){
 
 		/**cacheAs后，设置自己和父对象缓存失效。*/
 		__proto.repaint=function(){
-			this.model&&this.model.repaint&&this.model.repaint();
+			this.conchModel && this.conchModel.repaint && this.conchModel.repaint();
 			(this._repaint===0)&& (this._repaint=1,this.parentRepaint());
 			if (this._$P && this._$P.maskParent){
 				this._$P.maskParent.repaint();
@@ -12154,14 +15425,16 @@ var Laya=window.Laya=(function(window,document){
 		*@param elasticBackTime 橡皮筋回弹时间，单位为毫秒，默认为300毫秒，可选。
 		*@param data 拖动事件携带的数据，可选。
 		*@param disableMouseEvent 禁用其他对象的鼠标检测，默认为false，设置为true能提高性能
+		*@param ratio 惯性阻尼系数
 		*/
-		__proto.startDrag=function(area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent){
+		__proto.startDrag=function(area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent,ratio){
 			(hasInertia===void 0)&& (hasInertia=false);
 			(elasticDistance===void 0)&& (elasticDistance=0);
 			(elasticBackTime===void 0)&& (elasticBackTime=300);
 			(disableMouseEvent===void 0)&& (disableMouseEvent=false);
+			(ratio===void 0)&& (ratio=0.92);
 			this._$P.dragging || (this._set$P("dragging",new Dragging()));
-			this._$P.dragging.start(this,area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent);
+			this._$P.dragging.start(this,area,hasInertia,elasticDistance,elasticBackTime,data,disableMouseEvent,ratio);
 		}
 
 		/**停止拖动此对象。*/
@@ -12195,7 +15468,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.hitTestPoint=function(x,y){
 			var point=this.globalToLocal(Point.TEMP.setTo(x,y));
-			var rect=this._$P.hitArea ? this._$P.hitArea :Rectangle.EMPTY.setTo(0,0,this._width,this._height);
+			var rect=this._$P.hitArea ? this._$P.hitArea :Rectangle.TEMP.setTo(0,0,this._width,this._height);
 			return rect.contains(point.x,point.y);
 		}
 
@@ -12282,7 +15555,7 @@ var Laya=window.Laya=(function(window,document){
 			},function(b){
 			if (this._optimizeScrollRect !=b){
 				this._optimizeScrollRect=b;
-				this.model && this.model.optimizeScrollRect(b);
+				this.conchModel && this.conchModel.optimizeScrollRect(b);
 			}
 		});
 
@@ -12291,14 +15564,14 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'customRenderEnable',null,function(b){
 			if (b){
-				this._renderType |=0x200;
+				this._renderType |=0x400;
 				if (Render.isConchNode){
 					laya.display.Sprite.CustomList.push(this);
 					var canvas=new HTMLCanvas("2d");
 					canvas._setContext(new CanvasRenderingContext2D());
 					this.customContext=new RenderContext(0,0,canvas);
 					canvas.context.setCanvasType && canvas.context.setCanvasType(2);
-					this.model.custom(canvas.context);
+					this.conchModel.custom(canvas.context);
 				}
 			}
 		});
@@ -12330,8 +15603,8 @@ var Laya=window.Laya=(function(window,document){
 				cacheCanvas || (cacheCanvas=this._set$P("cacheCanvas",Pool.getItemByClass("cacheCanvas",Object)));
 				cacheCanvas.type=value;
 				cacheCanvas.reCache=true;
-				this._renderType |=0x08;
-				if (value=="bitmap")this.model && this.model.cacheAs(1);
+				this._renderType |=0x10;
+				if (value=="bitmap")this.conchModel && this.conchModel.cacheAs(1);
 				this._set$P("cacheForFilters",false);
 				}else {
 				if (this._$P["hasFilter"]){
@@ -12339,8 +15612,8 @@ var Laya=window.Laya=(function(window,document){
 					}else {
 					if (cacheCanvas)Pool.recover("cacheCanvas",cacheCanvas);
 					this._$P.cacheCanvas=null;
-					this._renderType &=~0x08;
-					this.model && this.model.cacheAs(0);
+					this._renderType &=~0x10;
+					this.conchModel && this.conchModel.cacheAs(0);
 				}
 			}
 			this.repaint();
@@ -12352,6 +15625,7 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			if (this._zOrder !=value){
 				this._zOrder=value;
+				this.conchModel && this.conchModel.setZOrder && this.conchModel.setZOrder(value);
 				this._parent && Laya.timer.callLater(this._parent,this.updateZOrder);
 			}
 		});
@@ -12362,9 +15636,10 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			var style=this.getStyle();
 			if (style._tf.rotate!==value){
+				this._changeType |=0x10;
 				style.setRotate(value);
 				this._tfChanged=true;
-				this.model && this.model.rotate(value);
+				this.conchModel && this.conchModel.rotate(value);
 				this._renderType |=0x04;
 				var p=this._parent;
 				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
@@ -12378,16 +15653,21 @@ var Laya=window.Laya=(function(window,document){
 			if (!this.autoSize)return this._width;
 			return this.getSelfBounds().width;
 			},function(value){
-			this._width!==value && (this._width=value,this.model && this.model.size(value,this._height),this.repaint());
+			this._width!==value && (this._width=value,this.conchModel && this.conchModel.size(value,this._height),this.repaint());
 		});
 
 		/**表示显示对象相对于父容器的水平方向坐标值。*/
 		__getset(0,__proto,'x',function(){
 			return this._x;
 			},function(value){
-			if (this.destroyed)return;
-			var p=this._parent;
-			this._x!==value && (this._x=value,this.model && this.model.pos(value,this._y),p && p._repaint===0 && (p._repaint=1,p.parentRepaint()),this._$P.maskParent && this._$P.maskParent._repaint===0 && (this._$P.maskParent._repaint=1,this._$P.maskParent.parentRepaint()));
+			if (this._x!==value){
+				if (this.destroyed)return;
+				this._x=value;
+				this.conchModel && this.conchModel.pos(value,this._y);
+				var p=this._parent;
+				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
+				this._$P.maskParent && this._$P.maskParent._repaint===0 && (this._$P.maskParent._repaint=1,this._$P.maskParent.parentRepaint());
+			}
 		});
 
 		/**
@@ -12421,13 +15701,28 @@ var Laya=window.Laya=(function(window,document){
 			}
 		});
 
+		/**@private 清理graphics，只显示此texture图片，等同于graphics.clear();graphics.drawTexture()*/
+		__getset(0,__proto,'texture',function(){
+			return this._texture;
+			},function(value){
+			if (this._texture !=value){
+				this._texture=value;
+				this.graphics.cleanByTexture(value,0,0);
+			}
+		});
+
 		/**表示显示对象相对于父容器的垂直方向坐标值。*/
 		__getset(0,__proto,'y',function(){
 			return this._y;
 			},function(value){
-			if (this.destroyed)return;
-			var p=this._parent;
-			this._y!==value && (this._y=value,this.model && this.model.pos(this._x,value),p && p._repaint===0 && (p._repaint=1,p.parentRepaint()),this._$P.maskParent && this._$P.maskParent._repaint===0 && (this._$P.maskParent._repaint=1,this._$P.maskParent.parentRepaint()));
+			if (this._y!==value){
+				if (this.destroyed)return;
+				this._y=value;
+				this.conchModel && this.conchModel.pos(this._x,value);
+				var p=this._parent;
+				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
+				this._$P.maskParent && this._$P.maskParent._repaint===0 && (this._$P.maskParent._repaint=1,this._$P.maskParent.parentRepaint());
+			}
 		});
 
 		/**
@@ -12437,7 +15732,7 @@ var Laya=window.Laya=(function(window,document){
 			if (!this.autoSize)return this._height;
 			return this.getSelfBounds().height;
 			},function(value){
-			this._height!==value && (this._height=value,this.model && this.model.size(this._width,value),this.repaint());
+			this._height!==value && (this._height=value,this.conchModel && this.conchModel.size(this._width,value),this.repaint());
 		});
 
 		/**指定要使用的混合模式。*/
@@ -12445,9 +15740,9 @@ var Laya=window.Laya=(function(window,document){
 			return this._style.blendMode;
 			},function(value){
 			this.getStyle().blendMode=value;
-			this.model && this.model.blendMode(value);
-			if (value && value !="source-over")this._renderType |=0x20;
-			else this._renderType &=~0x20;
+			this.conchModel && this.conchModel.blendMode(value);
+			if (value && value !="source-over")this._renderType |=0x08;
+			else this._renderType &=~0x08;
 			this.parentRepaint();
 		});
 
@@ -12458,8 +15753,9 @@ var Laya=window.Laya=(function(window,document){
 			var style=this.getStyle();
 			if (style._tf.scaleX!==value){
 				style.setScaleX(value);
+				this._changeType |=0x10;
 				this._tfChanged=true;
-				this.model && this.model.scale(value,style._tf.scaleY);
+				this.conchModel && this.conchModel.scale(value,style._tf.scaleY);
 				this._renderType |=0x04;
 				var p=this._parent;
 				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
@@ -12473,8 +15769,9 @@ var Laya=window.Laya=(function(window,document){
 			var style=this.getStyle();
 			if (style._tf.scaleY!==value){
 				style.setScaleY(value);
+				this._changeType |=0x10;
 				this._tfChanged=true;
-				this.model && this.model.scale(style._tf.scaleX,value);
+				this.conchModel && this.conchModel.scale(style._tf.scaleX,value);
 				this._renderType |=0x04;
 				var p=this._parent;
 				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
@@ -12500,19 +15797,27 @@ var Laya=window.Laya=(function(window,document){
 			}
 		});
 
-		/**显示对象的滚动矩形范围。*/
+		/**显示对象的滚动矩形范围，(如果只想限制子对象渲染区域，请使用viewport)，设置optimizeScrollRect=true，可以优化裁剪区域外的内容不进行渲染
+		*srollRect和viewport的区别：
+		*1.srollRect自带裁剪效果，viewport只影响子对象渲染是否渲染，不具有裁剪效果（性能更高）
+		*2.设置rect的x,y属性均能实现区域滚动效果，但scrollRect会保持0,0点位置不变
+		**/
 		__getset(0,__proto,'scrollRect',function(){
 			return this._style.scrollRect;
 			},function(value){
 			this.getStyle().scrollRect=value;
-			this.viewport=value;
 			this.repaint();
 			if (value){
-				this._renderType |=0x40;
-				this.model && this.model.scrollRect(value.x,value.y,value.width,value.height);
+				this._renderType |=0x80;
+				this.conchModel && this.conchModel.scrollRect(value.x,value.y,value.width,value.height);
 				}else {
-				this._renderType &=~0x40;
-				this.model && this.model.removeType(0x40);
+				this._renderType &=~0x80;
+				if (this.conchModel){
+					if (Sprite.RUNTIMEVERION < "0.9.1")
+						this.conchModel.removeType(0x40);
+					else
+					this.conchModel.removeType(0x80);
+				}
 			}
 		});
 
@@ -12524,7 +15829,7 @@ var Laya=window.Laya=(function(window,document){
 			if (style._tf.skewY!==value){
 				style.setSkewY(value);
 				this._tfChanged=true;
-				this.model && this.model.skew(style._tf.skewX,value);
+				this.conchModel && this.conchModel.skew(style._tf.skewX,value);
 				this._renderType |=0x04;
 				var p=this._parent;
 				p && p._repaint===0 && (p._repaint=1,p.parentRepaint());
@@ -12543,12 +15848,12 @@ var Laya=window.Laya=(function(window,document){
 				this._x=value.tx;
 				this._y=value.ty;
 				value.tx=value.ty=0;
-				this.model && this.model.transform(value.a,value.b,value.c,value.d,this._x,this._y);
+				this.conchModel && this.conchModel.transform(value.a,value.b,value.c,value.d,this._x,this._y);
 			}
 			if (value)this._renderType |=0x04;
 			else {
 				this._renderType &=~0x04;
-				this.model && this.model.removeType(0x04);
+				this.conchModel && this.conchModel.removeType(0x04);
 			}
 			this.parentRepaint();
 		});
@@ -12558,7 +15863,8 @@ var Laya=window.Laya=(function(window,document){
 			return this._style._tf.translateX;
 			},function(value){
 			this.getStyle().setTranslateX(value);
-			this.model && this.model.pivot(value,this._style._tf.translateY);
+			this._changeType |=0x10;
+			this.conchModel && this.conchModel.pivot(value,this._style._tf.translateY);
 			this.repaint();
 		});
 
@@ -12567,7 +15873,8 @@ var Laya=window.Laya=(function(window,document){
 			return this._style._tf.translateY;
 			},function(value){
 			this.getStyle().setTranslateY(value);
-			this.model && this.model.pivot(this._style._tf.translateX,value);
+			this._changeType |=0x10;
+			this.conchModel && this.conchModel.pivot(this._style._tf.translateX,value);
 			this.repaint();
 		});
 
@@ -12578,7 +15885,7 @@ var Laya=window.Laya=(function(window,document){
 			if (this._style && this._style.alpha!==value){
 				value=value < 0 ? 0 :(value > 1 ? 1 :value);
 				this.getStyle().alpha=value;
-				this.model && this.model.alpha(value);
+				this.conchModel && this.conchModel.alpha(value);
 				if (value!==1)this._renderType |=0x02;
 				else this._renderType &=~0x02;
 				this.parentRepaint();
@@ -12591,7 +15898,7 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			if (this._style && this._style.visible!==value){
 				this.getStyle().visible=value;
-				this.model && this.model.visible(value);
+				this.conchModel && this.conchModel.visible(value);
 				this.parentRepaint();
 			}
 		});
@@ -12604,13 +15911,18 @@ var Laya=window.Laya=(function(window,document){
 			this._graphics=value;
 			if (value){
 				this._renderType &=~0x01;
-				this._renderType |=0x100;
+				this._renderType |=0x200;
 				value._sp=this;
-				this.model && this.model.graphics(this._graphics);
+				this.conchModel && this.conchModel.graphics(this._graphics);
 				}else {
-				this._renderType &=~0x100;
+				this._renderType &=~0x200;
 				this._renderType &=~0x01;
-				this.model && this.model.removeType(0x100);
+				if (this.conchModel){
+					if (Sprite.RUNTIMEVERION < "0.9.1")
+						this.conchModel.removeType(0x100);
+					else
+					this.conchModel.removeType(0x200);
+				}
 			}
 			this.repaint();
 		});
@@ -12623,16 +15935,21 @@ var Laya=window.Laya=(function(window,document){
 			if (this._$P.filters==value)return;
 			this._set$P("filters",value ? value.slice():null);
 			if (Render.isConchApp){
-				this.model && this.model.removeType(0x10);
+				if (this.conchModel){
+					if (Sprite.RUNTIMEVERION < "0.9.1")
+						this.conchModel.removeType(0x10);
+					else
+					this.conchModel.removeType(0x20);
+				}
 				if (this._$P.filters && this._$P.filters.length==1){
 					this._$P.filters[0].callNative(this);
 				}
 			}
 			if (Render.isWebGL){
 				if (value && value.length){
-					this._renderType |=0x10;
+					this._renderType |=0x20;
 					}else {
-					this._renderType &=~0x10;
+					this._renderType &=~0x20;
 				}
 			}
 			if (value && value.length > 0){
@@ -12667,8 +15984,8 @@ var Laya=window.Laya=(function(window,document){
 				this.mask && this.mask._set$P("maskParent",null);
 				this._set$P("_mask",value);
 			}
-			this.model && this.model.mask(value ? value.model :null);
-			this._renderType |=0x20;
+			this.conchModel && this.conchModel.mask(value ? value.conchModel :null);
+			this._renderType |=0x40;
 			this.parentRepaint();
 		});
 
@@ -12714,9 +16031,393 @@ var Laya=window.Laya=(function(window,document){
 			return new Sprite().loadImage(url);
 		}
 
+		Sprite.CHG_VIEW=0x10;
+		Sprite.CHG_SCALE=0x100;
+		Sprite.CHG_TEXTURE=0x1000;
 		Sprite.CustomList=[];
+		__static(Sprite,
+		['RUNTIMEVERION',function(){return this.RUNTIMEVERION=window.conch?conchConfig.getRuntimeVersion().substr(conchConfig.getRuntimeVersion().lastIndexOf('-')+1):'';}
+		]);
 		return Sprite;
 	})(Node)
+
+
+	/**
+	*<code>AnimationTemplet</code> 类用于动画模板资源。
+	*/
+	//class laya.ani.AnimationTemplet extends laya.resource.Resource
+	var AnimationTemplet=(function(_super){
+		function AnimationTemplet(){
+			this._aniMap={};
+			//this._publicExtData=null;
+			//this._useParent=false;
+			//this.unfixedCurrentFrameIndexes=null;
+			//this.unfixedCurrentTimes=null;
+			//this.unfixedKeyframes=null;
+			this.unfixedLastAniIndex=-1;
+			//this.aniClassName=null;
+			//this._aniVersion=null;
+			//this._animationDatasCache=null;
+			AnimationTemplet.__super.call(this);
+			this._anis=new Array;
+		}
+
+		__class(AnimationTemplet,'laya.ani.AnimationTemplet',_super);
+		var __proto=AnimationTemplet.prototype;
+		__proto._endLoaded=function(){
+			this._loaded=true;
+			this.event("loaded",this);
+		}
+
+		__proto.parse=function(data){
+			var i=0,j=0,k=0,n=0,l=0,m=0,o=0;
+			var read=new Byte(data);
+			this._aniVersion=read.readUTFString();
+			var aniClassName=read.readUTFString();
+			this.aniClassName=aniClassName;
+			var strList=read.readUTFString().split("\n");
+			var aniCount=read.getUint8();
+			var publicDataPos=read.getUint32();
+			var publicExtDataPos=read.getUint32();
+			var publicData;
+			if (publicDataPos > 0)
+				publicData=data.slice(publicDataPos,publicExtDataPos);
+			var publicRead=new Byte(publicData);
+			if (publicExtDataPos > 0)
+				this._publicExtData=data.slice(publicExtDataPos,data.byteLength);
+			this._useParent=!!read.getUint8();
+			this._anis.length=aniCount;
+			for (i=0;i < aniCount;i++){
+				var ani=this._anis[i]=
+				{};
+				ani.nodes=new Array;
+				var name=ani.name=strList[read.getUint16()];
+				this._aniMap[name]=i;
+				ani.bone3DMap={};
+				ani.playTime=read.getFloat32();
+				var boneCount=ani.nodes.length=read.getUint8();
+				ani.totalKeyframesLength=0;
+				for (j=0;j < boneCount;j++){
+					var node=ani.nodes[j]=
+					{};
+					node.childs=[];
+					var nameIndex=read.getInt16();
+					if (nameIndex >=0){
+						node.name=strList[nameIndex];
+						ani.bone3DMap[node.name]=j;
+					}
+					node.keyFrame=new Array;
+					node.parentIndex=read.getInt16();
+					node.parentIndex==-1 ? node.parent=null :node.parent=ani.nodes[node.parentIndex]
+					node.lerpType=read.getUint8();
+					var keyframeParamsOffset=read.getUint32();
+					publicRead.pos=keyframeParamsOffset;
+					var keyframeDataCount=node.keyframeWidth=publicRead.getUint16();
+					ani.totalKeyframesLength+=keyframeDataCount;
+					if (node.lerpType===0||node.lerpType===1){
+						node.interpolationMethod=[];
+						node.interpolationMethod.length=keyframeDataCount;
+						for (k=0;k < keyframeDataCount;k++)
+						node.interpolationMethod[k]=AnimationTemplet.interpolation[publicRead.getUint8()];
+					}
+					if (node.parent !=null)
+						node.parent.childs.push(node);
+					var privateDataLen=read.getUint16();
+					if (privateDataLen > 0){
+						node.extenData=data.slice(read.pos,read.pos+privateDataLen);
+						read.pos+=privateDataLen;
+					};
+					var keyframeCount=read.getUint16();
+					node.keyFrame.length=keyframeCount;
+					var startTime=0;
+					for (k=0,n=keyframeCount;k < n;k++){
+						var keyFrame=node.keyFrame[k]=
+						{};
+						keyFrame.duration=read.getFloat32();
+						keyFrame.startTime=startTime;
+						if (node.lerpType===2){
+							keyFrame.interpolationData=[];
+							var interDataLength=read.getUint8();
+							var lerpType=0;
+							lerpType=read.getFloat32();
+							switch (lerpType){
+								case 254:
+									keyFrame.interpolationData.length=keyframeDataCount;
+									for (o=0;o < keyframeDataCount;o++)
+									keyFrame.interpolationData[o]=0;
+									break ;
+								case 255:
+									keyFrame.interpolationData.length=keyframeDataCount;
+									for (o=0;o < keyframeDataCount;o++)
+									keyFrame.interpolationData[o]=5;
+									break ;
+								default :
+									keyFrame.interpolationData.push(lerpType);
+									for (m=1;m < interDataLength;m++){
+										keyFrame.interpolationData.push(read.getFloat32());
+									}
+								}
+						}
+						keyFrame.data=new Float32Array(keyframeDataCount);
+						keyFrame.dData=new Float32Array(keyframeDataCount);
+						keyFrame.nextData=new Float32Array(keyframeDataCount);
+						for (l=0;l < keyframeDataCount;l++){
+							keyFrame.data[l]=read.getFloat32();
+							if (keyFrame.data[l] >-0.00000001 && keyFrame.data[l] < 0.00000001)keyFrame.data[l]=0;
+						}
+						startTime+=keyFrame.duration;
+					}
+					node.playTime=ani.playTime;
+					this._calculateKeyFrame(node,keyframeCount,keyframeDataCount);
+				}
+			}
+		}
+
+		__proto._calculateKeyFrame=function(node,keyframeCount,keyframeDataCount){
+			var keyFrames=node.keyFrame;
+			keyFrames[keyframeCount]=keyFrames[0];
+			for (var i=0;i < keyframeCount;i++){
+				var keyFrame=keyFrames[i];
+				for (var j=0;j < keyframeDataCount;j++){
+					keyFrame.dData[j]=(keyFrame.duration===0)? 0 :(keyFrames[i+1].data[j]-keyFrame.data[j])/ keyFrame.duration;
+					keyFrame.nextData[j]=keyFrames[i+1].data[j];
+				}
+			}
+			keyFrames.length--;
+		}
+
+		/**
+		*@private
+		*/
+		__proto.onAsynLoaded=function(url,data,params){
+			this.parse(data);
+			this._endLoaded();
+		}
+
+		__proto.getAnimationCount=function(){
+			return this._anis.length;
+		}
+
+		__proto.getAnimation=function(aniIndex){
+			return this._anis[aniIndex];
+		}
+
+		__proto.getAniDuration=function(aniIndex){
+			return this._anis[aniIndex].playTime;
+		}
+
+		__proto.getNodes=function(aniIndex){
+			return this._anis[aniIndex].nodes;
+		}
+
+		__proto.getNodeIndexWithName=function(aniIndex,name){
+			return this._anis[aniIndex].bone3DMap[name];
+		}
+
+		__proto.getNodeCount=function(aniIndex){
+			return this._anis[aniIndex].nodes.length;
+		}
+
+		__proto.getTotalkeyframesLength=function(aniIndex){
+			return this._anis[aniIndex].totalKeyframesLength;
+		}
+
+		__proto.getPublicExtData=function(){
+			return this._publicExtData;
+		}
+
+		__proto.getAnimationDataWithCache=function(key,cacheDatas,aniIndex,frameIndex){
+			var aniDatas=cacheDatas[aniIndex];
+			if (!aniDatas){
+				return null;
+				}else {
+				var keyDatas=aniDatas[key];
+				if (!keyDatas)
+					return null;
+				else {
+					return keyDatas[frameIndex];
+				}
+			}
+		}
+
+		__proto.setAnimationDataWithCache=function(key,cacheDatas,aniIndex,frameIndex,data){
+			var aniDatas=(cacheDatas[aniIndex])|| (cacheDatas[aniIndex]={});
+			var aniDatasCache=(aniDatas[key])|| (aniDatas[key]=[]);
+			aniDatasCache[frameIndex]=data;
+		}
+
+		__proto.getOriginalData=function(aniIndex,originalData,nodesFrameIndices,frameIndex,playCurTime){
+			var oneAni=this._anis[aniIndex];
+			var nodes=oneAni.nodes;
+			var j=0;
+			for (var i=0,n=nodes.length,outOfs=0;i < n;i++){
+				var node=nodes[i];
+				var key;
+				key=node.keyFrame[nodesFrameIndices[i][frameIndex]];
+				node.dataOffset=outOfs;
+				var dt=playCurTime-key.startTime;
+				switch (node.lerpType){
+					case 0:
+					case 1:
+						for (j=0;j < node.keyframeWidth;)
+						j+=node.interpolationMethod[j](node,j,originalData,outOfs+j,key.data,dt,key.dData,key.duration,key.nextData);
+						break ;
+					case 2:;
+						var interpolationData=key.interpolationData;
+						var interDataLen=interpolationData.length;
+						var dataIndex=0;
+						for (j=0;j < interDataLen;){
+							var type=interpolationData[j];
+						switch(type){
+							case 6:
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData,interpolationData,j+1);
+								break ;
+							case 7:
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData,interpolationData,j+1);
+								break ;
+							default :
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData);
+							}
+						dataIndex++;
+					}
+					break ;
+				}
+				outOfs+=node.keyframeWidth;
+			}
+		}
+
+		__proto.getNodesCurrentFrameIndex=function(aniIndex,playCurTime){
+			var ani=this._anis[aniIndex];
+			var nodes=ani.nodes;
+			if (aniIndex!==this.unfixedLastAniIndex){
+				this.unfixedCurrentFrameIndexes=new Uint32Array(nodes.length);
+				this.unfixedCurrentTimes=new Float32Array(nodes.length);
+				this.unfixedLastAniIndex=aniIndex;
+			}
+			for (var i=0,n=nodes.length,outOfs=0;i < n;i++){
+				var node=nodes[i];
+				if (playCurTime < this.unfixedCurrentTimes[i])
+					this.unfixedCurrentFrameIndexes[i]=0;
+				this.unfixedCurrentTimes[i]=playCurTime;
+				while ((this.unfixedCurrentFrameIndexes[i] < node.keyFrame.length)){
+					if (node.keyFrame[this.unfixedCurrentFrameIndexes[i]].startTime > this.unfixedCurrentTimes[i])
+						break ;
+					this.unfixedCurrentFrameIndexes[i]++;
+				}
+				this.unfixedCurrentFrameIndexes[i]--;
+			}
+			return this.unfixedCurrentFrameIndexes;
+		}
+
+		__proto.getOriginalDataUnfixedRate=function(aniIndex,originalData,playCurTime){
+			var oneAni=this._anis[aniIndex];
+			var nodes=oneAni.nodes;
+			if (aniIndex!==this.unfixedLastAniIndex){
+				this.unfixedCurrentFrameIndexes=new Uint32Array(nodes.length);
+				this.unfixedCurrentTimes=new Float32Array(nodes.length);
+				this.unfixedKeyframes=__newvec(nodes.length);
+				this.unfixedLastAniIndex=aniIndex;
+			};
+			var j=0;
+			for (var i=0,n=nodes.length,outOfs=0;i < n;i++){
+				var node=nodes[i];
+				if (playCurTime < this.unfixedCurrentTimes[i])
+					this.unfixedCurrentFrameIndexes[i]=0;
+				this.unfixedCurrentTimes[i]=playCurTime;
+				while (this.unfixedCurrentFrameIndexes[i] < node.keyFrame.length){
+					if (node.keyFrame[this.unfixedCurrentFrameIndexes[i]].startTime > this.unfixedCurrentTimes[i])
+						break ;
+					this.unfixedKeyframes[i]=node.keyFrame[this.unfixedCurrentFrameIndexes[i]];
+					this.unfixedCurrentFrameIndexes[i]++;
+				};
+				var key=this.unfixedKeyframes[i];
+				node.dataOffset=outOfs;
+				var dt=playCurTime-key.startTime;
+				switch (node.lerpType){
+					case 0:
+					case 1:
+						for (j=0;j < node.keyframeWidth;)
+						j+=node.interpolationMethod[j](node,j,originalData,outOfs+j,key.data,dt,key.dData,key.duration,key.nextData);
+						break ;
+					case 2:;
+						var interpolationData=key.interpolationData;
+						var interDataLen=interpolationData.length;
+						var dataIndex=0;
+						for (j=0;j < interDataLen;){
+							var type=interpolationData[j];
+						switch(type){
+							case 6:
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData,interpolationData,j+1);
+								break ;
+							case 7:
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData,interpolationData,j+1);
+								break ;
+							default :
+								j+=AnimationTemplet.interpolation[type](node,dataIndex,originalData,outOfs+dataIndex,key.data,dt,key.dData,key.duration,key.nextData);
+							}
+						dataIndex++;
+					}
+					break ;
+				}
+				outOfs+=node.keyframeWidth;
+			}
+		}
+
+		__proto.dispose=function(){
+			this.resourceManager.removeResource(this);
+			_super.prototype.dispose.call(this);
+		}
+
+		AnimationTemplet._LinearInterpolation_0=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			out[outOfs]=data[index]+dt *dData[index];
+			return 1;
+		}
+
+		AnimationTemplet._QuaternionInterpolation_1=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			var amount=duration===0 ? 0 :dt / duration;
+			MathUtil.slerpQuaternionArray(data,index,nextData,index,amount,out,outOfs);
+			return 4;
+		}
+
+		AnimationTemplet._AngleInterpolation_2=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			return 0;
+		}
+
+		AnimationTemplet._RadiansInterpolation_3=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			return 0;
+		}
+
+		AnimationTemplet._Matrix4x4Interpolation_4=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			for (var i=0;i < 16;i++,index++)
+			out[outOfs+i]=data[index]+dt *dData[index];
+			return 16;
+		}
+
+		AnimationTemplet._NoInterpolation_5=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData){
+			out[outOfs]=data[index];
+			return 1;
+		}
+
+		AnimationTemplet._BezierInterpolation_6=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData,offset){
+			(offset===void 0)&& (offset=0);
+			out[outOfs]=data[index]+(nextData[index]-data[index])*BezierLerp.getBezierRate(dt / duration,interData[offset],interData[offset+1],interData[offset+2],interData[offset+3]);
+			return 5;
+		}
+
+		AnimationTemplet._BezierInterpolation_7=function(bone,index,out,outOfs,data,dt,dData,duration,nextData,interData,offset){
+			(offset===void 0)&& (offset=0);
+			out[outOfs]=interData[offset+4]+interData[offset+5] *BezierLerp.getBezierRate((dt*0.001+interData[offset+6])/ interData[offset+7],interData[offset],interData[offset+1],interData[offset+2],interData[offset+3]);
+			return 9;
+		}
+
+		AnimationTemplet.load=function(url){
+			return Laya.loader.create(url,null,null,AnimationTemplet);
+		}
+
+		AnimationTemplet.interpolation=[AnimationTemplet._LinearInterpolation_0,AnimationTemplet._QuaternionInterpolation_1,AnimationTemplet._AngleInterpolation_2,AnimationTemplet._RadiansInterpolation_3,AnimationTemplet._Matrix4x4Interpolation_4,AnimationTemplet._NoInterpolation_5,AnimationTemplet._BezierInterpolation_6,AnimationTemplet._BezierInterpolation_7];
+		AnimationTemplet.LAYA_ANIMATION_VISION="LAYAANIMATION:1.6.0";
+		return AnimationTemplet;
+	})(Resource)
 
 
 	/**
@@ -12806,8 +16507,8 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.__resumePlay=function(){
+			if(this._audio)this._audio.removeEventListener("canplay",this._resumePlay);
 			try {
-				this._audio.removeEventListener("canplay",this._resumePlay);
 				this._audio.currentTime=this.startTime;
 				Browser.container.appendChild(this._audio);
 				this._audio.play();
@@ -12821,13 +16522,15 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.play=function(){
 			try {
+				this._audio.playbackRate=SoundManager.playbackRate;
 				this._audio.currentTime=this.startTime;
 				}catch (e){
 				this._audio.addEventListener("canplay",this._resumePlay);
 				return;
 			}
 			Browser.container.appendChild(this._audio);
-			this._audio.play();
+			if("play" in this._audio)
+				this._audio.play();
 		}
 
 		/**
@@ -12840,7 +16543,8 @@ var Laya=window.Laya=(function(window,document){
 			this.completeHandler=null;
 			if (!this._audio)
 				return;
-			this._audio.pause();
+			if("pause" in this._audio)
+				this._audio.pause();
 			this._audio.removeEventListener("ended",this._onEnd);
 			this._audio.removeEventListener("canplay",this._resumePlay);
 			Pool.recover("audio:"+this.url,this._audio);
@@ -12857,6 +16561,15 @@ var Laya=window.Laya=(function(window,document){
 			if (!this._audio)
 				return 0;
 			return this._audio.currentTime;
+		});
+
+		/**
+		*获取总时间。
+		*/
+		__getset(0,__proto,'duration',function(){
+			if (!this._audio)
+				return 0;
+			return this._audio.duration;
 		});
 
 		/**
@@ -12928,6 +16641,7 @@ var Laya=window.Laya=(function(window,document){
 			if (this.loops==0){
 				bufferSource.loop=true;
 			}
+			bufferSource.playbackRate.value=SoundManager.playbackRate;
 			bufferSource.start(0,this.startTime);
 			this._currentTime=0;
 		}
@@ -12986,6 +16700,13 @@ var Laya=window.Laya=(function(window,document){
 		__getset(0,__proto,'position',function(){
 			if (this.bufferSource){
 				return (Browser.now()-this._startTime)/ 1000+this.startTime;
+			}
+			return 0;
+		});
+
+		__getset(0,__proto,'duration',function(){
+			if (this.audioBuffer){
+				return this.audioBuffer.duration;
 			}
 			return 0;
 		});
@@ -13132,19 +16853,19 @@ var Laya=window.Laya=(function(window,document){
 		*<p>重置对象的 <code>X</code> 轴（水平方向）布局。</p>
 		*/
 		__proto.resetLayoutX=function(){
+			var layout=this._layout;
+			if (!isNaN(layout.anchorX))this.pivotX=layout.anchorX *this.width;
 			var parent=this.parent;
 			if (parent){
-				var layout=this._layout;
-				if (!isNaN(layout.anchorX))this.pivotX=layout.anchorX *this.width;
 				if (!isNaN(layout.centerX)){
-					this.x=(parent.width-this.displayWidth)*0.5+layout.centerX+this.pivotX;
+					this.x=(parent.width-this.displayWidth)*0.5+layout.centerX+this.pivotX *this.scaleX;
 					}else if (!isNaN(layout.left)){
-					this.x=layout.left+this.pivotX;
+					this.x=layout.left+this.pivotX *this.scaleX;
 					if (!isNaN(layout.right)){
 						this.width=(parent._width-layout.left-layout.right)/ this.scaleX;
 					}
 					}else if (!isNaN(layout.right)){
-					this.x=parent.width-this.displayWidth-layout.right+this.pivotX;
+					this.x=parent.width-this.displayWidth-layout.right+this.pivotX *this.scaleX;
 				}
 			}
 		}
@@ -13153,19 +16874,19 @@ var Laya=window.Laya=(function(window,document){
 		*<p>重置对象的 <code>Y</code> 轴（垂直方向）布局。</p>
 		*/
 		__proto.resetLayoutY=function(){
+			var layout=this._layout;
+			if (!isNaN(layout.anchorY))this.pivotY=layout.anchorY *this.height;
 			var parent=this.parent;
 			if (parent){
-				var layout=this._layout;
-				if (!isNaN(layout.anchorY))this.pivotY=layout.anchorY *this.height;
 				if (!isNaN(layout.centerY)){
-					this.y=(parent.height-this.displayHeight)*0.5+layout.centerY+this.pivotY;
+					this.y=(parent.height-this.displayHeight)*0.5+layout.centerY+this.pivotY *this.scaleY;
 					}else if (!isNaN(layout.top)){
-					this.y=layout.top+this.pivotY;
+					this.y=layout.top+this.pivotY *this.scaleY;
 					if (!isNaN(layout.bottom)){
 						this.height=(parent._height-layout.top-layout.bottom)/ this.scaleY;
 					}
 					}else if (!isNaN(layout.bottom)){
-					this.y=parent.height-this.displayHeight-layout.bottom+this.pivotY;
+					this.y=parent.height-this.displayHeight-layout.bottom+this.pivotY *this.scaleY;
 				}
 			}
 		}
@@ -13201,7 +16922,7 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			if (this._width !=value){
 				this._width=value;
-				this.model && this.model.size(this._width,this._height);
+				this.conchModel && this.conchModel.size(this._width,this._height);
 				this.callLater(this.changeSize);
 				if (this._layout.enable && (!isNaN(this._layout.centerX)|| !isNaN(this._layout.right)|| !isNaN(this._layout.anchorX)))this.resetLayoutX();
 			}
@@ -13258,7 +16979,7 @@ var Laya=window.Laya=(function(window,document){
 			},function(value){
 			if (this._height !=value){
 				this._height=value;
-				this.model && this.model.size(this._width,this._height);
+				this.conchModel && this.conchModel.size(this._width,this._height);
 				this.callLater(this.changeSize);
 				if (this._layout.enable && (!isNaN(this._layout.centerY)|| !isNaN(this._layout.bottom)|| !isNaN(this._layout.anchorY)))this.resetLayoutY();
 			}
@@ -13467,7 +17188,7 @@ var Laya=window.Laya=(function(window,document){
 
 		/**是否变灰。*/
 		__getset(0,__proto,'gray',function(){
-			return this._disabled;
+			return this._gray;
 			},function(value){
 			if (value!==this._gray){
 				this._gray=value;
@@ -13627,6 +17348,1628 @@ var Laya=window.Laya=(function(window,document){
 
 		return PowerMete;
 	})(Sprite)
+
+
+	/**
+	*骨骼动画由Templet,AnimationPlayer,Skeleton三部分组成
+	*/
+	//class laya.ani.bone.Skeleton extends laya.display.Sprite
+	var Skeleton=(function(_super){
+		function Skeleton(templet,aniMode){
+			this._templet=null;
+			this._player=null;
+			this._curOriginalData=null;
+			this._boneMatrixArray=[];
+			this._lastTime=0;
+			this._currAniName=null;
+			this._currAniIndex=-1;
+			this._pause=true;
+			this._aniClipIndex=-1;
+			this._clipIndex=-1;
+			this._skinIndex=0;
+			this._skinName="default";
+			this._aniMode=0;
+			this._graphicsCache=null;
+			this._boneSlotDic=null;
+			this._bindBoneBoneSlotDic=null;
+			this._boneSlotArray=null;
+			this._index=-1;
+			this._total=-1;
+			this._indexControl=false;
+			this._aniPath=null;
+			this._texturePath=null;
+			this._complete=null;
+			this._loadAniMode=0;
+			this._yReverseMatrix=null;
+			this._ikArr=null;
+			this._tfArr=null;
+			this._pathDic=null;
+			this._rootBone=null;
+			this._boneList=null;
+			this._aniSectionDic=null;
+			this._eventIndex=0;
+			this._drawOrderIndex=0;
+			this._drawOrder=null;
+			this._lastAniClipIndex=-1;
+			this._lastUpdateAniClipIndex=-1;
+			Skeleton.__super.call(this);
+			(aniMode===void 0)&& (aniMode=0);
+			if (templet)this.init(templet,aniMode);
+		}
+
+		__class(Skeleton,'laya.ani.bone.Skeleton',_super);
+		var __proto=Skeleton.prototype;
+		/**
+		*初始化动画
+		*0,使用模板缓冲的数据，模板缓冲的数据，不允许修改 （内存开销小，计算开销小，不支持换装）
+		*1,使用动画自己的缓冲区，每个动画都会有自己的缓冲区，相当耗费内存 （内存开销大，计算开销小，支持换装）
+		*2,使用动态方式，去实时去画 （内存开销小，计算开销大，支持换装,不建议使用）
+		*@param templet 模板
+		*@param aniMode 动画模式，0:不支持换装,1,2支持换装
+		*/
+		__proto.init=function(templet,aniMode){
+			(aniMode===void 0)&& (aniMode=0);
+			var i=0,n=0;
+			if (aniMode==1){
+				this._graphicsCache=[];
+				for (i=0,n=templet.getAnimationCount();i < n;i++){
+					this._graphicsCache.push([]);
+				}
+			}
+			this._yReverseMatrix=templet.yReverseMatrix;
+			this._aniMode=aniMode;
+			this._templet=templet;
+			this._player=new AnimationPlayer();
+			this._player.cacheFrameRate=templet.rate;
+			this._player.templet=templet;
+			this._player.play();
+			this._parseSrcBoneMatrix();
+			this._boneList=templet.mBoneArr;
+			this._rootBone=templet.mRootBone;
+			this._aniSectionDic=templet.aniSectionDic;
+			if (templet.ikArr.length > 0){
+				this._ikArr=[];
+				for (i=0,n=templet.ikArr.length;i < n;i++){
+					this._ikArr.push(new IkConstraint(templet.ikArr[i],this._boneList));
+				}
+			}
+			if (templet.pathArr.length > 0){
+				var tPathData;
+				var tPathConstraint;
+				if (this._pathDic==null)this._pathDic={};
+				var tBoneSlot;
+				for (i=0,n=templet.pathArr.length;i < n;i++){
+					tPathData=templet.pathArr[i];
+					tPathConstraint=new PathConstraint(tPathData,this._boneList);
+					tBoneSlot=this._boneSlotDic[tPathData.name];
+					if (tBoneSlot){
+						tPathConstraint=new PathConstraint(tPathData,this._boneList);
+						tPathConstraint.target=tBoneSlot;
+					}
+					this._pathDic[tPathData.name]=tPathConstraint;
+				}
+			}
+			if (templet.tfArr.length > 0){
+				this._tfArr=[];
+				for (i=0,n=templet.tfArr.length;i < n;i++){
+					this._tfArr.push(new TfConstraint(templet.tfArr[i],this._boneList));
+				}
+			}
+			if (templet.skinDataArray.length > 0){
+				var tSkinData=this._templet.skinDataArray[this._skinIndex];
+				this._skinName=tSkinData.name;
+			}
+			this._player.on("played",this,this._onPlay);
+			this._player.on("stopped",this,this._onStop);
+			this._player.on("paused",this,this._onPause);
+		}
+
+		/**
+		*通过加载直接创建动画
+		*@param path 要加载的动画文件路径
+		*@param complete 加载完成的回调函数
+		*@param aniMode 0,使用模板缓冲的数据，模板缓冲的数据，不允许修改（内存开销小，计算开销小，不支持换装） 1,使用动画自己的缓冲区，每个动画都会有自己的缓冲区，相当耗费内存 （内存开销大，计算开销小，支持换装）2,使用动态方式，去实时去画（内存开销小，计算开销大，支持换装,不建议使用）
+		*/
+		__proto.load=function(path,complete,aniMode){
+			(aniMode===void 0)&& (aniMode=0);
+			this._aniPath=path;
+			this._complete=complete;
+			this._loadAniMode=aniMode;
+			this._texturePath=path.replace(".sk",".png").replace(".bin",".png");
+			Laya.loader.load([{url:path,type:"arraybuffer"},{url:this._texturePath,type:"image"}],Handler.create(this,this._onLoaded));
+		}
+
+		/**
+		*加载完成
+		*/
+		__proto._onLoaded=function(){
+			var tTexture=Loader.getRes(this._texturePath);
+			var arraybuffer=Loader.getRes(this._aniPath);
+			if (tTexture==null || arraybuffer==null)return;
+			if (Templet.TEMPLET_DICTIONARY==null){
+				Templet.TEMPLET_DICTIONARY={};
+			};
+			var tFactory;
+			tFactory=Templet.TEMPLET_DICTIONARY[this._aniPath];
+			if (tFactory){
+				tFactory.isParseFail ? this._parseFail():this._parseComplete();
+				}else {
+				tFactory=new Templet();
+				tFactory.url=this._aniPath;
+				Templet.TEMPLET_DICTIONARY[this._aniPath]=tFactory;
+				tFactory.on("complete",this,this._parseComplete);
+				tFactory.on("error",this,this._parseFail);
+				tFactory.parseData(tTexture,arraybuffer);
+			}
+		}
+
+		/**
+		*解析完成
+		*/
+		__proto._parseComplete=function(){
+			var tTemple=Templet.TEMPLET_DICTIONARY[this._aniPath];
+			if (tTemple){
+				this.init(tTemple,this._loadAniMode);
+				this.play(0,true);
+			}
+			this._complete && this._complete.runWith(this);
+		}
+
+		/**
+		*解析失败
+		*/
+		__proto._parseFail=function(){
+			console.log("[Error]:"+this._aniPath+"解析失败");
+		}
+
+		/**
+		*传递PLAY事件
+		*/
+		__proto._onPlay=function(){
+			this.event("played");
+		}
+
+		/**
+		*传递STOP事件
+		*/
+		__proto._onStop=function(){
+			var tEventData;
+			var tEventAniArr=this._templet.eventAniArr;
+			var tEventArr=tEventAniArr[this._aniClipIndex];
+			if (tEventArr && this._eventIndex < tEventArr.length){
+				for (;this._eventIndex < tEventArr.length;this._eventIndex++){
+					tEventData=tEventArr[this._eventIndex];
+					if (tEventData.time >=this._player.playStart && tEventData.time <=this._player.playEnd){
+						this.event("label",tEventData);
+					}
+				}
+			}
+			this._eventIndex=0;
+			this._drawOrder=null;
+			this.event("stopped");
+		}
+
+		/**
+		*传递PAUSE事件
+		*/
+		__proto._onPause=function(){
+			this.event("paused");
+		}
+
+		/**
+		*创建骨骼的矩阵，保存每次计算的最终结果
+		*/
+		__proto._parseSrcBoneMatrix=function(){
+			var i=0,n=0;
+			n=this._templet.srcBoneMatrixArr.length;
+			for (i=0;i < n;i++){
+				this._boneMatrixArray.push(new Matrix());
+			}
+			if (this._aniMode==0){
+				this._boneSlotDic=this._templet.boneSlotDic;
+				this._bindBoneBoneSlotDic=this._templet.bindBoneBoneSlotDic;
+				this._boneSlotArray=this._templet.boneSlotArray;
+				}else {
+				if (this._boneSlotDic==null)this._boneSlotDic={};
+				if (this._bindBoneBoneSlotDic==null)this._bindBoneBoneSlotDic={};
+				if (this._boneSlotArray==null)this._boneSlotArray=[];
+				var tArr=this._templet.boneSlotArray;
+				var tBS;
+				var tBSArr;
+				for (i=0,n=tArr.length;i < n;i++){
+					tBS=tArr[i];
+					tBSArr=this._bindBoneBoneSlotDic[tBS.parent];
+					if (tBSArr==null){
+						this._bindBoneBoneSlotDic[tBS.parent]=tBSArr=[];
+					}
+					this._boneSlotDic[tBS.name]=tBS=tBS.copy();
+					tBSArr.push(tBS);
+					this._boneSlotArray.push(tBS);
+				}
+			}
+		}
+
+		__proto._emitMissedEvents=function(startTime,endTime,startIndex){
+			(startIndex===void 0)&& (startIndex=0);
+			var tEventAniArr=this._templet.eventAniArr;
+			var tEventArr=tEventAniArr[this._player.currentAnimationClipIndex];
+			if (tEventArr){
+				var i=0,len=0;
+				var tEventData;
+				len=tEventArr.length;
+				for (i=startIndex;i < len;i++){
+					tEventData=tEventArr[i];
+					if (tEventData.time >=this._player.playStart && tEventData.time <=this._player.playEnd){
+						this.event("label",tEventData);
+					}
+				}
+			}
+		}
+
+		/**
+		*更新动画
+		*@param autoKey true为正常更新，false为index手动更新
+		*/
+		__proto._update=function(autoKey){
+			(autoKey===void 0)&& (autoKey=true);
+			if (this._pause)return;
+			if (autoKey && this._indexControl){
+				return;
+			};
+			var tCurrTime=Laya.timer.currTimer;
+			var preIndex=this._player.currentKeyframeIndex;
+			if (autoKey){
+				this._player.update(tCurrTime-this._lastTime)
+				}else{
+				preIndex=-1;
+			}
+			this._lastTime=tCurrTime;
+			this._clipIndex=this._player.currentKeyframeIndex;
+			if (this._clipIndex==preIndex&&this._lastUpdateAniClipIndex==this._aniClipIndex){
+				return;
+			}
+			this._lastUpdateAniClipIndex=this._aniClipIndex;
+			if (preIndex > this._clipIndex&&this._eventIndex!=0){
+				this._emitMissedEvents(this._player.playStart,this._player.playEnd,this._eventIndex);
+				this._eventIndex=0;
+			};
+			var tEventData;
+			var tEventAniArr=this._templet.eventAniArr;
+			var tEventArr=tEventAniArr[this._aniClipIndex];
+			if (tEventArr && this._eventIndex < tEventArr.length){
+				tEventData=tEventArr[this._eventIndex];
+				if (tEventData.time >=this._player.playStart && tEventData.time <=this._player.playEnd){
+					if (this._player.currentPlayTime >=tEventData.time){
+						this.event("label",tEventData);
+						this._eventIndex++;
+					}
+					}else {
+					this._eventIndex++;
+				}
+			};
+			var tGraphics;
+			if (this._aniMode==0){
+				tGraphics=this._templet.getGrahicsDataWithCache(this._aniClipIndex,this._clipIndex);
+				if (tGraphics){
+					if (this.graphics !=tGraphics){
+						this.graphics=tGraphics;
+					}
+					return;
+					}else{
+					var i=0,minIndex=0;
+					minIndex=this._clipIndex;
+					while ((!this._templet.getGrahicsDataWithCache(this._aniClipIndex,minIndex-1))&&(minIndex>0)){
+						minIndex--;
+					}
+					if (minIndex < this._clipIndex){
+						for (i=minIndex;i < this._clipIndex;i++){
+							this._createGraphics(i);
+						}
+					}
+				}
+				}else if (this._aniMode==1){
+				tGraphics=this._getGrahicsDataWithCache(this._aniClipIndex,this._clipIndex);
+				if (tGraphics){
+					if (this.graphics !=tGraphics){
+						this.graphics=tGraphics;
+					}
+					return;
+					}else{
+					minIndex=this._clipIndex;
+					while ((!this._getGrahicsDataWithCache(this._aniClipIndex,minIndex-1))&&(minIndex>0)){
+						minIndex--;
+					}
+					if (minIndex < this._clipIndex){
+						for (i=minIndex;i < this._clipIndex;i++){
+							this._createGraphics(i);
+						}
+					}
+				}
+			}
+			this._createGraphics();
+		}
+
+		/**
+		*@private
+		*创建grahics图像
+		*/
+		__proto._createGraphics=function(_clipIndex){
+			(_clipIndex===void 0)&& (_clipIndex=-1);
+			if (_clipIndex==-1)_clipIndex=this._clipIndex;
+			var curTime=_clipIndex *this._player.cacheFrameRateInterval;
+			var tDrawOrderData;
+			var tDrawOrderAniArr=this._templet.drawOrderAniArr;
+			var tDrawOrderArr=tDrawOrderAniArr[this._aniClipIndex];
+			if (tDrawOrderArr && tDrawOrderArr.length > 0){
+				this._drawOrderIndex=0;
+				tDrawOrderData=tDrawOrderArr[this._drawOrderIndex];
+				while (curTime >=tDrawOrderData.time){
+					this._drawOrder=tDrawOrderData.drawOrder;
+					this._drawOrderIndex++;
+					if (this._drawOrderIndex >=tDrawOrderArr.length){
+						break ;
+					}
+					tDrawOrderData=tDrawOrderArr[this._drawOrderIndex];
+				}
+			};
+			var tGraphics;
+			if (this._aniMode==0 || this._aniMode==1){
+				this.graphics=new GraphicsAni();
+				}else {
+				if ((this.graphics instanceof laya.ani.GraphicsAni )){
+					this.graphics.clear();
+					}else {
+					this.graphics=new GraphicsAni();
+				}
+			}
+			tGraphics=this.graphics;
+			var bones=this._templet.getNodes(this._aniClipIndex);
+			this._templet.getOriginalData(this._aniClipIndex,this._curOriginalData,this._player._fullFrames[this._aniClipIndex],_clipIndex,curTime);
+			var tSectionArr=this._aniSectionDic[this._aniClipIndex];
+			var tParentMatrix;
+			var tStartIndex=0;
+			var i=0,j=0,k=0,n=0;
+			var tDBBoneSlot;
+			var tDBBoneSlotArr;
+			var tParentTransform;
+			var tSrcBone;
+			var boneCount=this._templet.srcBoneMatrixArr.length;
+			for (i=0,n=tSectionArr[0];i < boneCount;i++){
+				tSrcBone=this._boneList[i];
+				tParentTransform=this._templet.srcBoneMatrixArr[i];
+				tSrcBone.resultTransform.scX=tParentTransform.scX *this._curOriginalData[tStartIndex++];
+				tSrcBone.resultTransform.skX=tParentTransform.skX+this._curOriginalData[tStartIndex++];
+				tSrcBone.resultTransform.skY=tParentTransform.skY+this._curOriginalData[tStartIndex++];
+				tSrcBone.resultTransform.scY=tParentTransform.scY *this._curOriginalData[tStartIndex++];
+				tSrcBone.resultTransform.x=tParentTransform.x+this._curOriginalData[tStartIndex++];
+				tSrcBone.resultTransform.y=tParentTransform.y+this._curOriginalData[tStartIndex++];
+				if (this._templet.tMatrixDataLen===8){
+					tSrcBone.resultTransform.skewX=tParentTransform.skewX+this._curOriginalData[tStartIndex++];
+					tSrcBone.resultTransform.skewY=tParentTransform.skewY+this._curOriginalData[tStartIndex++];
+				}
+			};
+			var tSlotDic={};
+			var tSlotAlphaDic={};
+			var tBoneData;
+			for (n+=tSectionArr[1];i < n;i++){
+				tBoneData=bones[i];
+				tSlotDic[tBoneData.name]=this._curOriginalData[tStartIndex++];
+				tSlotAlphaDic[tBoneData.name]=this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+			};
+			var tBendDirectionDic={};
+			var tMixDic={};
+			for (n+=tSectionArr[2];i < n;i++){
+				tBoneData=bones[i];
+				tBendDirectionDic[tBoneData.name]=this._curOriginalData[tStartIndex++];
+				tMixDic[tBoneData.name]=this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+				this._curOriginalData[tStartIndex++];
+			}
+			if (this._pathDic){
+				var tPathConstraint;
+				for (n+=tSectionArr[3];i < n;i++){
+					tBoneData=bones[i];
+					tPathConstraint=this._pathDic[tBoneData.name];
+					if (tPathConstraint){
+						var tByte=new Byte(tBoneData.extenData);
+						switch(tByte.getByte()){
+							case 1:
+								tPathConstraint.position=this._curOriginalData[tStartIndex++];
+								break ;
+							case 2:
+								tPathConstraint.spacing=this._curOriginalData[tStartIndex++];
+								break ;
+							case 3:
+								tPathConstraint.rotateMix=this._curOriginalData[tStartIndex++];
+								tPathConstraint.translateMix=this._curOriginalData[tStartIndex++];
+								break ;
+							}
+					}
+				}
+			}
+			if (this._yReverseMatrix){
+				this._rootBone.update(this._yReverseMatrix);
+				}else {
+				this._rootBone.update(Matrix.TEMP.identity());
+			}
+			if (this._ikArr){
+				var tIkConstraint;
+				for (i=0,n=this._ikArr.length;i < n;i++){
+					tIkConstraint=this._ikArr[i];
+					if (tBendDirectionDic.hasOwnProperty(tIkConstraint.name)){
+						tIkConstraint.bendDirection=tBendDirectionDic[tIkConstraint.name];
+					}
+					if (tMixDic.hasOwnProperty(tIkConstraint.name)){
+						tIkConstraint.mix=tMixDic[tIkConstraint.name]
+					}
+					tIkConstraint.apply();
+				}
+			}
+			if (this._pathDic){
+				for (var tPathStr in this._pathDic){
+					tPathConstraint=this._pathDic[tPathStr];
+					tPathConstraint.apply(this._boneList,tGraphics);
+				}
+			}
+			if (this._tfArr){
+				var tTfConstraint;
+				for (i=0,k=this._tfArr.length;i < k;i++){
+					tTfConstraint=this._tfArr[i];
+					tTfConstraint.apply();
+				}
+			}
+			for (i=0,k=this._boneList.length;i < k;i++){
+				tSrcBone=this._boneList[i];
+				tDBBoneSlotArr=this._bindBoneBoneSlotDic[tSrcBone.name];
+				tSrcBone.resultMatrix.copyTo(this._boneMatrixArray[i]);
+				if (tDBBoneSlotArr){
+					for (j=0,n=tDBBoneSlotArr.length;j < n;j++){
+						tDBBoneSlot=tDBBoneSlotArr[j];
+						if (tDBBoneSlot){
+							tDBBoneSlot.setParentMatrix(tSrcBone.resultMatrix);
+						}
+					}
+				}
+			};
+			var tDeformDic={};
+			var tDeformAniArr=this._templet.deformAniArr;
+			var tDeformAniData;
+			var tDeformSlotData;
+			var tDeformSlotDisplayData;
+			if (tDeformAniArr && tDeformAniArr.length > 0){
+				if (this._lastAniClipIndex !=this._aniClipIndex){
+					this._lastAniClipIndex=this._aniClipIndex;
+					for (i=0,n=this._boneSlotArray.length;i < n;i++){
+						tDBBoneSlot=this._boneSlotArray[i];
+						tDBBoneSlot.deformData=null;
+					}
+				};
+				var tSkinDeformAni=tDeformAniArr[this._aniClipIndex];
+				tDeformAniData=(tSkinDeformAni["default"]);
+				this._setDeform(tDeformAniData,tDeformDic,this._boneSlotArray,curTime);
+				var tSkin;
+				for (tSkin in tSkinDeformAni){
+					if (tSkin!="default"&&tSkin!=this._skinName){
+						tDeformAniData=tSkinDeformAni [tSkin];
+						this._setDeform(tDeformAniData,tDeformDic,this._boneSlotArray,curTime);
+					}
+				}
+				tDeformAniData=(tSkinDeformAni[this._skinName]);
+				this._setDeform(tDeformAniData,tDeformDic,this._boneSlotArray,curTime);
+			};
+			var tSlotData2;
+			var tSlotData3;
+			var tObject;
+			if (this._drawOrder){
+				for (i=0,n=this._drawOrder.length;i < n;i++){
+					tDBBoneSlot=this._boneSlotArray[this._drawOrder[i]];
+					tSlotData2=tSlotDic[tDBBoneSlot.name];
+					tSlotData3=tSlotAlphaDic[tDBBoneSlot.name];
+					if (!isNaN(tSlotData3)){
+						tGraphics.save();
+						tGraphics.alpha(tSlotData3);
+					}
+					if (!isNaN(tSlotData2)){
+						if (this._templet.attachmentNames){
+							tDBBoneSlot.showDisplayByName(this._templet.attachmentNames[tSlotData2]);
+							}else {
+							tDBBoneSlot.showDisplayByIndex(tSlotData2);
+						}
+					}
+					if (tDeformDic[this._drawOrder[i]]){
+						tObject=tDeformDic[this._drawOrder[i]];
+						if (tDBBoneSlot.currDisplayData && tObject[tDBBoneSlot.currDisplayData.attachmentName]){
+							tDBBoneSlot.deformData=tObject[tDBBoneSlot.currDisplayData.attachmentName];
+							}else {
+							tDBBoneSlot.deformData=null;
+						}
+						}else {
+						tDBBoneSlot.deformData=null;
+					}
+					if (!isNaN(tSlotData3)){
+						tDBBoneSlot.draw(tGraphics,this._boneMatrixArray,this._aniMode==2,tSlotData3);
+						}else {
+						tDBBoneSlot.draw(tGraphics,this._boneMatrixArray,this._aniMode==2);
+					}
+					if (!isNaN(tSlotData3)){
+						tGraphics.restore();
+					}
+				}
+				}else {
+				for (i=0,n=this._boneSlotArray.length;i < n;i++){
+					tDBBoneSlot=this._boneSlotArray[i];
+					tSlotData2=tSlotDic[tDBBoneSlot.name];
+					tSlotData3=tSlotAlphaDic[tDBBoneSlot.name];
+					if (!isNaN(tSlotData3)){
+						tGraphics.save();
+						tGraphics.alpha(tSlotData3);
+					}
+					if (!isNaN(tSlotData2)){
+						if (this._templet.attachmentNames){
+							tDBBoneSlot.showDisplayByName(this._templet.attachmentNames[tSlotData2]);
+							}else {
+							tDBBoneSlot.showDisplayByIndex(tSlotData2);
+						}
+					}
+					if (tDeformDic[i]){
+						tObject=tDeformDic[i];
+						if (tDBBoneSlot.currDisplayData && tObject[tDBBoneSlot.currDisplayData.attachmentName]){
+							tDBBoneSlot.deformData=tObject[tDBBoneSlot.currDisplayData.attachmentName];
+							}else {
+							tDBBoneSlot.deformData=null;
+						}
+						}else {
+						tDBBoneSlot.deformData=null;
+					}
+					if (!isNaN(tSlotData3)){
+						tDBBoneSlot.draw(tGraphics,this._boneMatrixArray,this._aniMode==2,tSlotData3);
+						}else {
+						tDBBoneSlot.draw(tGraphics,this._boneMatrixArray,this._aniMode==2);
+					}
+					if (!isNaN(tSlotData3)){
+						tGraphics.restore();
+					}
+				}
+			}
+			if (this._aniMode==0){
+				this._templet.setGrahicsDataWithCache(this._aniClipIndex,_clipIndex,tGraphics);
+				}else if (this._aniMode==1){
+				this._setGrahicsDataWithCache(this._aniClipIndex,_clipIndex,tGraphics);
+			}
+		}
+
+		/**
+		*设置deform数据
+		*@param tDeformAniData
+		*@param tDeformDic
+		*@param _boneSlotArray
+		*@param curTime
+		*/
+		__proto._setDeform=function(tDeformAniData,tDeformDic,_boneSlotArray,curTime){
+			if (!tDeformAniData)return;
+			var tDeformSlotData;
+			var tDeformSlotDisplayData;
+			var tDBBoneSlot;
+			var i=0,n=0,j=0;
+			if (tDeformAniData){
+				for (i=0,n=tDeformAniData.deformSlotDataList.length;i < n;i++){
+					tDeformSlotData=tDeformAniData.deformSlotDataList[i];
+					for (j=0;j < tDeformSlotData.deformSlotDisplayList.length;j++){
+						tDeformSlotDisplayData=tDeformSlotData.deformSlotDisplayList[j];
+						tDBBoneSlot=_boneSlotArray[tDeformSlotDisplayData.slotIndex];
+						tDeformSlotDisplayData.apply(curTime,tDBBoneSlot);
+						if (!tDeformDic[tDeformSlotDisplayData.slotIndex]){
+							tDeformDic[tDeformSlotDisplayData.slotIndex]={};
+						}
+						tDeformDic[tDeformSlotDisplayData.slotIndex][tDeformSlotDisplayData.attachment]=tDeformSlotDisplayData.deformData;
+					}
+				}
+			}
+		}
+
+		/**
+		*得到当前动画的数量
+		*@return
+		*/
+		__proto.getAnimNum=function(){
+			return this._templet.getAnimationCount();
+		}
+
+		/**
+		*得到指定动画的名字
+		*@param index 动画的索引
+		*/
+		__proto.getAniNameByIndex=function(index){
+			return this._templet.getAniNameByIndex(index);
+		}
+
+		/**
+		*通过名字得到插槽的引用
+		*@param name 动画的名字
+		*@return
+		*/
+		__proto.getSlotByName=function(name){
+			return this._boneSlotDic[name];
+		}
+
+		/**
+		*通过名字显示一套皮肤
+		*@param name 皮肤的名字
+		*@param freshSlotIndex 是否将插槽纹理重置到初始化状态
+		*/
+		__proto.showSkinByName=function(name,freshSlotIndex){
+			(freshSlotIndex===void 0)&& (freshSlotIndex=true);
+			this.showSkinByIndex(this._templet.getSkinIndexByName(name),freshSlotIndex);
+		}
+
+		/**
+		*通过索引显示一套皮肤
+		*@param skinIndex 皮肤索引
+		*@param freshSlotIndex 是否将插槽纹理重置到初始化状态
+		*/
+		__proto.showSkinByIndex=function(skinIndex,freshSlotIndex){
+			(freshSlotIndex===void 0)&& (freshSlotIndex=true);
+			for (var i=0;i < this._boneSlotArray.length;i++){
+				(this._boneSlotArray [i]).showSlotData(null,freshSlotIndex);
+			}
+			if (this._templet.showSkinByIndex(this._boneSlotDic,skinIndex,freshSlotIndex)){
+				var tSkinData=this._templet.skinDataArray[skinIndex];
+				this._skinIndex=skinIndex;
+				this._skinName=tSkinData.name;
+			}
+			this._clearCache();
+		}
+
+		/**
+		*设置某插槽的皮肤
+		*@param slotName 插槽名称
+		*@param index 插糟皮肤的索引
+		*/
+		__proto.showSlotSkinByIndex=function(slotName,index){
+			if (this._aniMode==0)return;
+			var tBoneSlot=this.getSlotByName(slotName);
+			if (tBoneSlot){
+				tBoneSlot.showDisplayByIndex(index);
+			}
+			this._clearCache();
+		}
+
+		/**
+		*设置某插槽的皮肤
+		*@param slotName 插槽名称
+		*@param name 皮肤名称
+		*/
+		__proto.showSlotSkinByName=function(slotName,name){
+			if (this._aniMode==0)return;
+			var tBoneSlot=this.getSlotByName(slotName);
+			if (tBoneSlot){
+				tBoneSlot.showDisplayByName(name);
+			}
+			this._clearCache();
+		}
+
+		/**
+		*替换插槽贴图名
+		*@param slotName 插槽名称
+		*@param oldName 要替换的贴图名
+		*@param newName 替换后的贴图名
+		*/
+		__proto.replaceSlotSkinName=function(slotName,oldName,newName){
+			if (this._aniMode==0)return;
+			var tBoneSlot=this.getSlotByName(slotName);
+			if (tBoneSlot){
+				tBoneSlot.replaceDisplayByName(oldName,newName);
+			}
+			this._clearCache();
+		}
+
+		/**
+		*替换插槽的贴图索引
+		*@param slotName 插槽名称
+		*@param oldIndex 要替换的索引
+		*@param newIndex 替换后的索引
+		*/
+		__proto.replaceSlotSkinByIndex=function(slotName,oldIndex,newIndex){
+			if (this._aniMode==0)return;
+			var tBoneSlot=this.getSlotByName(slotName);
+			if (tBoneSlot){
+				tBoneSlot.replaceDisplayByIndex(oldIndex,newIndex);
+			}
+			this._clearCache();
+		}
+
+		/**
+		*设置自定义皮肤
+		*@param name 插糟的名字
+		*@param texture 自定义的纹理
+		*/
+		__proto.setSlotSkin=function(slotName,texture){
+			if (this._aniMode==0)return;
+			var tBoneSlot=this.getSlotByName(slotName);
+			if (tBoneSlot){
+				tBoneSlot.replaceSkin(texture);
+			}
+			this._clearCache();
+		}
+
+		/**
+		*换装的时候，需要清一下缓冲区
+		*/
+		__proto._clearCache=function(){
+			if (this._aniMode==1){
+				for (var i=0,n=this._graphicsCache.length;i < n;i++){
+					this._graphicsCache[i].length=0;
+				}
+			}
+		}
+
+		/**
+		*播放动画
+		*@param nameOrIndex 动画名字或者索引
+		*@param loop 是否循环播放
+		*@param force false,如果要播的动画跟上一个相同就不生效,true,强制生效
+		*@param start 起始时间
+		*@param end 结束时间
+		*@param freshSkin 是否刷新皮肤数据
+		*/
+		__proto.play=function(nameOrIndex,loop,force,start,end,freshSkin){
+			(force===void 0)&& (force=true);
+			(start===void 0)&& (start=0);
+			(end===void 0)&& (end=0);
+			(freshSkin===void 0)&& (freshSkin=true);
+			this._indexControl=false;
+			var index=-1;
+			var duration=NaN;
+			if (loop){
+				duration=2147483647;
+				}else {
+				duration=0;
+			}
+			if ((typeof nameOrIndex=='string')){
+				for (var i=0,n=this._templet.getAnimationCount();i < n;i++){
+					var animation=this._templet.getAnimation(i);
+					if (animation && nameOrIndex==animation.name){
+						index=i;
+						break ;
+					}
+				}
+				}else {
+				index=nameOrIndex;
+			}
+			if (index >-1 && index < this.getAnimNum()){
+				this._aniClipIndex=index;
+				if (force || this._pause || this._currAniIndex !=index){
+					this._currAniIndex=index;
+					this._curOriginalData=new Float32Array(this._templet.getTotalkeyframesLength(index));
+					this._drawOrder=null;
+					this._eventIndex=0;
+					this._player.play(index,this._player.playbackRate,duration,start,end);
+					if(freshSkin)
+						this._templet.showSkinByIndex(this._boneSlotDic,this._skinIndex);
+					if (this._pause){
+						this._pause=false;
+						this._lastTime=Browser.now();
+						Laya.stage.frameLoop(1,this,this._update,null,true);
+					}
+					this._update();
+				}
+			}
+		}
+
+		/**
+		*停止动画
+		*/
+		__proto.stop=function(){
+			if (!this._pause){
+				this._pause=true;
+				if (this._player){
+					this._player.stop(true);
+				}
+				Laya.timer.clear(this,this._update);
+			}
+		}
+
+		/**
+		*设置动画播放速率
+		*@param value 1为标准速率
+		*/
+		__proto.playbackRate=function(value){
+			if (this._player){
+				this._player.playbackRate=value;
+			}
+		}
+
+		/**
+		*暂停动画的播放
+		*/
+		__proto.paused=function(){
+			if (!this._pause){
+				this._pause=true;
+				if (this._player){
+					this._player.paused=true;
+				}
+				Laya.timer.clear(this,this._update);
+			}
+		}
+
+		/**
+		*恢复动画的播放
+		*/
+		__proto.resume=function(){
+			this._indexControl=false;
+			if (this._pause){
+				this._pause=false;
+				if (this._player){
+					this._player.paused=false;
+				}
+				this._lastTime=Browser.now();
+				Laya.stage.frameLoop(1,this,this._update,null,true);
+			}
+		}
+
+		/**
+		*@private
+		*得到缓冲数据
+		*@param aniIndex
+		*@param frameIndex
+		*@return
+		*/
+		__proto._getGrahicsDataWithCache=function(aniIndex,frameIndex){
+			return this._graphicsCache[aniIndex][frameIndex];
+		}
+
+		/**
+		*@private
+		*保存缓冲grahpics
+		*@param aniIndex
+		*@param frameIndex
+		*@param graphics
+		*/
+		__proto._setGrahicsDataWithCache=function(aniIndex,frameIndex,graphics){
+			this._graphicsCache[aniIndex][frameIndex]=graphics;
+		}
+
+		/**
+		*销毁当前动画
+		*/
+		__proto.destroy=function(destroyChild){
+			(destroyChild===void 0)&& (destroyChild=true);
+			_super.prototype.destroy.call(this,destroyChild);
+			this._templet=null;
+			this._player.offAll();
+			this._player=null;
+			this._curOriginalData=null;
+			this._boneMatrixArray.length=0;
+			this._lastTime=0;
+			Laya.timer.clear(this,this._update);
+		}
+
+		/**
+		*设置动画路径
+		*/
+		/**
+		*得到资源的URL
+		*/
+		__getset(0,__proto,'url',function(){
+			return this._aniPath;
+			},function(path){
+			this.load(path);
+		});
+
+		/**
+		*@private
+		*设置帧索引
+		*/
+		/**
+		*@private
+		*得到帧索引
+		*/
+		__getset(0,__proto,'index',function(){
+			return this._index;
+			},function(value){
+			if (this.player){
+				this._index=value;
+				this._player.currentTime=this._index *1000 / this._player.cacheFrameRate;
+				this._indexControl=true;
+				this._update(false);
+			}
+		});
+
+		/**
+		*得到总帧数据
+		*/
+		__getset(0,__proto,'total',function(){
+			if (this._templet && this._player){
+				this._total=Math.floor(this._templet.getAniDuration(this._player.currentAnimationClipIndex)/ 1000 *this._player.cacheFrameRate);
+				}else {
+				this._total=-1;
+			}
+			return this._total;
+		});
+
+		/**
+		*得到播放器的引用
+		*/
+		__getset(0,__proto,'player',function(){
+			return this._player;
+		});
+
+		return Skeleton;
+	})(Sprite)
+
+
+	/**
+	*动画模板类
+	*/
+	//class laya.ani.bone.Templet extends laya.ani.AnimationTemplet
+	var Templet=(function(_super){
+		function Templet(){
+			this._mainTexture=null;
+			this._textureJson=null;
+			this._graphicsCache=[];
+			this.srcBoneMatrixArr=[];
+			this.ikArr=[];
+			this.tfArr=[];
+			this.pathArr=[];
+			this.boneSlotDic={};
+			this.bindBoneBoneSlotDic={};
+			this.boneSlotArray=[];
+			this.skinDataArray=[];
+			this.skinDic={};
+			this.subTextureDic={};
+			this.isParseFail=false;
+			this.url=null;
+			this.yReverseMatrix=null;
+			this.drawOrderAniArr=[];
+			this.eventAniArr=[];
+			this.attachmentNames=null;
+			this.deformAniArr=[];
+			this._rate=30;
+			this.aniSectionDic={};
+			this._skBufferUrl=null;
+			this._textureDic={};
+			this._loadList=null;
+			this._path=null;
+			this.tMatrixDataLen=0;
+			this.mRootBone=null;
+			Templet.__super.call(this);
+			this.skinSlotDisplayDataArr=[];
+			this.mBoneArr=[];
+		}
+
+		__class(Templet,'laya.ani.bone.Templet',_super);
+		var __proto=Templet.prototype;
+		__proto.loadAni=function(url){
+			this._skBufferUrl=url;
+			Laya.loader.load(url,Handler.create(this,this.onComplete),null,"arraybuffer");
+		}
+
+		__proto.onComplete=function(content){
+			var tSkBuffer=Loader.getRes(this._skBufferUrl);
+			this._path=this._skBufferUrl.slice(0,this._skBufferUrl.lastIndexOf("/"))+"/";
+			this.parseData(null,tSkBuffer);
+		}
+
+		/**
+		*解析骨骼动画数据
+		*@param texture 骨骼动画用到的纹理
+		*@param skeletonData 骨骼动画信息及纹理分块信息
+		*@param playbackRate 缓冲的帧率数据（会根据帧率去分帧）
+		*/
+		__proto.parseData=function(texture,skeletonData,playbackRate){
+			(playbackRate===void 0)&& (playbackRate=30);
+			this._mainTexture=texture;
+			if (this._mainTexture){
+				if (Render.isWebGL && texture.bitmap){
+					texture.bitmap.enableMerageInAtlas=false;
+				}
+			}
+			this._rate=playbackRate;
+			this.parse(skeletonData);
+		}
+
+		/**
+		*创建动画
+		*0,使用模板缓冲的数据，模板缓冲的数据，不允许修改 （内存开销小，计算开销小，不支持换装）
+		*1,使用动画自己的缓冲区，每个动画都会有自己的缓冲区，相当耗费内存 （内存开销大，计算开销小，支持换装）
+		*2,使用动态方式，去实时去画 （内存开销小，计算开销大，支持换装,不建议使用）
+		*@param aniMode 0 动画模式，0:不支持换装,1,2支持换装
+		*@return
+		*/
+		__proto.buildArmature=function(aniMode){
+			(aniMode===void 0)&& (aniMode=0);
+			return new Skeleton(this,aniMode);
+		}
+
+		/**
+		*@private
+		*解析动画
+		*@param data 解析的二进制数据
+		*@param playbackRate 帧率
+		*/
+		__proto.parse=function(data){
+			_super.prototype.parse.call(this,data);
+			this._endLoaded();
+			if (this._aniVersion !=AnimationTemplet.LAYA_ANIMATION_VISION){
+				console.log("[Error] 版本不一致，请使用IDE版本（1.6.0）重新导出");
+				this._loaded=false;
+			}
+			if (this._loaded){
+				if (this._mainTexture){
+					this._parsePublicExtData();
+					}else {
+					this._parseTexturePath();
+				}
+				}else {
+				this.event("error",this);
+				this.isParseFail=true;
+			}
+		}
+
+		__proto._parseTexturePath=function(){
+			var i=0;
+			this._loadList=[];
+			var tByte=new Byte(this.getPublicExtData());
+			var tX=0,tY=0,tWidth=0,tHeight=0;
+			var tFrameX=0,tFrameY=0,tFrameWidth=0,tFrameHeight=0;
+			var tTempleData=0;
+			var tTextureLen=tByte.getInt32();
+			var tTextureName=tByte.readUTFString();
+			var tTextureNameArr=tTextureName.split("\n");
+			var tTexture;
+			var tSrcTexturePath;
+			for (i=0;i < tTextureLen;i++){
+				tSrcTexturePath=this._path+tTextureNameArr[i *2];
+				tTextureName=tTextureNameArr[i *2+1];
+				tX=tByte.getFloat32();
+				tY=tByte.getFloat32();
+				tWidth=tByte.getFloat32();
+				tHeight=tByte.getFloat32();
+				tTempleData=tByte.getFloat32();
+				tFrameX=isNaN(tTempleData)? 0 :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameY=isNaN(tTempleData)? 0 :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameWidth=isNaN(tTempleData)? tWidth :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameHeight=isNaN(tTempleData)? tHeight :tTempleData;
+				if (this._loadList.indexOf(tSrcTexturePath)==-1){
+					this._loadList.push(tSrcTexturePath);
+				}
+			}
+			Laya.loader.load(this._loadList,Handler.create(this,this._textureComplete));
+		}
+
+		/**
+		*纹理加载完成
+		*/
+		__proto._textureComplete=function(){
+			var tTexture;
+			var tTextureName;
+			for (var i=0,n=this._loadList.length;i < n;i++){
+				tTextureName=this._loadList[i];
+				tTexture=this._textureDic[tTextureName]=Loader.getRes(tTextureName);
+				if (Render.isWebGL && tTexture && tTexture.bitmap){
+					tTexture.bitmap.enableMerageInAtlas=false;
+				}
+			}
+			this._parsePublicExtData();
+		}
+
+		/**
+		*解析自定义数据
+		*/
+		__proto._parsePublicExtData=function(){
+			var i=0,j=0,k=0,l=0,n=0;
+			for (i=0,n=this.getAnimationCount();i < n;i++){
+				this._graphicsCache.push([]);
+			};
+			var isSpine=false;
+			isSpine=this.aniClassName !="Dragon";
+			var tByte=new Byte(this.getPublicExtData());
+			var tX=0,tY=0,tWidth=0,tHeight=0;
+			var tFrameX=0,tFrameY=0,tFrameWidth=0,tFrameHeight=0;
+			var tTempleData=0;
+			var tTextureLen=tByte.getInt32();
+			var tTextureName=tByte.readUTFString();
+			var tTextureNameArr=tTextureName.split("\n");
+			var tTexture;
+			var tSrcTexturePath;
+			for (i=0;i < tTextureLen;i++){
+				tTexture=this._mainTexture;
+				tSrcTexturePath=this._path+tTextureNameArr[i *2];
+				tTextureName=tTextureNameArr[i *2+1];
+				if (this._mainTexture==null){
+					tTexture=this._textureDic[tSrcTexturePath];
+				}
+				tX=tByte.getFloat32();
+				tY=tByte.getFloat32();
+				tWidth=tByte.getFloat32();
+				tHeight=tByte.getFloat32();
+				tTempleData=tByte.getFloat32();
+				tFrameX=isNaN(tTempleData)? 0 :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameY=isNaN(tTempleData)? 0 :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameWidth=isNaN(tTempleData)? tWidth :tTempleData;
+				tTempleData=tByte.getFloat32();
+				tFrameHeight=isNaN(tTempleData)? tHeight :tTempleData;
+				this.subTextureDic[tTextureName]=Texture.create(tTexture,tX,tY,tWidth,tHeight,-tFrameX,-tFrameY,tFrameWidth,tFrameHeight);
+			}
+			this._mainTexture=tTexture;
+			var tAniCount=tByte.getUint16();
+			var tSectionArr;
+			for (i=0;i < tAniCount;i++){
+				tSectionArr=[];
+				tSectionArr.push(tByte.getUint16());
+				tSectionArr.push(tByte.getUint16());
+				tSectionArr.push(tByte.getUint16());
+				tSectionArr.push(tByte.getUint16());
+				this.aniSectionDic[i]=tSectionArr;
+			};
+			var tBone;
+			var tParentBone;
+			var tName;
+			var tParentName;
+			var tBoneLen=tByte.getInt16();
+			var tBoneDic={};
+			var tRootBone;
+			for (i=0;i < tBoneLen;i++){
+				tBone=new Bone();
+				if (i==0){
+					tRootBone=tBone;
+					}else {
+					tBone.root=tRootBone;
+				}
+				tBone.d=isSpine?-1:1;
+				tName=tByte.readUTFString();
+				tParentName=tByte.readUTFString();
+				tBone.length=tByte.getFloat32();
+				if (tByte.getByte()==1){
+					tBone.inheritRotation=false;
+				}
+				if (tByte.getByte()==1){
+					tBone.inheritScale=false;
+				}
+				tBone.name=tName;
+				if (tParentName){
+					tParentBone=tBoneDic[tParentName];
+					if (tParentBone){
+						tParentBone.addChild(tBone);
+						}else {
+						this.mRootBone=tBone;
+					}
+				}
+				tBoneDic[tName]=tBone;
+				this.mBoneArr.push(tBone);
+			}
+			this.tMatrixDataLen=tByte.getUint16();
+			var tLen=tByte.getUint16();
+			var parentIndex=0;
+			var boneLength=Math.floor(tLen / this.tMatrixDataLen);
+			var tResultTransform;
+			var tMatrixArray=this.srcBoneMatrixArr;
+			for (i=0;i < boneLength;i++){
+				tResultTransform=new Transform();
+				tResultTransform.scX=tByte.getFloat32();
+				tResultTransform.skX=tByte.getFloat32();
+				tResultTransform.skY=tByte.getFloat32();
+				tResultTransform.scY=tByte.getFloat32();
+				tResultTransform.x=tByte.getFloat32();
+				tResultTransform.y=tByte.getFloat32();
+				if (this.tMatrixDataLen===8){
+					tResultTransform.skewX=tByte.getFloat32();
+					tResultTransform.skewY=tByte.getFloat32();
+				}
+				tMatrixArray.push(tResultTransform);
+				tBone=this.mBoneArr[i];
+				tBone.transform=tResultTransform;
+			};
+			var tIkConstraintData;
+			var tIkLen=tByte.getUint16();
+			var tIkBoneLen=0;
+			for (i=0;i < tIkLen;i++){
+				tIkConstraintData=new IkConstraintData();
+				tIkBoneLen=tByte.getUint16();
+				for (j=0;j < tIkBoneLen;j++){
+					tIkConstraintData.boneNames.push(tByte.readUTFString());
+					tIkConstraintData.boneIndexs.push(tByte.getInt16());
+				}
+				tIkConstraintData.name=tByte.readUTFString();
+				tIkConstraintData.targetBoneName=tByte.readUTFString();
+				tIkConstraintData.targetBoneIndex=tByte.getInt16();
+				tIkConstraintData.bendDirection=tByte.getFloat32();
+				tIkConstraintData.mix=tByte.getFloat32();
+				tIkConstraintData.isSpine=isSpine;
+				this.ikArr.push(tIkConstraintData);
+			};
+			var tTfConstraintData;
+			var tTfLen=tByte.getUint16();
+			var tTfBoneLen=0;
+			for (i=0;i < tTfLen;i++){
+				tTfConstraintData=new TfConstraintData();
+				tTfBoneLen=tByte.getUint16();
+				for (j=0;j < tTfBoneLen;j++){
+					tTfConstraintData.boneIndexs.push(tByte.getInt16());
+				}
+				tTfConstraintData.name=tByte.getUTFString();
+				tTfConstraintData.targetIndex=tByte.getInt16();
+				tTfConstraintData.rotateMix=tByte.getFloat32();
+				tTfConstraintData.translateMix=tByte.getFloat32();
+				tTfConstraintData.scaleMix=tByte.getFloat32();
+				tTfConstraintData.shearMix=tByte.getFloat32();
+				tTfConstraintData.offsetRotation=tByte.getFloat32();
+				tTfConstraintData.offsetX=tByte.getFloat32();
+				tTfConstraintData.offsetY=tByte.getFloat32();
+				tTfConstraintData.offsetScaleX=tByte.getFloat32();
+				tTfConstraintData.offsetScaleY=tByte.getFloat32();
+				tTfConstraintData.offsetShearY=tByte.getFloat32();
+				this.tfArr.push(tTfConstraintData);
+			};
+			var tPathConstraintData;
+			var tPathLen=tByte.getUint16();
+			var tPathBoneLen=0;
+			for (i=0;i < tPathLen;i++){
+				tPathConstraintData=new PathConstraintData();
+				tPathConstraintData.name=tByte.readUTFString();
+				tPathBoneLen=tByte.getUint16();
+				for (j=0;j < tPathBoneLen;j++){
+					tPathConstraintData.bones.push(tByte.getInt16());
+				}
+				tPathConstraintData.target=tByte.readUTFString();
+				tPathConstraintData.positionMode=tByte.readUTFString();
+				tPathConstraintData.spacingMode=tByte.readUTFString();
+				tPathConstraintData.rotateMode=tByte.readUTFString();
+				tPathConstraintData.offsetRotation=tByte.getFloat32();
+				tPathConstraintData.position=tByte.getFloat32();
+				tPathConstraintData.spacing=tByte.getFloat32();
+				tPathConstraintData.rotateMix=tByte.getFloat32();
+				tPathConstraintData.translateMix=tByte.getFloat32();
+				this.pathArr.push(tPathConstraintData);
+			};
+			var tDeformSlotLen=0;
+			var tDeformSlotDisplayLen=0;
+			var tDSlotIndex=0;
+			var tDAttachment;
+			var tDeformTimeLen=0;
+			var tDTime=NaN;
+			var tDeformVecticesLen=0;
+			var tDeformAniData;
+			var tDeformSlotData;
+			var tDeformSlotDisplayData;
+			var tDeformVectices;
+			var tDeformAniLen=tByte.getInt16();
+			for (i=0;i < tDeformAniLen;i++){
+				var tDeformSkinLen=tByte.getUint8();
+				var tSkinDic={};
+				this.deformAniArr.push(tSkinDic);
+				for (var f=0;f < tDeformSkinLen;f++){
+					tDeformAniData=new DeformAniData();
+					tDeformAniData.skinName=tByte.getUTFString();
+					tSkinDic[tDeformAniData.skinName]=tDeformAniData;
+					tDeformSlotLen=tByte.getInt16();
+					for (j=0;j < tDeformSlotLen;j++){
+						tDeformSlotData=new DeformSlotData();
+						tDeformAniData.deformSlotDataList.push(tDeformSlotData);
+						tDeformSlotDisplayLen=tByte.getInt16();
+						for (k=0;k < tDeformSlotDisplayLen;k++){
+							tDeformSlotDisplayData=new DeformSlotDisplayData();
+							tDeformSlotData.deformSlotDisplayList.push(tDeformSlotDisplayData);
+							tDeformSlotDisplayData.slotIndex=tDSlotIndex=tByte.getInt16();
+							tDeformSlotDisplayData.attachment=tDAttachment=tByte.getUTFString();
+							tDeformTimeLen=tByte.getInt16();
+							for (l=0;l < tDeformTimeLen;l++){
+								if (tByte.getByte()==1){
+									tDeformSlotDisplayData.tweenKeyList.push(true);
+									}else {
+									tDeformSlotDisplayData.tweenKeyList.push(false);
+								}
+								tDTime=tByte.getFloat32();
+								tDeformSlotDisplayData.timeList.push(tDTime);
+								tDeformVectices=[];
+								tDeformSlotDisplayData.vectices.push(tDeformVectices);
+								tDeformVecticesLen=tByte.getInt16();
+								for (n=0;n < tDeformVecticesLen;n++){
+									tDeformVectices.push(tByte.getFloat32());
+								}
+							}
+						}
+					}
+				}
+			};
+			var tDrawOrderArr;
+			var tDrawOrderAniLen=tByte.getInt16();
+			var tDrawOrderLen=0;
+			var tDrawOrderData;
+			var tDoLen=0;
+			for (i=0;i < tDrawOrderAniLen;i++){
+				tDrawOrderLen=tByte.getInt16();
+				tDrawOrderArr=[];
+				for (j=0;j < tDrawOrderLen;j++){
+					tDrawOrderData=new DrawOrderData();
+					tDrawOrderData.time=tByte.getFloat32();
+					tDoLen=tByte.getInt16();
+					for (k=0;k < tDoLen;k++){
+						tDrawOrderData.drawOrder.push(tByte.getInt16());
+					}
+					tDrawOrderArr.push(tDrawOrderData);
+				}
+				this.drawOrderAniArr.push(tDrawOrderArr);
+			};
+			var tEventArr;
+			var tEventAniLen=tByte.getInt16();
+			var tEventLen=0;
+			var tEventData;
+			for (i=0;i < tEventAniLen;i++){
+				tEventLen=tByte.getInt16();
+				tEventArr=[];
+				for (j=0;j < tEventLen;j++){
+					tEventData=new EventData();
+					tEventData.name=tByte.getUTFString();
+					tEventData.intValue=tByte.getInt32();
+					tEventData.floatValue=tByte.getFloat32();
+					tEventData.stringValue=tByte.getUTFString();
+					tEventData.time=tByte.getFloat32();
+					tEventArr.push(tEventData);
+				}
+				this.eventAniArr.push(tEventArr);
+			};
+			var tAttachmentLen=tByte.getInt16();
+			if (tAttachmentLen > 0){
+				this.attachmentNames=[];
+				for (i=0;i < tAttachmentLen;i++){
+					this.attachmentNames.push(tByte.getUTFString());
+				}
+			};
+			var tBoneSlotLen=tByte.getInt16();
+			var tDBBoneSlot;
+			var tDBBoneSlotArr;
+			for (i=0;i < tBoneSlotLen;i++){
+				tDBBoneSlot=new BoneSlot();
+				tDBBoneSlot.name=tByte.readUTFString();
+				tDBBoneSlot.parent=tByte.readUTFString();
+				tDBBoneSlot.attachmentName=tByte.readUTFString();
+				tDBBoneSlot.srcDisplayIndex=tDBBoneSlot.displayIndex=tByte.getInt16();
+				tDBBoneSlot.templet=this;
+				this.boneSlotDic[tDBBoneSlot.name]=tDBBoneSlot;
+				tDBBoneSlotArr=this.bindBoneBoneSlotDic[tDBBoneSlot.parent];
+				if (tDBBoneSlotArr==null){
+					this.bindBoneBoneSlotDic[tDBBoneSlot.parent]=tDBBoneSlotArr=[];
+				}
+				tDBBoneSlotArr.push(tDBBoneSlot);
+				this.boneSlotArray.push(tDBBoneSlot);
+			};
+			var tNameString=tByte.readUTFString();
+			var tNameArray=tNameString.split("\n");
+			var tNameStartIndex=0;
+			var tSkinDataLen=tByte.getUint8();
+			var tSkinData,tSlotData,tDisplayData;
+			var tSlotDataLen=0,tDisplayDataLen=0;
+			var tUvLen=0,tWeightLen=0,tTriangleLen=0,tVerticeLen=0,tLengthLen=0;
+			for (i=0;i < tSkinDataLen;i++){
+				tSkinData=new SkinData();
+				tSkinData.name=tNameArray[tNameStartIndex++];
+				tSlotDataLen=tByte.getUint8();
+				for (j=0;j < tSlotDataLen;j++){
+					tSlotData=new SlotData();
+					tSlotData.name=tNameArray[tNameStartIndex++];
+					tDBBoneSlot=this.boneSlotDic[tSlotData.name];
+					tDisplayDataLen=tByte.getUint8();
+					for (k=0;k < tDisplayDataLen;k++){
+						tDisplayData=new SkinSlotDisplayData();
+						this.skinSlotDisplayDataArr.push(tDisplayData);
+						tDisplayData.name=tNameArray[tNameStartIndex++];
+						tDisplayData.attachmentName=tNameArray[tNameStartIndex++];
+						tDisplayData.transform=new Transform();
+						tDisplayData.transform.scX=tByte.getFloat32();
+						tDisplayData.transform.skX=tByte.getFloat32();
+						tDisplayData.transform.skY=tByte.getFloat32();
+						tDisplayData.transform.scY=tByte.getFloat32();
+						tDisplayData.transform.x=tByte.getFloat32();
+						tDisplayData.transform.y=tByte.getFloat32();
+						tSlotData.displayArr.push(tDisplayData);
+						tDisplayData.width=tByte.getFloat32();
+						tDisplayData.height=tByte.getFloat32();
+						tDisplayData.type=tByte.getUint8();
+						tDisplayData.verLen=tByte.getUint16();
+						tBoneLen=tByte.getUint16();
+						if (tBoneLen > 0){
+							tDisplayData.bones=[];
+							for (l=0;l < tBoneLen;l++){
+								var tBoneId=tByte.getUint16();
+								tDisplayData.bones.push(tBoneId);
+							}
+						}
+						tUvLen=tByte.getUint16();
+						if (tUvLen > 0){
+							tDisplayData.uvs=[];
+							for (l=0;l < tUvLen;l++){
+								tDisplayData.uvs.push(tByte.getFloat32());
+							}
+						}
+						tWeightLen=tByte.getUint16();
+						if (tWeightLen > 0){
+							tDisplayData.weights=[];
+							for (l=0;l < tWeightLen;l++){
+								tDisplayData.weights.push(tByte.getFloat32());
+							}
+						}
+						tTriangleLen=tByte.getUint16();
+						if (tTriangleLen > 0){
+							tDisplayData.triangles=[];
+							for (l=0;l < tTriangleLen;l++){
+								tDisplayData.triangles.push(tByte.getUint16());
+							}
+						}
+						tVerticeLen=tByte.getUint16();
+						if (tVerticeLen > 0){
+							tDisplayData.vertices=[];
+							for (l=0;l < tVerticeLen;l++){
+								tDisplayData.vertices.push(tByte.getFloat32());
+							}
+						}
+						tLengthLen=tByte.getUint16();
+						if (tLengthLen > 0){
+							tDisplayData.lengths=[];
+							for (l=0;l < tLengthLen;l++){
+								tDisplayData.lengths.push(tByte.getFloat32());
+							}
+						}
+					}
+					tSkinData.slotArr.push(tSlotData);
+				}
+				this.skinDic[tSkinData.name]=tSkinData;
+				this.skinDataArray.push(tSkinData);
+			};
+			var tReverse=tByte.getUint8();
+			if (tReverse==1){
+				this.yReverseMatrix=new Matrix(1,0,0,-1,0,0);
+				if (tRootBone){
+					tRootBone.setTempMatrix(this.yReverseMatrix);
+				}
+				}else {
+				if (tRootBone){
+					tRootBone.setTempMatrix(new Matrix());
+				}
+			}
+			this.showSkinByIndex(this.boneSlotDic,0);
+			this.event("complete",this);
+		}
+
+		/**
+		*得到指定的纹理
+		*@param name 纹理的名字
+		*@return
+		*/
+		__proto.getTexture=function(name){
+			var tTexture=this.subTextureDic[name];
+			if (tTexture==null){
+				return this._mainTexture;
+			}
+			return tTexture;
+		}
+
+		/**
+		*@private
+		*显示指定的皮肤
+		*@param boneSlotDic 插糟字典的引用
+		*@param skinIndex 皮肤的索引
+		*@param freshDisplayIndex 是否重置插槽纹理
+		*/
+		__proto.showSkinByIndex=function(boneSlotDic,skinIndex,freshDisplayIndex){
+			(freshDisplayIndex===void 0)&& (freshDisplayIndex=true);
+			if (skinIndex < 0 && skinIndex >=this.skinDataArray.length)return false;
+			var i=0,n=0;
+			var tBoneSlot;
+			var tSlotData;
+			var tSkinData=this.skinDataArray[skinIndex];
+			if (tSkinData){
+				for (i=0,n=tSkinData.slotArr.length;i < n;i++){
+					tSlotData=tSkinData.slotArr[i];
+					if (tSlotData){
+						tBoneSlot=boneSlotDic[tSlotData.name];
+						if (tBoneSlot){
+							tBoneSlot.showSlotData(tSlotData,freshDisplayIndex);
+							if (freshDisplayIndex&&tBoneSlot.attachmentName !="undefined" && tBoneSlot.attachmentName !="null"){
+								tBoneSlot.showDisplayByName(tBoneSlot.attachmentName);
+								}else {
+								tBoneSlot.showDisplayByIndex(tBoneSlot.displayIndex);
+							}
+						}
+					}
+				}
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		*通过皮肤名字得到皮肤索引
+		*@param skinName 皮肤名称
+		*@return
+		*/
+		__proto.getSkinIndexByName=function(skinName){
+			var tSkinData;
+			for (var i=0,n=this.skinDataArray.length;i < n;i++){
+				tSkinData=this.skinDataArray[i];
+				if (tSkinData.name==skinName){
+					return i;
+				}
+			}
+			return-1;
+		}
+
+		/**
+		*@private
+		*得到缓冲数据
+		*@param aniIndex 动画索引
+		*@param frameIndex 帧索引
+		*@return
+		*/
+		__proto.getGrahicsDataWithCache=function(aniIndex,frameIndex){
+			return this._graphicsCache[aniIndex][frameIndex];
+		}
+
+		/**
+		*@private
+		*保存缓冲grahpics
+		*@param aniIndex 动画索引
+		*@param frameIndex 帧索引
+		*@param graphics 要保存的数据
+		*/
+		__proto.setGrahicsDataWithCache=function(aniIndex,frameIndex,graphics){
+			this._graphicsCache[aniIndex][frameIndex]=graphics;
+		}
+
+		/**
+		*释放纹理
+		*/
+		__proto.destroy=function(){
+			var tTexture;
+			for(var $each_tTexture in this.subTextureDic){
+				tTexture=this.subTextureDic[$each_tTexture];
+				tTexture.destroy();
+			}
+			var $each_tTexture;
+			for($each_tTexture in this._textureDic){
+				tTexture=this._textureDic[$each_tTexture];
+				tTexture.destroy();
+			};
+			var tSkinSlotDisplayData;
+			for (var i=0,n=this.skinSlotDisplayDataArr.length;i < n;i++){
+				tSkinSlotDisplayData=this.skinSlotDisplayDataArr[i];
+				tSkinSlotDisplayData.destory();
+			}
+			this.skinSlotDisplayDataArr.length=0;
+			if (this.url){
+				delete Templet.TEMPLET_DICTIONARY[this.url];
+			}
+		}
+
+		/**
+		*通过索引得动画名称
+		*@param index
+		*@return
+		*/
+		__proto.getAniNameByIndex=function(index){
+			var tAni=this.getAnimation(index);
+			if (tAni)return tAni.name;
+			return null;
+		}
+
+		__getset(0,__proto,'rate',function(){
+			return this._rate;
+		});
+
+		Templet.TEMPLET_DICTIONARY=null
+		return Templet;
+	})(AnimationTemplet)
 
 
 	/**
@@ -13969,8 +19312,8 @@ var Laya=window.Laya=(function(window,document){
 			if (nw !=this._textWidth || nh !=this._textHeight){
 				this._textWidth=nw;
 				this._textHeight=nh;
-				if(!this._width||!this._height)
-					this.model&&this.model.size(this._width||this._textWidth,this._height||this._textHeight);
+				if (!this._width || !this._height)
+					this.conchModel && this.conchModel.size(this._width || this._textWidth,this._height || this._textHeight);
 			}
 		}
 
@@ -14001,10 +19344,15 @@ var Laya=window.Laya=(function(window,document){
 			var needWordWrapOrTruncate=this.wordWrap || this.overflow==Text.HIDDEN;
 			if (needWordWrapOrTruncate){
 				var wordWrapWidth=this.getWordWrapWidth();
+			}
+			if (this._currBitmapFont){
+				this._charSize.width=this._currBitmapFont.getMaxWidth();
+				this._charSize.height=this._currBitmapFont.getMaxHeight();
+				}else {
+				var measureResult=Browser.context.measureText(Text._testWord);
+				this._charSize.width=measureResult.width;
+				this._charSize.height=(measureResult.height || this.fontSize);
 			};
-			var measureResult=Browser.context.measureText("阳");
-			this._charSize.width=measureResult.width;
-			this._charSize.height=(measureResult.height || this.fontSize);
 			var lines=text.replace(/\r\n/g,"\n").split("\n");
 			for (var i=0,n=lines.length;i < n;i++){
 				if (i < n-1)
@@ -14039,7 +19387,7 @@ var Laya=window.Laya=(function(window,document){
 				this._lineWidths.push(charsWidth);
 				return;
 			}
-			charsWidth=this._currBitmapFont ? this._currBitmapFont.getMaxWidth():this._charSize.width;
+			charsWidth=this._charSize.width;
 			maybeIndex=Math.floor(wordWrapWidth / charsWidth);
 			(maybeIndex==0)&& (maybeIndex=1);
 			charsWidth=this.getTextWidth(line.substring(0,maybeIndex));
@@ -14459,6 +19807,7 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
+		Text._testWord="游";
 		Text.langPacks=null
 		Text.VISIBLE="visible";
 		Text.SCROLL="scroll";
@@ -14475,13 +19824,15 @@ var Laya=window.Laya=(function(window,document){
 	var AnimationPlayerBase=(function(_super){
 		function AnimationPlayerBase(){
 			this.loop=false;
+			this.wrapMode=0;
 			this._index=0;
 			this._count=0;
 			this._isPlaying=false;
 			this._labels=null;
-			this._controlNode=null;
-			this.wrapMode=0;
 			this._isReverse=false;
+			this._frameRateChanged=false;
+			this._controlNode=null;
+			this._actionName=null;
 			AnimationPlayerBase.__super.call(this);
 			this._interval=Config.animationInterval;
 		}
@@ -14499,8 +19850,9 @@ var Laya=window.Laya=(function(window,document){
 			(loop===void 0)&& (loop=true);
 			(name===void 0)&& (name="");
 			this._isPlaying=true;
-			this.index=((typeof start=='string'))?this._getFrameByLabel(start):start;
+			this.index=((typeof start=='string'))? this._getFrameByLabel(start):start;
 			this.loop=loop;
+			this._actionName=name;
 			this._isReverse=this.wrapMode==1;
 			if (this.interval > 0){
 				this.timerLoop(this.interval,this,this._frameLoop,null,true);
@@ -14521,33 +19873,33 @@ var Laya=window.Laya=(function(window,document){
 			if (this._isReverse){
 				this._index--;
 				if (this._index < 0){
-					if(this.loop){
-						if(this.wrapMode==2){
-							this._index=this._count > 0?1:0;
+					if (this.loop){
+						if (this.wrapMode==2){
+							this._index=this._count > 0 ? 1 :0;
 							this._isReverse=false;
-							}else{
+							}else {
 							this._index=this._count-1;
 						}
 						this.event("complete");
-						}else{
+						}else {
 						this._index=0;
 						this.stop();
 						this.event("complete");
 						return;
 					}
 				}
-				}else{
+				}else {
 				this._index++;
 				if (this._index >=this._count){
-					if(this.loop){
-						if(this.wrapMode==2){
-							this._index=this._count-2 >=0?this._count-2:0;
+					if (this.loop){
+						if (this.wrapMode==2){
+							this._index=this._count-2 >=0 ? this._count-2 :0;
 							this._isReverse=true;
-							}else{
+							}else {
 							this._index=0;
 						}
 						this.event("complete");
-						}else{
+						}else {
 						this._index--;
 						this.stop();
 						this.event("complete");
@@ -14565,7 +19917,7 @@ var Laya=window.Laya=(function(window,document){
 				this._controlNode.off("undisplay",this,this._$3__onDisplay);
 			}
 			this._controlNode=node;
-			if (node&&node!=this){
+			if (node && node !=this){
 				node.on("display",this,this._$3__onDisplay);
 				node.on("undisplay",this,this._$3__onDisplay);
 			}
@@ -14580,7 +19932,7 @@ var Laya=window.Laya=(function(window,document){
 		/**@private */
 		__proto._$3__onDisplay=function(){
 			if (this._isPlaying){
-				if (this._controlNode.displayedInStage)this.play(this._index,this.loop);
+				if (this._controlNode.displayedInStage)this.play(this._index,this.loop,this._actionName);
 				else this.clearTimer(this,this._frameLoop);
 			}
 		}
@@ -14624,7 +19976,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param position 帧索引或label
 		*/
 		__proto.gotoAndStop=function(position){
-			this.index=((typeof position=='string'))?this._getFrameByLabel(position):position;
+			this.index=((typeof position=='string'))? this._getFrameByLabel(position):position;
 			this.stop();
 		}
 
@@ -14645,10 +19997,13 @@ var Laya=window.Laya=(function(window,document){
 		/**播放间隔(单位：毫秒)。*/
 		__getset(0,__proto,'interval',function(){
 			return this._interval;
-			},function(v){
-			this._interval=v;
-			if (this._isPlaying && v > 0){
-				this.timerLoop(v,this,this._frameLoop,null,true);
+			},function(value){
+			if (this._interval !=value){
+				this._frameRateChanged=true;
+				this._interval=value;
+				if (this._isPlaying && value > 0){
+					this.timerLoop(value,this,this._frameLoop,null,true);
+				}
 			}
 		});
 
@@ -14685,7 +20040,6 @@ var Laya=window.Laya=(function(window,document){
 	var Stage=(function(_super){
 		function Stage(){
 			this.focus=null;
-			this._offset=null;
 			this.frameRate="fast";
 			this.desginWidth=0;
 			this.desginHeight=0;
@@ -14702,20 +20056,31 @@ var Laya=window.Laya=(function(window,document){
 			this._safariOffsetY=0;
 			this._frameStartTime=NaN;
 			this._previousOrientation=0;
+			this._isFocused=false;
+			this._isVisibility=false;
+			this._scenes=null;
 			Stage.__super.call(this);
 			this.offset=new Point();
 			this._canvasTransform=new Matrix();
 			var _$this=this;
+			this.transform=Matrix.create();
+			this._scenes=[];
 			this.mouseEnabled=true;
 			this.hitTestPrior=true;
+			this.autoSize=false;
 			this._displayedInStage=true;
+			this._isFocused=true;
 			var _this=this;
 			var window=Browser.window;
 			window.addEventListener("focus",function(){
+				_$this._isFocused=true;
 				_this.event("focus");
+				_this.event("focuschange");
 			});
 			window.addEventListener("blur",function(){
+				_$this._isFocused=false;
 				_this.event("blur");
+				_this.event("focuschange");
 				if (_this._isInputting())Input["inputElement"].target.focus=false;
 			});
 			var hidden="hidden",state="visibilityState",visibilityChange="visibilitychange";
@@ -14736,11 +20101,12 @@ var Laya=window.Laya=(function(window,document){
 			window.document.addEventListener(visibilityChange,visibleChangeFun);
 			function visibleChangeFun (){
 				if (Browser.document[state]=="hidden"){
-					_this.event("blur");
+					_$this._isVisibility=false;
 					if (_this._isInputting())Input["inputElement"].target.focus=false;
 					}else {
-					_this.event("focus");
+					_$this._isVisibility=true;
 				}
+				_this.event("visibilitychange");
 			}
 			window.addEventListener("resize",function(){
 				var orientation=Browser.window.orientation;
@@ -14750,7 +20116,7 @@ var Laya=window.Laya=(function(window,document){
 				_$this._previousOrientation=orientation;
 				if (_this._isInputting())return;
 				if (Browser.onSafari)
-					_this._safariOffsetY=(Browser.document.body.clientHeight || Browser.document.documentElement.clientHeight)-Browser.window.innerHeight;
+					_this._safariOffsetY=(Browser.window.__innerHeight || Browser.document.body.clientHeight || Browser.document.documentElement.clientHeight)-Browser.window.innerHeight;
 				_this._resetCanvas();
 			});
 			window.addEventListener("orientationchange",function(e){
@@ -14780,7 +20146,7 @@ var Laya=window.Laya=(function(window,document){
 			var canvasStyle=canvas.source.style;
 			canvas.size(1,1);
 			canvasStyle.transform=canvasStyle.webkitTransform=canvasStyle.msTransform=canvasStyle.mozTransform=canvasStyle.oTransform="";
-			this._style.visible=false;
+			this.visible=false;
 			Laya.timer.once(100,this,this._changeCanvasSize);
 		}
 
@@ -14849,12 +20215,11 @@ var Laya=window.Laya=(function(window,document){
 			scaleX *=this.scaleX;
 			scaleY *=this.scaleY;
 			if (scaleX===1 && scaleY===1){
-				this.transform && this.transform.identity();
+				this.transform.identity();
 				}else {
-				this.transform || (this.transform=new Matrix());
-				this.transform.a=scaleX / (realWidth / canvasWidth);
-				this.transform.d=scaleY / (realHeight / canvasHeight);
-				this.model && this.model.scale(this.transform.a,this.transform.d);
+				this.transform.a=this._formatData(scaleX / (realWidth / canvasWidth));
+				this.transform.d=this._formatData(scaleY / (realHeight / canvasHeight));
+				this.conchModel && this.conchModel.scale(this.transform.a,this.transform.d);
 			}
 			canvas.size(canvasWidth,canvasHeight);
 			RunDriver.changeWebGLSize(canvasWidth,canvasHeight);
@@ -14865,16 +20230,10 @@ var Laya=window.Laya=(function(window,document){
 			if (this._alignV==="top")this.offset.y=0;
 			else if (this._alignV==="bottom")this.offset.y=screenHeight-realHeight;
 			else this.offset.y=(screenHeight-realHeight)*0.5 / pixelRatio;
-			if (!this._offset){
-				this._offset=new Point(parseInt(canvasStyle.left)|| 0,parseInt(canvasStyle.top)|| 0);
-				canvasStyle.left=canvasStyle.top="0px";
-			}
-			this.offset.x+=this._offset.x;
-			this.offset.y+=this._offset.y;
 			this.offset.x=Math.round(this.offset.x);
 			this.offset.y=Math.round(this.offset.y);
-			canvasStyle.top=this._safariOffsetY+"px";
 			mat.translate(this.offset.x,this.offset.y);
+			if (this._safariOffsetY && parseInt(canvasStyle.top)===0)canvasStyle.top=this._safariOffsetY+"px";
 			this.canvasDegree=0;
 			if (rotation){
 				if (this._screenMode==="horizontal"){
@@ -14887,14 +20246,22 @@ var Laya=window.Laya=(function(window,document){
 					this.canvasDegree=-90;
 				}
 			}
-			if (mat.a < 0.00000000000001)mat.a=mat.d=0;
-			if (mat.tx < 0.00000000000001)mat.tx=0;
-			if (mat.ty < 0.00000000000001)mat.ty=0;
+			mat.a=this._formatData(mat.a);
+			mat.d=this._formatData(mat.d);
+			mat.tx=this._formatData(mat.tx);
+			mat.ty=this._formatData(mat.ty);
 			canvasStyle.transformOrigin=canvasStyle.webkitTransformOrigin=canvasStyle.msTransformOrigin=canvasStyle.mozTransformOrigin=canvasStyle.oTransformOrigin="0px 0px 0px";
 			canvasStyle.transform=canvasStyle.webkitTransform=canvasStyle.msTransform=canvasStyle.mozTransform=canvasStyle.oTransform="matrix("+mat.toString()+")";
-			this._style.visible=true;
+			mat.translate(parseInt(canvasStyle.left)|| 0,parseInt(canvasStyle.top)|| 0);
+			this.visible=true;
 			this._repaint=1;
 			this.event("resize");
+		}
+
+		__proto._formatData=function(value){
+			if (Math.abs(value)< 0.000001)return 0;
+			if (Math.abs(1-value)< 0.001)return value > 0 ? 1 :-1;
+			return value;
 		}
 
 		/**@inheritDoc */
@@ -14928,38 +20295,61 @@ var Laya=window.Laya=(function(window,document){
 
 		/**@inheritDoc */
 		__proto.render=function(context,x,y){
-			this._frameStartTime=Browser.now();
-			Render.isFlash && this.repaint();
+			if (this.frameRate==="sleep"){
+				var now=Browser.now();
+				if (now-this._frameStartTime >=1000)this._frameStartTime=now;
+				else return;
+			}
 			this._renderCount++;
+			Render.isFlash && this.repaint();
+			if (!this.visible){
+				if (this._renderCount % 5===0){
+					Stat.loopCount++;
+					MouseManager.instance.runEvent();
+					Laya.timer._update();
+				}
+				return;
+			}
+			this._frameStartTime=Browser.now();
 			var frameMode=this.frameRate==="mouse" ? (((this._frameStartTime-this._mouseMoveTime)< 2000)? "fast" :"slow"):this.frameRate;
 			var isFastMode=(frameMode!=="slow");
 			var isDoubleLoop=(this._renderCount % 2===0);
-			var ctx=context;
 			Stat.renderSlow=!isFastMode;
 			if (isFastMode || isDoubleLoop){
 				Stat.loopCount++;
 				MouseManager.instance.runEvent();
 				Laya.timer._update();
+				var i=0,n=0;
+				for (i=0,n=this._scenes.length;i < n;i++){
+					var scene=this._scenes[i];
+					(scene)&& (scene._updateScene());
+				}
 				if (Render.isConchNode){
 					var customList=Sprite.CustomList;
-					for (var i=0,n=customList.length;i < n;i++){
-						customList[i].customRender(customList[i].customContext,0,0);
+					for (i=0,n=customList.length;i < n;i++){
+						var customItem=customList[i];
+						customItem.customRender(customItem.customContext,0,0);
 					}
 					return;
 				}
-				if (this.renderingEnabled && this._style.visible){
-					Render.isWebGL ? ctx.clear():RunDriver.clear(this._bgColor);
+				if (Render.isWebGL && this.renderingEnabled){
+					context.clear();
 					_super.prototype.render.call(this,context,x,y);
 				}
 			}
 			if (Render.isConchNode)return;
-			if (this.renderingEnabled && this._style.visible && (isFastMode || !isDoubleLoop)){
-				Render.isWebGL && RunDriver.clear(this._bgColor);
-				RunDriver.beginFlush();
-				context.flush();
-				RunDriver.endFinish();
+			if (this.renderingEnabled && (isFastMode || !isDoubleLoop)){
+				if (Render.isWebGL){
+					RunDriver.clear(this._bgColor);
+					RunDriver.beginFlush();
+					context.flush();
+					RunDriver.endFinish();
+					VectorGraphManager.instance && VectorGraphManager.getInstance().endDispose();
+					}else {
+					RunDriver.clear(this._bgColor);
+					_super.prototype.render.call(this,context,x,y);
+				}
 			}
-			VectorGraphManager.instance && VectorGraphManager.getInstance().endDispose();
 		}
 
 		/**@private */
@@ -14993,11 +20383,6 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
-		/**鼠标在 Stage 上的 Y 轴坐标。*/
-		__getset(0,__proto,'mouseY',function(){
-			return Math.round(MouseManager.instance.mouseY / this.clientScaleY);
-		});
-
 		/**当前视窗由缩放模式导致的 Y 轴缩放系数。*/
 		__getset(0,__proto,'clientScaleY',function(){
 			return this._transform ? this._transform.getScaleY():1;
@@ -15007,6 +20392,13 @@ var Laya=window.Laya=(function(window,document){
 			this.desginWidth=value;
 			_super.prototype._$set_width.call(this,value);
 			Laya.timer.callLater(this,this._changeCanvasSize);
+		});
+
+		/**
+		*舞台是否获得焦点。
+		*/
+		__getset(0,__proto,'isFocused',function(){
+			return this._isFocused;
 		});
 
 		/**
@@ -15029,6 +20421,13 @@ var Laya=window.Laya=(function(window,document){
 			this.desginHeight=value;
 			_super.prototype._$set_height.call(this,value);
 			Laya.timer.callLater(this,this._changeCanvasSize);
+		});
+
+		/**
+		*舞台是否处于可见状态。
+		*/
+		__getset(0,__proto,'isVisibility',function(){
+			return this._isVisibility;
 		});
 
 		/**
@@ -15071,7 +20470,7 @@ var Laya=window.Laya=(function(window,document){
 			return this._bgColor;
 			},function(value){
 			this._bgColor=value;
-			this.model && this.model.bgColor(value);
+			this.conchModel && this.conchModel.bgColor(value);
 			if (value){
 				Render.canvas.style.background=value;
 				}else {
@@ -15079,14 +20478,19 @@ var Laya=window.Laya=(function(window,document){
 			}
 		});
 
-		/**当前视窗由缩放模式导致的 X 轴缩放系数。*/
-		__getset(0,__proto,'clientScaleX',function(){
-			return this._transform ? this._transform.getScaleX():1;
-		});
-
 		/**鼠标在 Stage 上的 X 轴坐标。*/
 		__getset(0,__proto,'mouseX',function(){
 			return Math.round(MouseManager.instance.mouseX / this.clientScaleX);
+		});
+
+		/**鼠标在 Stage 上的 Y 轴坐标。*/
+		__getset(0,__proto,'mouseY',function(){
+			return Math.round(MouseManager.instance.mouseY / this.clientScaleY);
+		});
+
+		/**当前视窗由缩放模式导致的 X 轴缩放系数。*/
+		__getset(0,__proto,'clientScaleX',function(){
+			return this._transform ? this._transform.getScaleX():1;
 		});
 
 		/**
@@ -15101,6 +20505,14 @@ var Laya=window.Laya=(function(window,document){
 			return this._screenMode;
 			},function(value){
 			this._screenMode=value;
+		});
+
+		__getset(0,__proto,'visible',_super.prototype._$get_visible,function(value){
+			if (this.visible!==value){
+				_super.prototype._$set_visible.call(this,value);
+				var style=Render._mainCanvas.source.style;
+				style.visibility=value ? "visible" :"hidden";
+			}
 		});
 
 		/**是否开启全屏，用户点击后进入全屏*/
@@ -15143,6 +20555,7 @@ var Laya=window.Laya=(function(window,document){
 		Stage.FRAME_FAST="fast";
 		Stage.FRAME_SLOW="slow";
 		Stage.FRAME_MOUSE="mouse";
+		Stage.FRAME_SLEEP="sleep";
 		return Stage;
 	})(Sprite)
 
@@ -16384,21 +21797,10 @@ var Laya=window.Laya=(function(window,document){
 			var inputWid=this._width-this.padding[1]-this.padding[3];
 			var inputHei=this._height-this.padding[0]-this.padding[2];
 			this.nativeInput.setSize(inputWid,inputHei);
-			if (!this._getVisible())this.focus=false;
 			if (Render.isConchApp){
 				this.nativeInput.setPos(tx,ty);
 				this.nativeInput.setScale(sx,sy);
 			}
-		}
-
-		/**@private */
-		__proto._getVisible=function(){
-			var target=this;
-			while (target){
-				if (target.visible===false)return false;
-				target=target.parent;
-			}
-			return true;
 		}
 
 		/**选中所有文本。*/
@@ -16602,6 +22004,7 @@ var Laya=window.Laya=(function(window,document){
 					}else {
 					input.target=null;
 					this._focusOut();
+					input.blur();
 					if (Render.isConchApp){
 						input.setPos(-10000,-10000);
 					}else if (Input.inputContainer.contains(input))
@@ -16706,6 +22109,7 @@ var Laya=window.Laya=(function(window,document){
 			style.backgroundColor='transparent';
 			style.border='none';
 			style.outline='none';
+			style.zIndex=1;
 			input.addEventListener('input',Input._processInputting);
 			input.addEventListener('mousemove',Input._stopEvent);
 			input.addEventListener('mousedown',Input._stopEvent);
@@ -16720,6 +22124,7 @@ var Laya=window.Laya=(function(window,document){
 
 		Input._processInputting=function(e){
 			var input=laya.display.Input.inputElement.target;
+			if (!input)return;
 			var value=laya.display.Input.inputElement.value;
 			if (input._restrictPattern){
 				value=value.replace(/\u2006|\x27/g,"");
@@ -17641,6 +23046,7 @@ var Laya=window.Laya=(function(window,document){
 			this._listChanged=false;
 			this._itemChanged=false;
 			this._scrollBarSkin=null;
+			this.itemRender=null;
 			ComboBox.__super.call(this);
 			this._itemColors=Styles.comboBoxItemColors;
 			this.skin=skin;
@@ -17709,7 +23115,7 @@ var Laya=window.Laya=(function(window,document){
 			var labelWidth=this.width-2;
 			var labelColor=this._itemColors[2];
 			this._itemHeight=this._itemSize+6;
-			this._list.itemRender={type:"Box",child:[{type:"Label",props:{name:"label",x:1,padding:"3,3,3,3",width:labelWidth,height:this._itemHeight,fontSize:this._itemSize,color:labelColor}}]};
+			this._list.itemRender=this.itemRender || {type:"Box",child:[{type:"Label",props:{name:"label",x:1,padding:"3,3,3,3",width:labelWidth,height:this._itemHeight,fontSize:this._itemSize,color:labelColor}}]};
 			this._list.repeatY=this._visibleNum;
 			if (this._scrollBar)this._scrollBar.x=this.width-this._scrollBar.width-1;
 			this._list.refresh();
@@ -17725,12 +23131,14 @@ var Laya=window.Laya=(function(window,document){
 				var box=this._list.getCell(index);
 				if (!box)return;
 				var label=box.getChildByName("label");
-				if (type==="mouseover"){
-					label.bgColor=this._itemColors[0];
-					label.color=this._itemColors[1];
-					}else {
-					label.bgColor=null;
-					label.color=this._itemColors[2];
+				if (label){
+					if (type==="mouseover"){
+						label.bgColor=this._itemColors[0];
+						label.color=this._itemColors[1];
+						}else {
+						label.bgColor=null;
+						label.color=this._itemColors[2];
+					}
 				}
 				}else if (type==="click"){
 				this.selectedIndex=index;
@@ -17929,8 +23337,7 @@ var Laya=window.Laya=(function(window,document){
 					this._list || this._createList();
 					this._listChanged && this.changeList();
 					this._itemChanged && this.changeItem();
-					Point.EMPTY.setTo(0,0);
-					var p=this.localToGlobal(Point.EMPTY);
+					var p=this.localToGlobal(Point.TEMP.setTo(0,0));
 					var py=p.y+this._button.height;
 					py=py+this._listHeight <=Laya.stage.height ? py :p.y-this._listHeight;
 					this._list.pos(p.x,py);
@@ -17975,6 +23382,7 @@ var Laya=window.Laya=(function(window,document){
 		*获取对 <code>ComboBox</code> 组件所包含的 <code>List</code> 列表组件的引用。
 		*/
 		__getset(0,__proto,'list',function(){
+			this._list || this._createList();
 			return this._list;
 		});
 
@@ -18052,6 +23460,7 @@ var Laya=window.Laya=(function(window,document){
 	//class laya.ui.ScrollBar extends laya.ui.Component
 	var ScrollBar=(function(_super){
 		function ScrollBar(skin){
+			this.rollRatio=0.95;
 			this.changeHandler=null;
 			this.scaleBar=true;
 			this.autoHide=false;
@@ -18313,7 +23722,7 @@ var Laya=window.Laya=(function(window,document){
 
 		/**@private */
 		__proto.tweenMove=function(){
-			this._lastOffset *=0.95;
+			this._lastOffset *=this.rollRatio;
 			this.value-=this._lastOffset;
 			if (Math.abs(this._lastOffset)< 1 || this.value==this.max || this.value==this.min){
 				Laya.timer.clear(this,this.tweenMove);
@@ -18649,8 +24058,8 @@ var Laya=window.Laya=(function(window,document){
 		*设置滑块的位置信息。
 		*/
 		__proto.setBarPoint=function(){
-			if (this.isVertical)this._bar.x=(this._bg.width-this._bar.width)*0.5;
-			else this._bar.y=(this._bg.height-this._bar.height)*0.5;
+			if (this.isVertical)this._bar.x=Math.round((this._bg.width-this._bar.width)*0.5);
+			else this._bar.y=Math.round((this._bg.height-this._bar.height)*0.5);
 		}
 
 		/**@inheritDoc */
@@ -18683,8 +24092,10 @@ var Laya=window.Laya=(function(window,document){
 			var pow=Math.pow(10,(this._tick+"").length-1);
 			this._value=Math.round(Math.round(this._value / this._tick)*this._tick *pow)/ pow;
 			this._value=this._value > this._max ? this._max :this._value < this._min ? this._min :this._value;
-			if (this.isVertical)this._bar.y=(this._value-this._min)/ (this._max-this._min)*(this.height-this._bar.height);
-			else this._bar.x=(this._value-this._min)/ (this._max-this._min)*(this.width-this._bar.width);
+			var num=this._max-this._min;
+			if (num===0)num=1;
+			if (this.isVertical)this._bar.y=(this._value-this._min)/ num *(this.height-this._bar.height);
+			else this._bar.x=(this._value-this._min)/ num *(this.width-this._bar.width);
 		}
 
 		/**
@@ -19682,7 +25093,7 @@ var Laya=window.Laya=(function(window,document){
 				*animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 				*animation.x=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 				*animation.y=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-				*animation.interval=30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+				*animation.interval=50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 				*animation.play();//播放动画。
 				*Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 				*}
@@ -19702,7 +25113,7 @@ var Laya=window.Laya=(function(window,document){
 		*animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 		*animation.x=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 		*animation.y=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-		*animation.interval=30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+		*animation.interval=50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 		*animation.play();//播放动画。
 		*Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 		*}
@@ -19720,7 +25131,7 @@ var Laya=window.Laya=(function(window,document){
 			*animation.loadAtlas("resource/ani/fighter.json");//加载图集并播放
 			*animation.x=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
 			*animation.y=200;//设置 animation 对象的属性 x 的值，用于控制 animation 对象的显示位置。
-			*animation.interval=30;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
+			*animation.interval=50;//设置 animation 对象的动画播放间隔时间，单位：毫秒。
 			*animation.play();//播放动画。
 			*Laya.stage.addChild(animation);//将 animation 对象添加到显示列表。
 			*}
@@ -19733,7 +25144,6 @@ var Laya=window.Laya=(function(window,document){
 		function Animation(){
 			this._frames=null;
 			this._url=null;
-			this._actionName=null;
 			Animation.__super.call(this);
 			this._setControlNode(this);
 		}
@@ -19765,7 +25175,7 @@ var Laya=window.Laya=(function(window,document){
 			this.loop=loop;
 			this._actionName=name;
 			this._isReverse=this.wrapMode==1;
-			if (this._frames && this._frames.length > 1 && this.interval > 0){
+			if (this._frames && this.interval > 0){
 				this.timerLoop(this.interval,this,this._frameLoop,null,true);
 			}
 		}
@@ -19775,6 +25185,7 @@ var Laya=window.Laya=(function(window,document){
 			if (name && Animation.framesMap[name]){
 				this._frames=Animation.framesMap[name];
 				this._count=this._frames.length;
+				if (!this._frameRateChanged && Animation.framesMap[name+"$len"])this._interval=Animation.framesMap[name+"$len"];
 				return true;
 			}
 			return false;
@@ -19838,7 +25249,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		/**
-		*加载并播放一个由IDE制作的动画。
+		*加载并播放一个由IDE制作的动画，播放的帧率按照IDE设计的帧率
 		*@param url 动画地址。
 		*@param loaded 加载完毕回调
 		*@return 返回动画本身。
@@ -19855,16 +25266,22 @@ var Laya=window.Laya=(function(window,document){
 							var obj=aniData.animationDic;
 							var flag=true;
 							for (var name in obj){
-								var arr=obj[name];
-								if (arr.length){
-									Animation.framesMap[url+"#"+name]=arr;
+								var info=obj[name];
+								if (info.frames.length){
+									Animation.framesMap[url+"#"+name]=info.frames;
+									Animation.framesMap[url+"#"+name+"$len"]=info.interval;
 									}else {
 									flag=false;
 								}
 							}
-							_this.frames=aniData.animationList[0];
-							if (flag)Animation.framesMap[url+"#"]=_this.frames;
+							if(!_this._frameRateChanged)_this._interval=aniData.animationList[0].interval;
+							_this.frames=aniData.animationList[0].frames;
+							if (flag){
+								Animation.framesMap[url+"#$len"]=aniData.animationList[0].interval;
+								Animation.framesMap[url+"#"]=_this.frames;
+							}
 							}else {
+							if(!_this._frameRateChanged)_this._interval=Animation.framesMap[url+"#$len"];
 							_this.frames=Animation.framesMap[url+"#"];
 						}
 						if (loaded)loaded.run();
@@ -19976,7 +25393,13 @@ var Laya=window.Laya=(function(window,document){
 			this._targetDic=targetDic;
 			this._animationData=animationData;
 			this.interval=1000 / animationData.frameRate;
-			this._calculateDatas();
+			if (animationData.parsed){
+				this._count=animationData.count;
+				}else{
+				this._calculateDatas();
+			}
+			animationData.parsed=true;
+			animationData.count=this._count;
 		}
 
 		/**@inheritDoc */
@@ -20254,7 +25677,6 @@ var Laya=window.Laya=(function(window,document){
 			this._idMap=null;
 			this._aniList=null;
 			View.__super.call(this);
-			if (this._width > 0 && !this.mouseThrough)this.hitTestPrior=true;
 		}
 
 		__class(View,'laya.ui.View',_super);
@@ -20291,6 +25713,7 @@ var Laya=window.Laya=(function(window,document){
 				}
 				this._aniList=anilist;
 			}
+			if (this._width > 0 && uiView.props.hitTestPrior==null && !this.mouseThrough)this.hitTestPrior=true;
 		}
 
 		/**
@@ -20301,6 +25724,18 @@ var Laya=window.Laya=(function(window,document){
 		__proto.loadUI=function(path){
 			var uiView=View.uiMap[path];
 			uiView && this.createView(uiView);
+		}
+
+		/**
+		*<p>销毁此对象。</p>
+		*@param destroyChild 是否同时销毁子节点，若值为true,则销毁子节点，否则不销毁子节点。
+		*/
+		__proto.destroy=function(destroyChild){
+			(destroyChild===void 0)&& (destroyChild=true);
+			if (this._aniList)this._aniList.length=0;
+			this._idMap=null;
+			this._aniList=null;
+			laya.ui.Component.prototype.destroy.call(this,destroyChild);
 		}
 
 		View._regs=function(){
@@ -20384,7 +25819,7 @@ var Laya=window.Laya=(function(window,document){
 		['uiClassMap',function(){return this.uiClassMap={"ViewStack":ViewStack,"LinkButton":Button,"TextArea":TextArea,"ColorPicker":ColorPicker,"Box":Box,"Button":Button,"CheckBox":CheckBox,"Clip":Clip,"ComboBox":ComboBox,"Component":Component,"HScrollBar":HScrollBar,"HSlider":HSlider,"Image":Image,"Label":Label,"List":List,"Panel":Panel,"ProgressBar":ProgressBar,"Radio":Radio,"RadioGroup":RadioGroup,"ScrollBar":ScrollBar,"Slider":Slider,"Tab":Tab,"TextInput":TextInput,"View":View,"VScrollBar":VScrollBar,"VSlider":VSlider,"Tree":Tree,"HBox":HBox,"VBox":VBox,"Sprite":Sprite,"Animation":Animation,"Text":Text};}
 		]);
 		View.__init$=function(){
-			View._regs();
+			View._regs()
 		}
 
 		return View;
@@ -20707,7 +26142,7 @@ var Laya=window.Laya=(function(window,document){
 			if (this._scrollBar){
 				this._content.scrollRect || (this._content.scrollRect=new Rectangle());
 				this._content.scrollRect.setTo(0,0,width,height);
-				this._content.model && this._content.model.scrollRect(0,0,width,height);
+				this._content.conchModel && this._content.conchModel.scrollRect(0,0,width,height);
 				this.event("resize");
 			}
 		}
@@ -20807,7 +26242,7 @@ var Laya=window.Laya=(function(window,document){
 				}else {
 				r.x=scrollValue;
 			}
-			this._content.model && this._content.model.scrollRect(r.x,r.y,r.width,r.height);
+			this._content.conchModel && this._content.conchModel.scrollRect(r.x,r.y,r.width,r.height);
 			this.repaint();
 		}
 
@@ -20854,12 +26289,12 @@ var Laya=window.Laya=(function(window,document){
 				if (!this.cacheContent){
 					this.posCell(cell,index);
 				}
+				if (this.hasListener("render"))this.event("render",[cell,index]);
+				if (this.renderHandler)this.renderHandler.runWith([cell,index]);
 				}else {
 				cell.visible=false;
 				cell.dataSource=null;
 			}
-			if (this.hasListener("render"))this.event("render",[cell,index]);
-			if (this.renderHandler)this.renderHandler.runWith([cell,index]);
 		}
 
 		/**
@@ -20980,6 +26415,10 @@ var Laya=window.Laya=(function(window,document){
 				this._cellChanged=true;
 				this.callLater(this.changeCells);
 			}
+		}
+
+		__proto.commitMeasure=function(){
+			this.runCallLater(this.changeCells);
 		}
 
 		/**@inheritDoc */
@@ -21838,13 +27277,424 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*<code>LayoutBox</code> 是一个布局容器类。
+	*/
+	//class laya.ui.LayoutBox extends laya.ui.Box
+	var LayoutBox=(function(_super){
+		function LayoutBox(){
+			this._space=0;
+			this._align="none";
+			this._itemChanged=false;
+			LayoutBox.__super.call(this);
+		}
+
+		__class(LayoutBox,'laya.ui.LayoutBox',_super);
+		var __proto=LayoutBox.prototype;
+		/**@inheritDoc */
+		__proto.addChild=function(child){
+			child.on("resize",this,this.onResize);
+			this._setItemChanged();
+			return laya.display.Node.prototype.addChild.call(this,child);
+		}
+
+		__proto.onResize=function(e){
+			this._setItemChanged();
+		}
+
+		/**@inheritDoc */
+		__proto.addChildAt=function(child,index){
+			child.on("resize",this,this.onResize);
+			this._setItemChanged();
+			return laya.display.Node.prototype.addChildAt.call(this,child,index);
+		}
+
+		/**@inheritDoc */
+		__proto.removeChild=function(child){
+			child.off("resize",this,this.onResize);
+			this._setItemChanged();
+			return laya.display.Node.prototype.removeChild.call(this,child);
+		}
+
+		/**@inheritDoc */
+		__proto.removeChildAt=function(index){
+			this.getChildAt(index).off("resize",this,this.onResize);
+			this._setItemChanged();
+			return laya.display.Node.prototype.removeChildAt.call(this,index);
+		}
+
+		/**刷新。*/
+		__proto.refresh=function(){
+			this._setItemChanged();
+		}
+
+		/**
+		*改变子对象的布局。
+		*/
+		__proto.changeItems=function(){
+			this._itemChanged=false;
+		}
+
+		/**
+		*排序项目列表。可通过重写改变默认排序规则。
+		*@param items 项目列表。
+		*/
+		__proto.sortItem=function(items){
+			if (items)items.sort(function(a,b){return a.y > b.y ? 1 :-1
+			});
+		}
+
+		__proto._setItemChanged=function(){
+			if (!this._itemChanged){
+				this._itemChanged=true;
+				this.callLater(this.changeItems);
+			}
+		}
+
+		/**子对象的间隔。*/
+		__getset(0,__proto,'space',function(){
+			return this._space;
+			},function(value){
+			this._space=value;
+			this._setItemChanged();
+		});
+
+		/**子对象对齐方式。*/
+		__getset(0,__proto,'align',function(){
+			return this._align;
+			},function(value){
+			this._align=value;
+			this._setItemChanged();
+		});
+
+		return LayoutBox;
+	})(Box)
+
+
+	/**
+	*<code>Panel</code> 是一个面板容器类。
+	*/
+	//class laya.ui.Panel extends laya.ui.Box
+	var Panel=(function(_super){
+		function Panel(){
+			this._content=null;
+			this._vScrollBar=null;
+			this._hScrollBar=null;
+			this._scrollChanged=false;
+			Panel.__super.call(this);
+			this.width=this.height=100;
+			this._content.optimizeScrollRect=true;
+		}
+
+		__class(Panel,'laya.ui.Panel',_super);
+		var __proto=Panel.prototype;
+		/**@inheritDoc */
+		__proto.destroy=function(destroyChild){
+			(destroyChild===void 0)&& (destroyChild=true);
+			laya.ui.Component.prototype.destroy.call(this,destroyChild);
+			this._content && this._content.destroy(destroyChild);
+			this._vScrollBar && this._vScrollBar.destroy(destroyChild);
+			this._hScrollBar && this._hScrollBar.destroy(destroyChild);
+			this._vScrollBar=null;
+			this._hScrollBar=null;
+			this._content=null;
+		}
+
+		/**@inheritDoc */
+		__proto.destroyChildren=function(){
+			this._content.destroyChildren();
+		}
+
+		/**@inheritDoc */
+		__proto.createChildren=function(){
+			laya.display.Node.prototype.addChild.call(this,this._content=new Box());
+		}
+
+		/**@inheritDoc */
+		__proto.addChild=function(child){
+			child.on("resize",this,this.onResize);
+			this._setScrollChanged();
+			return this._content.addChild(child);
+		}
+
+		/**
+		*@private
+		*子对象的 <code>Event.RESIZE</code> 事件侦听处理函数。
+		*/
+		__proto.onResize=function(){
+			this._setScrollChanged();
+		}
+
+		/**@inheritDoc */
+		__proto.addChildAt=function(child,index){
+			child.on("resize",this,this.onResize);
+			this._setScrollChanged();
+			return this._content.addChildAt(child,index);
+		}
+
+		/**@inheritDoc */
+		__proto.removeChild=function(child){
+			child.off("resize",this,this.onResize);
+			this._setScrollChanged();
+			return this._content.removeChild(child);
+		}
+
+		/**@inheritDoc */
+		__proto.removeChildAt=function(index){
+			this.getChildAt(index).off("resize",this,this.onResize);
+			this._setScrollChanged();
+			return this._content.removeChildAt(index);
+		}
+
+		/**@inheritDoc */
+		__proto.removeChildren=function(beginIndex,endIndex){
+			(beginIndex===void 0)&& (beginIndex=0);
+			(endIndex===void 0)&& (endIndex=0x7fffffff);
+			for (var i=this._content.numChildren-1;i >-1;i--){
+				this._content.removeChildAt(i);
+			}
+			this._setScrollChanged();
+			return this;
+		}
+
+		/**@inheritDoc */
+		__proto.getChildAt=function(index){
+			return this._content.getChildAt(index);
+		}
+
+		/**@inheritDoc */
+		__proto.getChildByName=function(name){
+			return this._content.getChildByName(name);
+		}
+
+		/**@inheritDoc */
+		__proto.getChildIndex=function(child){
+			return this._content.getChildIndex(child);
+		}
+
+		/**@private */
+		__proto.changeScroll=function(){
+			this._scrollChanged=false;
+			var contentW=this.contentWidth;
+			var contentH=this.contentHeight;
+			var vscroll=this._vScrollBar;
+			var hscroll=this._hScrollBar;
+			var vShow=vscroll && contentH > this._height;
+			var hShow=hscroll && contentW > this._width;
+			var showWidth=vShow ? this._width-vscroll.width :this._width;
+			var showHeight=hShow ? this._height-hscroll.height :this._height;
+			if (vscroll){
+				vscroll.x=this._width-vscroll.width;
+				vscroll.y=0;
+				vscroll.height=this._height-(hShow ? hscroll.height :0);
+				vscroll.scrollSize=Math.max(this._height *0.033,1);
+				vscroll.thumbPercent=showHeight / contentH;
+				vscroll.setScroll(0,contentH-showHeight,vscroll.value);
+			}
+			if (hscroll){
+				hscroll.x=0;
+				hscroll.y=this._height-hscroll.height;
+				hscroll.width=this._width-(vShow ? vscroll.width :0);
+				hscroll.scrollSize=Math.max(this._width *0.033,1);
+				hscroll.thumbPercent=showWidth / contentW;
+				hscroll.setScroll(0,contentW-showWidth,hscroll.value);
+			}
+		}
+
+		/**@inheritDoc */
+		__proto.changeSize=function(){
+			laya.ui.Component.prototype.changeSize.call(this);
+			this.setContentSize(this._width,this._height);
+		}
+
+		/**
+		*@private
+		*设置内容的宽度、高度（以像素为单位）。
+		*@param width 宽度。
+		*@param height 高度。
+		*/
+		__proto.setContentSize=function(width,height){
+			var content=this._content;
+			content.width=width;
+			content.height=height;
+			content.scrollRect || (content.scrollRect=new Rectangle());
+			content.scrollRect.setTo(0,0,width,height);
+			content.conchModel&&content.conchModel.scrollRect(0,0,width,height);
+		}
+
+		/**
+		*@private
+		*滚动条的<code><code>Event.MOUSE_DOWN</code>事件侦听处理函数。</code>事件侦听处理函数。
+		*@param scrollBar 滚动条对象。
+		*@param e Event 对象。
+		*/
+		__proto.onScrollBarChange=function(scrollBar){
+			var rect=this._content.scrollRect;
+			if (rect){
+				var start=Math.round(scrollBar.value);
+				scrollBar.isVertical ? rect.y=start :rect.x=start;
+				this._content.conchModel&&this._content.conchModel.scrollRect(rect.x,rect.y,rect.width,rect.height);
+			}
+		}
+
+		/**
+		*<p>滚动内容容器至设定的垂直、水平方向滚动条位置。</p>
+		*@param x 水平方向滚动条属性value值。滚动条位置数字。
+		*@param y 垂直方向滚动条属性value值。滚动条位置数字。
+		*/
+		__proto.scrollTo=function(x,y){
+			(x===void 0)&& (x=0);
+			(y===void 0)&& (y=0);
+			if (this.vScrollBar)this.vScrollBar.value=y;
+			if (this.hScrollBar)this.hScrollBar.value=x;
+		}
+
+		/**
+		*刷新滚动内容。
+		*/
+		__proto.refresh=function(){
+			this.changeScroll();
+		}
+
+		__proto.onScrollStart=function(){
+			this._$P.cacheAs || (this._$P.cacheAs=_super.prototype._$get_cacheAs.call(this));
+			_super.prototype._$set_cacheAs.call(this,"none");
+			this._hScrollBar && this._hScrollBar.once("end",this,this.onScrollEnd);
+			this._vScrollBar && this._vScrollBar.once("end",this,this.onScrollEnd);
+		}
+
+		__proto.onScrollEnd=function(){
+			_super.prototype._$set_cacheAs.call(this,this._$P.cacheAs);
+		}
+
+		/**@private */
+		__proto._setScrollChanged=function(){
+			if (!this._scrollChanged){
+				this._scrollChanged=true;
+				this.callLater(this.changeScroll);
+			}
+		}
+
+		/**@inheritDoc */
+		__getset(0,__proto,'numChildren',function(){
+			return this._content.numChildren;
+		});
+
+		/**
+		*水平方向滚动条皮肤。
+		*/
+		__getset(0,__proto,'hScrollBarSkin',function(){
+			return this._hScrollBar ? this._hScrollBar.skin :null;
+			},function(value){
+			if (this._hScrollBar==null){
+				laya.display.Node.prototype.addChild.call(this,this._hScrollBar=new HScrollBar());
+				this._hScrollBar.on("change",this,this.onScrollBarChange,[this._hScrollBar]);
+				this._hScrollBar.target=this._content;
+				this._setScrollChanged();
+			}
+			this._hScrollBar.skin=value;
+		});
+
+		/**
+		*@private
+		*获取内容宽度（以像素为单位）。
+		*/
+		__getset(0,__proto,'contentWidth',function(){
+			var max=0;
+			for (var i=this._content.numChildren-1;i >-1;i--){
+				var comp=this._content.getChildAt(i);
+				max=Math.max(comp.x+comp.width *comp.scaleX,max);
+			}
+			return max;
+		});
+
+		/**
+		*@private
+		*获取内容高度（以像素为单位）。
+		*/
+		__getset(0,__proto,'contentHeight',function(){
+			var max=0;
+			for (var i=this._content.numChildren-1;i >-1;i--){
+				var comp=this._content.getChildAt(i);
+				max=Math.max(comp.y+comp.height *comp.scaleY,max);
+			}
+			return max;
+		});
+
+		/**
+		*@inheritDoc
+		*/
+		__getset(0,__proto,'width',_super.prototype._$get_width,function(value){
+			_super.prototype._$set_width.call(this,value);
+			this._setScrollChanged();
+		});
+
+		/**
+		*水平方向滚动条对象。
+		*/
+		__getset(0,__proto,'hScrollBar',function(){
+			return this._hScrollBar;
+		});
+
+		/**
+		*获取内容容器对象。
+		*/
+		__getset(0,__proto,'content',function(){
+			return this._content;
+		});
+
+		/**@inheritDoc */
+		__getset(0,__proto,'height',_super.prototype._$get_height,function(value){
+			_super.prototype._$set_height.call(this,value);
+			this._setScrollChanged();
+		});
+
+		/**
+		*垂直方向滚动条皮肤。
+		*/
+		__getset(0,__proto,'vScrollBarSkin',function(){
+			return this._vScrollBar ? this._vScrollBar.skin :null;
+			},function(value){
+			if (this._vScrollBar==null){
+				laya.display.Node.prototype.addChild.call(this,this._vScrollBar=new VScrollBar());
+				this._vScrollBar.on("change",this,this.onScrollBarChange,[this._vScrollBar]);
+				this._vScrollBar.target=this._content;
+				this._setScrollChanged();
+			}
+			this._vScrollBar.skin=value;
+		});
+
+		/**
+		*垂直方向滚动条对象。
+		*/
+		__getset(0,__proto,'vScrollBar',function(){
+			return this._vScrollBar;
+		});
+
+		/**@inheritDoc */
+		__getset(0,__proto,'cacheAs',_super.prototype._$get_cacheAs,function(value){
+			_super.prototype._$set_cacheAs.call(this,value);
+			this._$P.cacheAs=null;
+			if (value!=="none"){
+				this._hScrollBar && this._hScrollBar.on("start",this,this.onScrollStart);
+				this._vScrollBar && this._vScrollBar.on("start",this,this.onScrollStart);
+				}else {
+				this._hScrollBar && this._hScrollBar.off("start",this,this.onScrollStart);
+				this._vScrollBar && this._vScrollBar.off("start",this,this.onScrollStart);
+			}
+		});
+
+		return Panel;
+	})(Box)
+
+
+	/**
 	*<code>Group</code> 是一个可以自动布局的项集合控件。
 	*<p> <code>Group</code> 的默认项对象为 <code>Button</code> 类实例。
 	*<code>Group</code> 是 <code>Tab</code> 和 <code>RadioGroup</code> 的基类。</p>
 	*/
-	//class laya.ui.Group extends laya.ui.Box
-	var Group=(function(_super){
-		function Group(labels,skin){
+	//class laya.ui.UIGroup extends laya.ui.Box
+	var UIGroup=(function(_super){
+		function UIGroup(labels,skin){
 			this.selectHandler=null;
 			this._items=null;
 			this._selectedIndex=-1;
@@ -21862,13 +27712,13 @@ var Laya=window.Laya=(function(window,document){
 			this._labelAlign=null;
 			this._stateNum=0;
 			this._labelChanged=false;
-			Group.__super.call(this);
+			UIGroup.__super.call(this);
 			this.skin=skin;
 			this.labels=labels;
 		}
 
-		__class(Group,'laya.ui.Group',_super);
-		var __proto=Group.prototype;
+		__class(UIGroup,'laya.ui.UIGroup',_super);
+		var __proto=UIGroup.prototype;
 		Laya.imps(__proto,{"laya.ui.IItem":true})
 		/**@inheritDoc */
 		__proto.preinitialize=function(){
@@ -22237,418 +28087,7 @@ var Laya=window.Laya=(function(window,document){
 			else _super.prototype._$set_dataSource.call(this,value);
 		});
 
-		return Group;
-	})(Box)
-
-
-	/**
-	*<code>LayoutBox</code> 是一个布局容器类。
-	*/
-	//class laya.ui.LayoutBox extends laya.ui.Box
-	var LayoutBox=(function(_super){
-		function LayoutBox(){
-			this._space=0;
-			this._align="none";
-			this._itemChanged=false;
-			LayoutBox.__super.call(this);
-		}
-
-		__class(LayoutBox,'laya.ui.LayoutBox',_super);
-		var __proto=LayoutBox.prototype;
-		/**@inheritDoc */
-		__proto.addChild=function(child){
-			child.on("resize",this,this.onResize);
-			this._setItemChanged();
-			return laya.display.Node.prototype.addChild.call(this,child);
-		}
-
-		__proto.onResize=function(e){
-			this._setItemChanged();
-		}
-
-		/**@inheritDoc */
-		__proto.addChildAt=function(child,index){
-			child.on("resize",this,this.onResize);
-			this._setItemChanged();
-			return laya.display.Node.prototype.addChildAt.call(this,child,index);
-		}
-
-		/**@inheritDoc */
-		__proto.removeChild=function(child){
-			child.off("resize",this,this.onResize);
-			this._setItemChanged();
-			return laya.display.Node.prototype.removeChild.call(this,child);
-		}
-
-		/**@inheritDoc */
-		__proto.removeChildAt=function(index){
-			this.getChildAt(index).off("resize",this,this.onResize);
-			this._setItemChanged();
-			return laya.display.Node.prototype.removeChildAt.call(this,index);
-		}
-
-		/**刷新。*/
-		__proto.refresh=function(){
-			this._setItemChanged();
-		}
-
-		/**
-		*改变子对象的布局。
-		*/
-		__proto.changeItems=function(){
-			this._itemChanged=false;
-		}
-
-		/**
-		*排序项目列表。可通过重写改变默认排序规则。
-		*@param items 项目列表。
-		*/
-		__proto.sortItem=function(items){
-			if (items)items.sort(function(a,b){return a.y > b.y ? 1 :-1
-			});
-		}
-
-		__proto._setItemChanged=function(){
-			if (!this._itemChanged){
-				this._itemChanged=true;
-				this.callLater(this.changeItems);
-			}
-		}
-
-		/**子对象的间隔。*/
-		__getset(0,__proto,'space',function(){
-			return this._space;
-			},function(value){
-			this._space=value;
-			this._setItemChanged();
-		});
-
-		/**子对象对齐方式。*/
-		__getset(0,__proto,'align',function(){
-			return this._align;
-			},function(value){
-			this._align=value;
-			this._setItemChanged();
-		});
-
-		return LayoutBox;
-	})(Box)
-
-
-	/**
-	*<code>Panel</code> 是一个面板容器类。
-	*/
-	//class laya.ui.Panel extends laya.ui.Box
-	var Panel=(function(_super){
-		function Panel(){
-			this._content=null;
-			this._vScrollBar=null;
-			this._hScrollBar=null;
-			this._scrollChanged=false;
-			Panel.__super.call(this);
-			this.width=this.height=100;
-			this._content.optimizeScrollRect=true;
-		}
-
-		__class(Panel,'laya.ui.Panel',_super);
-		var __proto=Panel.prototype;
-		/**@inheritDoc */
-		__proto.destroy=function(destroyChild){
-			(destroyChild===void 0)&& (destroyChild=true);
-			laya.ui.Component.prototype.destroy.call(this,destroyChild);
-			this._content && this._content.destroy(destroyChild);
-			this._vScrollBar && this._vScrollBar.destroy(destroyChild);
-			this._hScrollBar && this._hScrollBar.destroy(destroyChild);
-			this._vScrollBar=null;
-			this._hScrollBar=null;
-			this._content=null;
-		}
-
-		/**@inheritDoc */
-		__proto.destroyChildren=function(){
-			this._content.destroyChildren();
-		}
-
-		/**@inheritDoc */
-		__proto.createChildren=function(){
-			laya.display.Node.prototype.addChild.call(this,this._content=new Box());
-		}
-
-		/**@inheritDoc */
-		__proto.addChild=function(child){
-			child.on("resize",this,this.onResize);
-			this._setScrollChanged();
-			return this._content.addChild(child);
-		}
-
-		/**
-		*@private
-		*子对象的 <code>Event.RESIZE</code> 事件侦听处理函数。
-		*/
-		__proto.onResize=function(){
-			this._setScrollChanged();
-		}
-
-		/**@inheritDoc */
-		__proto.addChildAt=function(child,index){
-			child.on("resize",this,this.onResize);
-			this._setScrollChanged();
-			return this._content.addChildAt(child,index);
-		}
-
-		/**@inheritDoc */
-		__proto.removeChild=function(child){
-			child.off("resize",this,this.onResize);
-			this._setScrollChanged();
-			return this._content.removeChild(child);
-		}
-
-		/**@inheritDoc */
-		__proto.removeChildAt=function(index){
-			this.getChildAt(index).off("resize",this,this.onResize);
-			this._setScrollChanged();
-			return this._content.removeChildAt(index);
-		}
-
-		/**@inheritDoc */
-		__proto.removeChildren=function(beginIndex,endIndex){
-			(beginIndex===void 0)&& (beginIndex=0);
-			(endIndex===void 0)&& (endIndex=0x7fffffff);
-			for (var i=this._content.numChildren-1;i >-1;i--){
-				this._content.removeChildAt(i);
-			}
-			this._setScrollChanged();
-			return this;
-		}
-
-		/**@inheritDoc */
-		__proto.getChildAt=function(index){
-			return this._content.getChildAt(index);
-		}
-
-		/**@inheritDoc */
-		__proto.getChildByName=function(name){
-			return this._content.getChildByName(name);
-		}
-
-		/**@inheritDoc */
-		__proto.getChildIndex=function(child){
-			return this._content.getChildIndex(child);
-		}
-
-		/**@private */
-		__proto.changeScroll=function(){
-			this._scrollChanged=false;
-			var contentW=this.contentWidth;
-			var contentH=this.contentHeight;
-			var vscroll=this._vScrollBar;
-			var hscroll=this._hScrollBar;
-			var vShow=vscroll && contentH > this._height;
-			var hShow=hscroll && contentW > this._width;
-			var showWidth=vShow ? this._width-vscroll.width :this._width;
-			var showHeight=hShow ? this._height-hscroll.height :this._height;
-			if (vscroll){
-				vscroll.x=this._width-vscroll.width;
-				vscroll.y=0;
-				vscroll.height=this._height-(hShow ? hscroll.height :0);
-				vscroll.scrollSize=Math.max(this._height *0.033,1);
-				vscroll.thumbPercent=showHeight / contentH;
-				vscroll.setScroll(0,contentH-showHeight,vscroll.value);
-			}
-			if (hscroll){
-				hscroll.x=0;
-				hscroll.y=this._height-hscroll.height;
-				hscroll.width=this._width-(vShow ? vscroll.width :0);
-				hscroll.scrollSize=Math.max(this._width *0.033,1);
-				hscroll.thumbPercent=showWidth / contentW;
-				hscroll.setScroll(0,contentW-showWidth,hscroll.value);
-			}
-		}
-
-		/**@inheritDoc */
-		__proto.changeSize=function(){
-			laya.ui.Component.prototype.changeSize.call(this);
-			this.setContentSize(this._width,this._height);
-		}
-
-		/**
-		*@private
-		*设置内容的宽度、高度（以像素为单位）。
-		*@param width 宽度。
-		*@param height 高度。
-		*/
-		__proto.setContentSize=function(width,height){
-			var content=this._content;
-			content.width=width;
-			content.height=height;
-			content.scrollRect || (content.scrollRect=new Rectangle());
-			content.scrollRect.setTo(0,0,width,height);
-			content.model&&content.model.scrollRect(0,0,width,height);
-		}
-
-		/**
-		*@private
-		*滚动条的<code><code>Event.MOUSE_DOWN</code>事件侦听处理函数。</code>事件侦听处理函数。
-		*@param scrollBar 滚动条对象。
-		*@param e Event 对象。
-		*/
-		__proto.onScrollBarChange=function(scrollBar){
-			var rect=this._content.scrollRect;
-			if (rect){
-				var start=Math.round(scrollBar.value);
-				scrollBar.isVertical ? rect.y=start :rect.x=start;
-				this._content.model&&this._content.model.scrollRect(rect.x,rect.y,rect.width,rect.height);
-			}
-		}
-
-		/**
-		*<p>滚动内容容器至设定的垂直、水平方向滚动条位置。</p>
-		*@param x 水平方向滚动条属性value值。滚动条位置数字。
-		*@param y 垂直方向滚动条属性value值。滚动条位置数字。
-		*/
-		__proto.scrollTo=function(x,y){
-			(x===void 0)&& (x=0);
-			(y===void 0)&& (y=0);
-			if (this.vScrollBar)this.vScrollBar.value=y;
-			if (this.hScrollBar)this.hScrollBar.value=x;
-		}
-
-		/**
-		*刷新滚动内容。
-		*/
-		__proto.refresh=function(){
-			this.changeScroll();
-		}
-
-		__proto.onScrollStart=function(){
-			this._$P.cacheAs || (this._$P.cacheAs=_super.prototype._$get_cacheAs.call(this));
-			_super.prototype._$set_cacheAs.call(this,"none");
-			this._hScrollBar && this._hScrollBar.once("end",this,this.onScrollEnd);
-			this._vScrollBar && this._vScrollBar.once("end",this,this.onScrollEnd);
-		}
-
-		__proto.onScrollEnd=function(){
-			_super.prototype._$set_cacheAs.call(this,this._$P.cacheAs);
-		}
-
-		/**@private */
-		__proto._setScrollChanged=function(){
-			if (!this._scrollChanged){
-				this._scrollChanged=true;
-				this.callLater(this.changeScroll);
-			}
-		}
-
-		/**@inheritDoc */
-		__getset(0,__proto,'numChildren',function(){
-			return this._content.numChildren;
-		});
-
-		/**
-		*水平方向滚动条皮肤。
-		*/
-		__getset(0,__proto,'hScrollBarSkin',function(){
-			return this._hScrollBar ? this._hScrollBar.skin :null;
-			},function(value){
-			if (this._hScrollBar==null){
-				laya.display.Node.prototype.addChild.call(this,this._hScrollBar=new HScrollBar());
-				this._hScrollBar.on("change",this,this.onScrollBarChange,[this._hScrollBar]);
-				this._hScrollBar.target=this._content;
-				this._setScrollChanged();
-			}
-			this._hScrollBar.skin=value;
-		});
-
-		/**
-		*@private
-		*获取内容宽度（以像素为单位）。
-		*/
-		__getset(0,__proto,'contentWidth',function(){
-			var max=0;
-			for (var i=this._content.numChildren-1;i >-1;i--){
-				var comp=this._content.getChildAt(i);
-				max=Math.max(comp.x+comp.width *comp.scaleX,max);
-			}
-			return max;
-		});
-
-		/**
-		*@private
-		*获取内容高度（以像素为单位）。
-		*/
-		__getset(0,__proto,'contentHeight',function(){
-			var max=0;
-			for (var i=this._content.numChildren-1;i >-1;i--){
-				var comp=this._content.getChildAt(i);
-				max=Math.max(comp.y+comp.height *comp.scaleY,max);
-			}
-			return max;
-		});
-
-		/**
-		*@inheritDoc
-		*/
-		__getset(0,__proto,'width',_super.prototype._$get_width,function(value){
-			_super.prototype._$set_width.call(this,value);
-			this._setScrollChanged();
-		});
-
-		/**
-		*水平方向滚动条对象。
-		*/
-		__getset(0,__proto,'hScrollBar',function(){
-			return this._hScrollBar;
-		});
-
-		/**
-		*获取内容容器对象。
-		*/
-		__getset(0,__proto,'content',function(){
-			return this._content;
-		});
-
-		/**@inheritDoc */
-		__getset(0,__proto,'height',_super.prototype._$get_height,function(value){
-			_super.prototype._$set_height.call(this,value);
-			this._setScrollChanged();
-		});
-
-		/**
-		*垂直方向滚动条皮肤。
-		*/
-		__getset(0,__proto,'vScrollBarSkin',function(){
-			return this._vScrollBar ? this._vScrollBar.skin :null;
-			},function(value){
-			if (this._vScrollBar==null){
-				laya.display.Node.prototype.addChild.call(this,this._vScrollBar=new VScrollBar());
-				this._vScrollBar.on("change",this,this.onScrollBarChange,[this._vScrollBar]);
-				this._vScrollBar.target=this._content;
-				this._setScrollChanged();
-			}
-			this._vScrollBar.skin=value;
-		});
-
-		/**
-		*垂直方向滚动条对象。
-		*/
-		__getset(0,__proto,'vScrollBar',function(){
-			return this._vScrollBar;
-		});
-
-		/**@inheritDoc */
-		__getset(0,__proto,'cacheAs',_super.prototype._$get_cacheAs,function(value){
-			_super.prototype._$set_cacheAs.call(this,value);
-			this._$P.cacheAs=null;
-			if (value!=="none"){
-				this._hScrollBar && this._hScrollBar.on("start",this,this.onScrollStart);
-				this._vScrollBar && this._vScrollBar.on("start",this,this.onScrollStart);
-				}else {
-				this._hScrollBar && this._hScrollBar.off("start",this,this.onScrollStart);
-				this._vScrollBar && this._vScrollBar.off("start",this,this.onScrollStart);
-			}
-		});
-
-		return Panel;
+		return UIGroup;
 	})(Box)
 
 
@@ -23261,107 +28700,6 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
-	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
-	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
-	*
-	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
-	*<listing version="3.0">
-	*package
-	*{
-		*import laya.ui.HSlider;
-		*import laya.ui.VSlider;
-		*import laya.utils.Handler;
-		*public class VSlider_Example
-		*{
-			*private var vSlider:VSlider;
-			*public function VSlider_Example()
-			*{
-				*Laya.init(640,800);//设置游戏画布宽高。
-				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
-				*}
-			*private function onLoadComplete():void
-			*{
-				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-				*vSlider.min=0;//设置 vSlider 最低位置值。
-				*vSlider.max=10;//设置 vSlider 最高位置值。
-				*vSlider.value=2;//设置 vSlider 当前位置值。
-				*vSlider.tick=1;//设置 vSlider 刻度值。
-				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
-				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-				*}
-			*private function onChange(value:Number):void
-			*{
-				*trace("滑块的位置： value="+value);
-				*}
-			*}
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*Laya.init(640,800);//设置游戏画布宽高
-	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
-	*var vSlider;
-	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
-	*function onLoadComplete(){
-		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-		*vSlider.min=0;//设置 vSlider 最低位置值。
-		*vSlider.max=10;//设置 vSlider 最高位置值。
-		*vSlider.value=2;//设置 vSlider 当前位置值。
-		*vSlider.tick=1;//设置 vSlider 刻度值。
-		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
-		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
-		*}
-	*function onChange(value){
-		*console.log("滑块的位置： value="+value);
-		*}
-	*</listing>
-	*<listing version="3.0">
-	*import HSlider=laya.ui.HSlider;
-	*import VSlider=laya.ui.VSlider;
-	*import Handler=laya.utils.Handler;
-	*class VSlider_Example {
-		*private vSlider:VSlider;
-		*constructor(){
-			*Laya.init(640,800);//设置游戏画布宽高。
-			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
-			*}
-		*private onLoadComplete():void {
-			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
-			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
-			*this.vSlider.min=0;//设置 vSlider 最低位置值。
-			*this.vSlider.max=10;//设置 vSlider 最高位置值。
-			*this.vSlider.value=2;//设置 vSlider 当前位置值。
-			*this.vSlider.tick=1;//设置 vSlider 刻度值。
-			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
-			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
-			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
-			*}
-		*private onChange(value:number):void {
-			*console.log("滑块的位置： value="+value);
-			*}
-		*}
-	*</listing>
-	*@see laya.ui.Slider
-	*/
-	//class laya.ui.VSlider extends laya.ui.Slider
-	var VSlider=(function(_super){
-		function VSlider(){VSlider.__super.call(this);;
-		};
-
-		__class(VSlider,'laya.ui.VSlider',_super);
-		return VSlider;
-	})(Slider)
-
-
-	/**
 	*<code>TextInput</code> 类用于创建显示对象以显示和输入文本。
 	*
 	*@example 以下示例代码，创建了一个 <code>TextInput</code> 实例。
@@ -23677,6 +29015,107 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
+	*使用 <code>VSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
+	*<p> <code>VSlider</code> 控件采用垂直方向。滑块轨道从下往上扩展，而标签位于轨道的左右两侧。</p>
+	*
+	*@example 以下示例代码，创建了一个 <code>VSlider</code> 实例。
+	*<listing version="3.0">
+	*package
+	*{
+		*import laya.ui.HSlider;
+		*import laya.ui.VSlider;
+		*import laya.utils.Handler;
+		*public class VSlider_Example
+		*{
+			*private var vSlider:VSlider;
+			*public function VSlider_Example()
+			*{
+				*Laya.init(640,800);//设置游戏画布宽高。
+				*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+				*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,onLoadComplete));//加载资源。
+				*}
+			*private function onLoadComplete():void
+			*{
+				*vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+				*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+				*vSlider.min=0;//设置 vSlider 最低位置值。
+				*vSlider.max=10;//设置 vSlider 最高位置值。
+				*vSlider.value=2;//设置 vSlider 当前位置值。
+				*vSlider.tick=1;//设置 vSlider 刻度值。
+				*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+				*vSlider.changeHandler=new Handler(this,onChange);//设置 vSlider 位置变化处理器。
+				*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+				*}
+			*private function onChange(value:Number):void
+			*{
+				*trace("滑块的位置： value="+value);
+				*}
+			*}
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*Laya.init(640,800);//设置游戏画布宽高
+	*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
+	*var vSlider;
+	*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],laya.utils.Handler.create(this,onLoadComplete));//加载资源。
+	*function onLoadComplete(){
+		*vSlider=new laya.ui.VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+		*vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+		*vSlider.min=0;//设置 vSlider 最低位置值。
+		*vSlider.max=10;//设置 vSlider 最高位置值。
+		*vSlider.value=2;//设置 vSlider 当前位置值。
+		*vSlider.tick=1;//设置 vSlider 刻度值。
+		*vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+		*vSlider.changeHandler=new laya.utils.Handler(this,onChange);//设置 vSlider 位置变化处理器。
+		*Laya.stage.addChild(vSlider);//把 vSlider 添加到显示列表。
+		*}
+	*function onChange(value){
+		*console.log("滑块的位置： value="+value);
+		*}
+	*</listing>
+	*<listing version="3.0">
+	*import HSlider=laya.ui.HSlider;
+	*import VSlider=laya.ui.VSlider;
+	*import Handler=laya.utils.Handler;
+	*class VSlider_Example {
+		*private vSlider:VSlider;
+		*constructor(){
+			*Laya.init(640,800);//设置游戏画布宽高。
+			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+			*Laya.loader.load(["resource/ui/vslider.png","resource/ui/vslider$bar.png"],Handler.create(this,this.onLoadComplete));//加载资源。
+			*}
+		*private onLoadComplete():void {
+			*this.vSlider=new VSlider();//创建一个 VSlider 类的实例对象 vSlider 。
+			*this.vSlider.skin="resource/ui/vslider.png";//设置 vSlider 的皮肤。
+			*this.vSlider.min=0;//设置 vSlider 最低位置值。
+			*this.vSlider.max=10;//设置 vSlider 最高位置值。
+			*this.vSlider.value=2;//设置 vSlider 当前位置值。
+			*this.vSlider.tick=1;//设置 vSlider 刻度值。
+			*this.vSlider.x=100;//设置 vSlider 对象的属性 x 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.y=100;//设置 vSlider 对象的属性 y 的值，用于控制 vSlider 对象的显示位置。
+			*this.vSlider.changeHandler=new Handler(this,this.onChange);//设置 vSlider 位置变化处理器。
+			*Laya.stage.addChild(this.vSlider);//把 vSlider 添加到显示列表。
+			*}
+		*private onChange(value:number):void {
+			*console.log("滑块的位置： value="+value);
+			*}
+		*}
+	*</listing>
+	*@see laya.ui.Slider
+	*/
+	//class laya.ui.VSlider extends laya.ui.Slider
+	var VSlider=(function(_super){
+		function VSlider(){VSlider.__super.call(this);;
+		};
+
+		__class(VSlider,'laya.ui.VSlider',_super);
+		return VSlider;
+	})(Slider)
+
+
+	/**
 	*@private
 	*/
 	//class laya.display.GraphicAnimation extends laya.display.FrameAnimation
@@ -23824,7 +29263,7 @@ var Laya=window.Laya=(function(window,document){
 				m.translate(params[1],params[2]);
 				params[1]=params[2]=0;
 			}
-			g.drawTexture(params[0],params[1],params[2],params[3],params[4],m);
+			g.drawTexture(params[0],params[1],params[2],params[3],params[4],m,params[10]);
 		}
 
 		/**
@@ -23849,14 +29288,18 @@ var Laya=window.Laya=(function(window,document){
 				var tAniO;
 				for (i=0;i < len;i++){
 					tAniO=animations[i];
+					if (!tAniO)continue ;
 					try{
 						this._calGraphicData(tAniO);
 						}catch (e){
 						console.log("parse animation fail:"+tAniO.name+",empty animation created");
 						this._gList=[];
-					}
-					anilist.push(this._gList);
-					aniDic[tAniO.name]=this._gList;
+					};
+					var frameO={};
+					frameO.interval=1000 / tAniO["frameRate"];
+					frameO.frames=this._gList;
+					anilist.push(frameO);
+					aniDic[tAniO.name]=frameO;
 				}
 				this.animationList=anilist;
 				this.animationDic=aniDic;
@@ -23888,7 +29331,7 @@ var Laya=window.Laya=(function(window,document){
 		GraphicAnimation._temParam=[];
 		GraphicAnimation._I=null
 		__static(GraphicAnimation,
-		['_drawTextureCmd',function(){return this._drawTextureCmd=[["skin",null],["x",0],["y",0],["width",0],["height",0],["pivotX",0],["pivotY",0],["scaleX",1],["scaleY",1],["rotation",0]];}
+		['_drawTextureCmd',function(){return this._drawTextureCmd=[["skin",null],["x",0],["y",0],["width",0],["height",0],["pivotX",0],["pivotY",0],["scaleX",1],["scaleY",1],["rotation",0],["alpha",1]];}
 		]);
 		return GraphicAnimation;
 	})(FrameAnimation)
@@ -23959,18 +29402,27 @@ var Laya=window.Laya=(function(window,document){
 			this.initData();
 			this.initEvent();
 			this.initRole();
-			this.initBoss();
 			this.initBg();
 			this.initCloud();
 			this.initPowerMete();
+			this.initBoss();
 		}
 
-		__proto.initBoss=function(){}
-		/*var boss:MovieClip=new MovieClip();
-		boss.load(GameConstant.GAME_SWF_PATH+"t.swf");
-		boss.width=20;
-		boss.height=20;
-		this.addChild(boss);*/
+		__proto.initBoss=function(){
+			var boss=new Templet();
+			boss.on("complete",this,function(fac){
+				var ani=fac.buildArmature(0);
+				ani.play(0,true);
+				ani.x=750;
+				ani.y=this.groundPosY-78;
+				Layer.GAME_ROLE_LAYER.addChild(ani);
+			});
+			boss.on("error",this,function(e){
+				console.log("load fail");
+			});
+			boss.loadAni(GameConstant.GAME_BONES_PATH+"boss1Ani.sk");
+		}
+
 		__proto.initPowerMete=function(){
 			if (!this.powerMete){
 				this.powerMete=new PowerMete();
@@ -23999,7 +29451,6 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initData=function(){
 			this.size(1136,640);
 			this.bgCount=3;
-			this.timerLoop(1 / 60 *1000,this,this.gameLoop);
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
@@ -24239,7 +29690,7 @@ var Laya=window.Laya=(function(window,document){
 				var item=this.getChildAt(i);
 				if (item){
 					items.push(item);
-					maxHeight=Math.max(maxHeight,item.displayHeight);
+					maxHeight=Math.max(maxHeight,item.height *item.scaleY);
 				}
 			}
 			this.sortItem(items);
@@ -24247,13 +29698,13 @@ var Laya=window.Laya=(function(window,document){
 			for (i=0,n=this.numChildren;i < n;i++){
 				item=items[i];
 				item.x=left;
-				left+=item.displayWidth+this._space;
+				left+=item.width *item.scaleX+this._space;
 				if (this._align=="top"){
 					item.y=0;
 					}else if (this._align=="middle"){
-					item.y=(maxHeight-item.displayHeight)*0.5;
+					item.y=(maxHeight-item.height *item.scaleY)*0.5;
 					}else if (this._align=="bottom"){
-					item.y=maxHeight-item.displayHeight;
+					item.y=maxHeight-item.height *item.scaleY;
 				}
 			}
 			this.changeSize();
@@ -24264,6 +29715,53 @@ var Laya=window.Laya=(function(window,document){
 		HBox.MIDDLE="middle";
 		HBox.BOTTOM="bottom";
 		return HBox;
+	})(LayoutBox)
+
+
+	/**
+	*<code>VBox</code> 是一个垂直布局容器类。
+	*/
+	//class laya.ui.VBox extends laya.ui.LayoutBox
+	var VBox=(function(_super){
+		function VBox(){VBox.__super.call(this);;
+		};
+
+		__class(VBox,'laya.ui.VBox',_super);
+		var __proto=VBox.prototype;
+		/**@inheritDoc */
+		__proto.changeItems=function(){
+			this._itemChanged=false;
+			var items=[];
+			var maxWidth=0;
+			for (var i=0,n=this.numChildren;i < n;i++){
+				var item=this.getChildAt(i);
+				if (item){
+					items.push(item);
+					maxWidth=Math.max(maxWidth,item.width *item.scaleX);
+				}
+			}
+			this.sortItem(items);
+			var top=0;
+			for (i=0,n=this.numChildren;i < n;i++){
+				item=items[i];
+				item.y=top;
+				top+=item.height *item.scaleY+this._space;
+				if (this._align=="left"){
+					item.x=0;
+					}else if (this._align=="center"){
+					item.x=(maxWidth-item.width *item.scaleX)*0.5;
+					}else if (this._align=="right"){
+					item.x=maxWidth-item.width *item.scaleX;
+				}
+			}
+			this.changeSize();
+		}
+
+		VBox.NONE="none";
+		VBox.LEFT="left";
+		VBox.CENTER="center";
+		VBox.RIGHT="right";
+		return VBox;
 	})(LayoutBox)
 
 
@@ -24345,7 +29843,7 @@ var Laya=window.Laya=(function(window,document){
 		*}
 	*</listing>
 	*/
-	//class laya.ui.RadioGroup extends laya.ui.Group
+	//class laya.ui.RadioGroup extends laya.ui.UIGroup
 	var RadioGroup=(function(_super){
 		function RadioGroup(){RadioGroup.__super.call(this);;
 		};
@@ -24358,7 +29856,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		return RadioGroup;
-	})(Group)
+	})(UIGroup)
 
 
 	/**
@@ -24437,7 +29935,7 @@ var Laya=window.Laya=(function(window,document){
 		*}
 	*</listing>
 	*/
-	//class laya.ui.Tab extends laya.ui.Group
+	//class laya.ui.Tab extends laya.ui.UIGroup
 	var Tab=(function(_super){
 		function Tab(){Tab.__super.call(this);;
 		};
@@ -24453,54 +29951,7 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		return Tab;
-	})(Group)
-
-
-	/**
-	*<code>VBox</code> 是一个垂直布局容器类。
-	*/
-	//class laya.ui.VBox extends laya.ui.LayoutBox
-	var VBox=(function(_super){
-		function VBox(){VBox.__super.call(this);;
-		};
-
-		__class(VBox,'laya.ui.VBox',_super);
-		var __proto=VBox.prototype;
-		/**@inheritDoc */
-		__proto.changeItems=function(){
-			this._itemChanged=false;
-			var items=[];
-			var maxWidth=0;
-			for (var i=0,n=this.numChildren;i < n;i++){
-				var item=this.getChildAt(i);
-				if (item){
-					items.push(item);
-					maxWidth=Math.max(maxWidth,item.displayWidth);
-				}
-			}
-			this.sortItem(items);
-			var top=0;
-			for (i=0,n=this.numChildren;i < n;i++){
-				item=items[i];
-				item.y=top;
-				top+=item.displayHeight+this._space;
-				if (this._align=="left"){
-					item.x=0;
-					}else if (this._align=="center"){
-					item.x=(maxWidth-item.displayWidth)*0.5;
-					}else if (this._align=="right"){
-					item.x=maxWidth-item.displayWidth;
-				}
-			}
-			this.changeSize();
-		}
-
-		VBox.NONE="none";
-		VBox.LEFT="left";
-		VBox.CENTER="center";
-		VBox.RIGHT="right";
-		return VBox;
-	})(LayoutBox)
+	})(UIGroup)
 
 
 	/**
@@ -24729,7 +30180,7 @@ var Laya=window.Laya=(function(window,document){
 	})(TextInput)
 
 
-	Laya.__init([EventDispatcher,Render,View,NotificationCenter,Browser,LoaderManager,LocalStorage,Timer]);
+	Laya.__init([LoaderManager,EventDispatcher,Render,View,NotificationCenter,Browser,LocalStorage,Timer]);
 	new Main();
 
 })(window,document,Laya);

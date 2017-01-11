@@ -2,6 +2,7 @@ package laya.utils {
 	import laya.display.Sprite;
 	import laya.maths.Point;
 	import laya.maths.Rectangle;
+	import laya.runtime.IConchNode;
 	
 	/**
 	 * <code>Utils</code> 是工具类。
@@ -13,6 +14,8 @@ package laya.utils {
 		private static var _pi:Number = /*[STATIC SAFE]*/ 180 / Math.PI;
 		/**@private */
 		private static var _pi2:Number = /*[STATIC SAFE]*/ Math.PI / 180;
+		/**@private */
+		protected static var _extReg:RegExp =/*[STATIC SAFE]*/ /\.(\w+)\??/g;
 		
 		/**
 		 * 角度转弧度。
@@ -184,6 +187,25 @@ package laya.utils {
 				array[j + 1] = c;
 				i++;
 			}
+		    var model:IConchNode = c.parent.conchModel;
+			if (model)
+			{
+				if (model.updateZOrder != null)
+				{
+					model.updateZOrder();
+				}
+				else
+				{
+					for (i=0; i < len;i++)
+					{
+						model.removeChild(array[i].conchModel);
+					}
+					for (i=0; i < len;i++)
+					{
+						model.addChildAt(array[i].conchModel, i);
+					}
+				}
+			}
 			return true;
 		}
 		
@@ -212,6 +234,16 @@ package laya.utils {
 			var result:* = Browser.window.parseInt(str, radix);
 			if (isNaN(result)) return 0;
 			return result;
+		}
+		
+		/**@private */
+		public static function getFileExtension(path:String):String{
+			_extReg.lastIndex = path.lastIndexOf(".");
+			var result:Array = _extReg.exec(path);
+			if (result && result.length > 1) {
+				return result[1].toLowerCase();
+			}
+			return null;
 		}
 	}
 }

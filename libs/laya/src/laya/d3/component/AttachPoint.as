@@ -1,7 +1,6 @@
 package laya.d3.component {
 	import laya.ani.AnimationPlayer;
 	import laya.ani.AnimationState;
-	import laya.ani.KeyframesAniTemplet;
 	import laya.d3.component.animation.SkinAnimations;
 	import laya.d3.core.Sprite3D;
 	import laya.d3.core.render.RenderState;
@@ -46,14 +45,14 @@ package laya.d3.component {
 		 * @param	state 渲染状态。
 		 */
 		public override function _update(state:RenderState):void {
-			var player:AnimationPlayer = _attachSkeleton.player;
-			if (!_attachSkeleton || player.state !== AnimationState.playing || !_attachSkeleton.curBonesDatas)
+			if (!_attachSkeleton || _attachSkeleton.player.state !== AnimationState.playing || !_attachSkeleton.curBonesDatas)
 				return;
-			
+				
+			var player:AnimationPlayer = _attachSkeleton.player;			
 			matrixs.length = attachBones.length;
 			for (var i:int; i < attachBones.length; i++) {
 				
-				var index:int = _attachSkeleton._templet.getNodeIndexWithName(player.currentAnimationClipIndex, attachBones[i]);
+				var index:int = _attachSkeleton.templet.getNodeIndexWithName(player.currentAnimationClipIndex, attachBones[i]);
 				_data = _attachSkeleton.curBonesDatas.subarray(index * 16, (index + 1) * 16);
 				var matrix:Matrix4x4 = matrixs[i];
 				

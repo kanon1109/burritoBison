@@ -161,13 +161,13 @@ package laya.d3.core {
 			var min:Vector3 = boundingBox.min;
 			var max:Vector3 = boundingBox.max;
 			_minX = min.x;
-			_minZ = min.z;	
+			_minZ = min.z;
 		}
 		
 		/**
 		 * @private
 		 */
-		private function _createFromMeshAndHeightMapMeshLoaded(sender:Mesh, texture:Texture2D, minHeight:Number, maxHeight:Number):void {
+		private function _createFromMeshAndHeightMapMeshLoaded(texture:Texture2D, minHeight:Number, maxHeight:Number):void {
 			_initCreateFromMeshHeightMap(texture, minHeight, maxHeight);
 		}
 		

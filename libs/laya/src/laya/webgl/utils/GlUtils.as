@@ -10,7 +10,7 @@ package laya.webgl.utils {
 		}
 		
 		// 填充几何图形的Vb
-		private static var _fillLineArray:Array =/*[STATIC SAFE]*/ [[0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0]];
+		private static var _fillLineArray:Array =/*[STATIC SAFE]*/ [0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0, 0, 0, /*0,*/ 0, 0];
 		
 		/**
 		 *  初始化全局IB,IB索引如下:
@@ -152,7 +152,7 @@ package laya.webgl.utils {
 			var vpos:int = (vb._byteLength >> 2)/*FLOAT32*/;// + WebGLContext2D._RECTVBSIZE;
 			vb.byteLength = ((vpos + WebGLContext2D._RECTVBSIZE) << 2);
 			var vbdata:* = vb.getFloat32Array();
-
+			/*
 			for (var i:int = 0; i < 16; i++)
 			{
 				vbdata[vpos + i] = vbdata[vpos + i-16];
@@ -166,6 +166,13 @@ package laya.webgl.utils {
 			vbdata[vpos + 9] += dy;
 			vbdata[vpos + 12]+= dx;
 			vbdata[vpos + 13]+= dy;
+			*/
+			for (var i:int=0,ci:int=vpos -16; i < 4; i++) {
+				vbdata[vpos] = vbdata[ci] + dx;++vpos;++ci;
+				vbdata[vpos] = vbdata[ci] + dy;++vpos;++ci;				
+				vbdata[vpos] = vbdata[ci];++vpos;++ci;
+				vbdata[vpos] = vbdata[ci];++vpos;++ci;
+			}
 			vb._upload = true;
 		}
 		
@@ -206,8 +213,7 @@ package laya.webgl.utils {
 			{
 				cBx = clip.x, cBy = clip.y, cEx = clip.width + cBx, cEy = clip.height + cBy;
 			}
-			
-			if (mType !== 1 && (toBx >= cEx || toBy >= cEy || toEx <= cBx || toEy <= cBy))
+			if (mType !== 1 && ( Math.min(toBx,toEx) >= cEx ||  Math.min(toBy ,toEy)>= cEy ||  Math.max(toEx,toBx) <= cBx || Math.max(toEy,toBy) <= cBy))
 				return false;
 			
 			var vpos:int = (vb._byteLength >> 2)/*FLOAT32*/;// + WebGLContext2D._RECTVBSIZE;

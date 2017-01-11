@@ -7,18 +7,17 @@ package laya.webgl.shader {
 	import laya.webgl.WebGLContext;
 	import laya.webgl.utils.ShaderCompile;
 	
-	public class Shader extends Resource {
+	public class Shader extends BaseShader {
 		/*[DISABLE-ADD-VARIABLE-DEFAULT-VALUE]*/
 		private static var _TEXTURES:Array = /*[STATIC SAFE]*/ [WebGLContext.TEXTURE0, WebGLContext.TEXTURE1, WebGLContext.TEXTURE2, WebGLContext.TEXTURE3, WebGLContext.TEXTURE4, WebGLContext.TEXTURE5, WebGLContext.TEXTURE6,, WebGLContext.TEXTURE7, WebGLContext.TEXTURE8];
 		private static var _includeFiles:* = {}; //shader里面inlcude的小文件
 		private static var _count:int = 0;
-		private static var _preCompileShader:* = {}; //存储预编译结果，可以通过名字获得内容,目前不支持#ifdef嵌套和条件
+		public static var _preCompileShader:* = {}; //存储预编译结果，可以通过名字获得内容,目前不支持#ifdef嵌套和条件
 		
 		protected static var shaderParamsMap:Object = {"float": WebGLContext.FLOAT, "int": WebGLContext.INT, "bool": WebGLContext.BOOL, "vec2": WebGLContext.FLOAT_VEC2, "vec3": WebGLContext.FLOAT_VEC3, "vec4": WebGLContext.FLOAT_VEC4, "ivec2": WebGLContext.INT_VEC2, "ivec3": WebGLContext.INT_VEC3, "ivec4": WebGLContext.INT_VEC4, "bvec2": WebGLContext.BOOL_VEC2, "bvec3": WebGLContext.BOOL_VEC3, "bvec4": WebGLContext.BOOL_VEC4, "mat2": WebGLContext.FLOAT_MAT2, "mat3": WebGLContext.FLOAT_MAT3, "mat4": WebGLContext.FLOAT_MAT4, "sampler2D": WebGLContext.SAMPLER_2D, "samplerCube": WebGLContext.SAMPLER_CUBE};
 		
 		public static const SHADERNAME2ID:Number = 0.0002;
 		
-		public static var activeShader:Shader;
 		
 		public static var nameKey:StringKey = new StringKey();
 		
@@ -156,7 +155,6 @@ package laya.webgl.shader {
 		}
 		
 		private function _compile():void {
-			
 			if (!_vs || !_ps || _params)
 				return;
 			
@@ -167,7 +165,6 @@ package laya.webgl.shader {
 			var result:Object;
 			if (customCompile)
 				result = _preGetParams(_vs, _ps);
-			
 			var gl:WebGLContext = WebGL.mainContext;
 			_program = gl.createProgram();
 			_vshader = _createShader(gl, text[0], WebGLContext.VERTEX_SHADER);
@@ -193,7 +190,6 @@ package laya.webgl.shader {
 			
 			for (i = 0; i < nUniformNum; i++) {
 				var uniform:* = customCompile ? result.uniforms[i] : gl.getActiveUniform(_program, i);//得到uniform对象，包括名字等信息 {name,type,size}
-				
 				location = gl.getUniformLocation(_program, uniform.name); //用名字来得到location
 				one = {vartype: "uniform", ivartype: 1, attrib: attrib, location: location, name: uniform.name, type: uniform.type, isArray: false, isSame: false, preValue: null, indexOfParams: 0};
 				if (one.name.indexOf('[0]') > 0) {
@@ -207,7 +203,6 @@ package laya.webgl.shader {
 			
 			for (i = 0, n = _params.length; i < n; i++) {
 				one = _params[i];
-				
 				one.indexOfParams = i;
 				one.index = 1;
 				one.value = [one.location, null];
@@ -222,17 +217,20 @@ package laya.webgl.shader {
 				}
 				
 				switch (one.type) {
+				case WebGLContext.INT: 
+					one.fun = one.isArray ? this._uniform1iv : this._uniform1i;
+					break;
 				case WebGLContext.FLOAT: 
 					one.fun = one.isArray ? this._uniform1fv : this._uniform1f;
 					break;
 				case WebGLContext.FLOAT_VEC2: 
-					one.fun = this._uniform_vec2;
+					one.fun =one.isArray ? this._uniform_vec2v:this._uniform_vec2;
 					break;
 				case WebGLContext.FLOAT_VEC3: 
-					one.fun = this._uniform_vec3;
+					one.fun =one.isArray ?  this._uniform_vec3v:this._uniform_vec3;
 					break;
 				case WebGLContext.FLOAT_VEC4: 
-					one.fun = this._uniform_vec4;
+					one.fun =one.isArray ?  this._uniform_vec4v:this._uniform_vec4;
 					break;
 				case WebGLContext.SAMPLER_2D: 
 					one.fun = this._uniform_sampler2D;
@@ -497,6 +495,7 @@ package laya.webgl.shader {
 		 */
 		public function upload(shaderValue:ShaderValue, params:Array = null):void {
 			activeShader = this;
+			bindShader = this;
 			activeResource();
 			WebGLContext.UseProgram(_program);
 			
@@ -522,6 +521,7 @@ package laya.webgl.shader {
 		 */
 		public function uploadArray(shaderValue:Array, length:int, _bufferUsage:*):void {
 			activeShader = this;
+			bindShader = this;
 			activeResource();
 			WebGLContext.UseProgram(_program);
 			var params:* = _params, value:*;

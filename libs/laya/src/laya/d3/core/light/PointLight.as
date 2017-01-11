@@ -1,10 +1,11 @@
 package laya.d3.core.light {
 	import laya.d3.core.render.RenderState;
+	import laya.d3.core.scene.BaseScene;
 	import laya.d3.math.Vector3;
 	import laya.d3.shader.ShaderDefines3D;
+	import laya.d3.shader.ValusArray;
 	import laya.utils.Stat;
 	import laya.webgl.utils.Buffer2D;
-	import laya.webgl.utils.ValusArray;
 	
 	/**
 	 * <code>PointLight</code> 类用于创建点光。
@@ -76,16 +77,16 @@ package laya.d3.core.light {
 		 * @param state 渲染状态参数。
 		 */
 		public override function updateToWorldState(state:RenderState):void {
-			if (state.scene.enableLight) {
-				var shaderValue:ValusArray = state.worldShaderValue;
-				var loopCount:int = Stat.loopCount;
-				state.shaderDefs.add(ShaderDefines3D.POINTLIGHT);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTDIFFUSE, diffuseColor.elements);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTAMBIENT, ambientColor.elements);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTSPECULAR, specularColor.elements);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTPOS, transform.position.elements);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTRANGE, range);
-				shaderValue.pushValue(Buffer2D.POINTLIGHTATTENUATION, attenuation.elements);
+			var scene:BaseScene = state.scene;
+			if (scene.enableLight) {
+				var shaderValue:ValusArray = scene._shaderValues;
+				state.shaderDefines.add(ShaderDefines3D.POINTLIGHT);
+				shaderValue.setValue(BaseScene.POINTLIGHTDIFFUSE, diffuseColor.elements);
+				shaderValue.setValue(BaseScene.POINTLIGHTAMBIENT, ambientColor.elements);
+				shaderValue.setValue(BaseScene.POINTLIGHTSPECULAR, specularColor.elements);
+				shaderValue.setValue(BaseScene.POINTLIGHTPOS, transform.position.elements);
+				shaderValue.setValue(BaseScene.POINTLIGHTRANGE, range);
+				shaderValue.setValue(BaseScene.POINTLIGHTATTENUATION, attenuation.elements);
 			}
 		}
 	

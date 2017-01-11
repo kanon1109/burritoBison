@@ -24,19 +24,21 @@ package laya.renders {
 		/** @private */
 		public static const TRANSFORM:int = 0x04;
 		/** @private */
-		public static const CANVAS:int = 0x08;
+		public static const BLEND:int = 0x08;
 		/** @private */
-		public static const FILTERS:int = 0x10;
+		public static const CANVAS:int = 0x10;
 		/** @private */
-		public static const BLEND:int = 0x20;
+		public static const FILTERS:int = 0x20;
 		/** @private */
-		public static const CLIP:int = 0x40;
+		public static const MASK:int = 0x40;
 		/** @private */
-		public static const STYLE:int = 0x80;
+		public static const CLIP:int = 0x80;
 		/** @private */
-		public static const GRAPHICS:int = 0x100;
+		public static const STYLE:int = 0x100;
 		/** @private */
-		public static const CUSTOM:int = 0x200;
+		public static const GRAPHICS:int = 0x200;
+		/** @private */
+		public static const CUSTOM:int = 0x400;
 		/** @private */
 		public static const CHILDS:int = 0x800;
 		/** @private */
@@ -113,6 +115,9 @@ package laya.renders {
 			case CANVAS: 
 				_fun = this._canvas;
 				return;
+			case MASK: 
+				_fun = this._mask;
+				return;
 			case CLIP: 
 				_fun = this._clip;
 				return;
@@ -180,6 +185,12 @@ package laya.renders {
 			}
 			var next:RenderSprite = this._next;
 			next._fun.call(next, sprite, context, x, y);
+			context.ctx.globalCompositeOperation = "source-over";
+		}
+		
+		public function _mask(sprite:Sprite, context:RenderContext, x:Number, y:Number):void {
+			var next:RenderSprite = this._next;
+			next._fun.call(next, sprite, context, x, y);
 			var mask:Sprite = sprite.mask;
 			if (mask) {
 				context.ctx.globalCompositeOperation = "destination-in";
@@ -234,31 +245,32 @@ package laya.renders {
 		
 		public function _childs(sprite:Sprite, context:RenderContext, x:Number, y:Number):void {
 			//'use strict';
-			var style:Style = sprite._style;
+			var style:* = sprite._style;
 			x += -style._tf.translateX + style.paddingLeft;
 			y += -style._tf.translateY + style.paddingTop;
-			var words:Vector.<HTMLChar> = sprite._getWords();
-			words && context.fillWords(words, x, y, (style as CSSStyle).font, (style as CSSStyle).color);
+			/*[IF-FLASH]*/if (style.hasOwnProperty("_calculation")) {
+			//[IF-JS]if (style._calculation) {
+				var words:Vector.<HTMLChar> = sprite._getWords();
+				words && context.fillWords(words, x, y, (style as CSSStyle).font, (style as CSSStyle).color);
+			}
 			
-			var childs:Array = sprite._childs, n:int = childs.length, ele:Sprite;
-			if (!sprite.viewport || !sprite.optimizeScrollRect) {
-				for (var i:int = 0; i < n; ++i)
-					(ele = (childs[i] as Sprite))._style.visible && ele.render(context, x, y);
-			} else {
-				var rect:Rectangle = sprite.viewport;
-				
+			var childs:Array = sprite._childs, n:int = childs.length, ele:*;
+			if (sprite.viewport || (sprite.optimizeScrollRect && sprite._style.scrollRect)) {
+				var rect:Rectangle = sprite.viewport || sprite._style.scrollRect;
 				var left:Number = rect.x;
 				var top:Number = rect.y;
 				var right:Number = rect.right;
 				var bottom:Number = rect.bottom;
-				var _x:Number=0, _y:Number=0;
+				var _x:Number, _y:Number;
 				
 				for (i = 0; i < n; ++i) {
-					if ( (ele = childs[i] as Sprite)._style.visible && ( (_x=ele.x) < right && (_x + ele.width) > left && (_y=ele.y) < bottom && (_y + ele.height) > top))
-					{
+					if ((ele = childs[i] as Sprite).visible && ((_x = ele._x) < right && (_x + ele.width) > left && (_y = ele._y) < bottom && (_y + ele.height) > top)) {
 						ele.render(context, x, y);
 					}
 				}
+			} else {
+				for (var i:int = 0; i < n; ++i)
+					(ele = (childs[i] as Sprite))._style.visible && ele.render(context, x, y);
 			}
 		}
 		
@@ -284,48 +296,66 @@ package laya.renders {
 					_cacheCanvas._cacheRec = new Rectangle();
 				var w:Number, h:Number;
 				tRec = sprite.getSelfBounds();
-				if (Render.isWebGL && _cacheCanvas.type === 'bitmap' && (tRec.width > 2048 || tRec.height > 2048)) {
-					trace("cache bitmap size larger than 2048,cache ignored");
-					_next._fun.call(_next, sprite, tx, x, y);
-					return;
-				}
+				//				if (Render.isWebGL && _cacheCanvas.type === 'bitmap' && (tRec.width > 2048 || tRec.height > 2048)) {
+				//					trace("cache bitmap size larger than 2048,cache ignored");
+				//					if(_cacheCanvas.ctx)
+				//					{
+				//						Pool.recover("RenderContext",_cacheCanvas.ctx);
+				//						_cacheCanvas.ctx=null;
+				//				    }			
+				//					_next._fun.call(_next, sprite, context, x, y);
+				//					return;
+				//				}
 				tRec.x -= sprite.pivotX;
 				tRec.y -= sprite.pivotY;
-				tRec.x -= 10;
-				tRec.y -= 10;
-				tRec.width += 20;
-				tRec.height += 20;
+				tRec.x -= 16;
+				tRec.y -= 16;
+				tRec.width += 32;
+				tRec.height += 32;
 				tRec.x = Math.floor(tRec.x + x) - x;
 				tRec.y = Math.floor(tRec.y + y) - y;
 				tRec.width = Math.floor(tRec.width);
 				tRec.height = Math.floor(tRec.height);
 				_cacheCanvas._cacheRec.copyFrom(tRec);
 				tRec = _cacheCanvas._cacheRec;
-				var scaleX:Number = Render.isWebGL?1:Browser.pixelRatio * Laya.stage.clientScaleX;
-				var scaleY:Number = Render.isWebGL?1:Browser.pixelRatio * Laya.stage.clientScaleY;
+				var scaleX:Number = Render.isWebGL ? 1 : Browser.pixelRatio * Laya.stage.clientScaleX;
+				var scaleY:Number = Render.isWebGL ? 1 : Browser.pixelRatio * Laya.stage.clientScaleY;
 				
-				if (!Render.isWebGL)
-				{
+				if (!Render.isWebGL) {//||_cacheCanvas.type === 'bitmap'
 					var chainScaleX:Number = 1;
 					var chainScaleY:Number = 1;
 					var tar:Sprite;
-				    tar = sprite;
-				    while (tar && tar != Laya.stage)
-				    {
-					   chainScaleX *= tar.scaleX;
-					   chainScaleY *= tar.scaleY;
-					   tar = tar.parent as Sprite;
-				    }
-					if (chainScaleX > 1) scaleX *= chainScaleX;
-					if (chainScaleY > 1) scaleY *= chainScaleY;
+					tar = sprite;
+					while (tar && tar != Laya.stage) {
+						chainScaleX *= tar.scaleX;
+						chainScaleY *= tar.scaleY;
+						tar = tar.parent as Sprite;
+					}
+					if (Render.isWebGL) {
+						if (chainScaleX < 1) scaleX *= chainScaleX;
+						if (chainScaleY < 1) scaleY *= chainScaleY;
+					} else {
+						if (chainScaleX > 1) scaleX *= chainScaleX;
+						if (chainScaleY > 1) scaleY *= chainScaleY;
+					}
+					
 				}
-				
 				w = tRec.width * scaleX;
 				h = tRec.height * scaleY;
 				left = tRec.x;
 				top = tRec.y;
+				
+				if (Render.isWebGL && _cacheCanvas.type === 'bitmap' && (w > 2048 || h > 2048)) {
+					trace("cache bitmap size larger than 2048,cache ignored");
+					if (_cacheCanvas.ctx) {
+						Pool.recover("RenderContext", _cacheCanvas.ctx);
+						_cacheCanvas.ctx = null;
+					}
+					_next._fun.call(_next, sprite, context, x, y);
+					return;
+				}
 				if (!tx) {
-					tx = _cacheCanvas.ctx = Pool.getItem("RenderContext")||new RenderContext(w, h, HTMLCanvas.create(HTMLCanvas.TYPEAUTO));
+					tx = _cacheCanvas.ctx = Pool.getItem("RenderContext") || new RenderContext(w, h, HTMLCanvas.create(HTMLCanvas.TYPEAUTO));
 					tx.ctx.sprite = sprite;
 				}
 				
@@ -337,27 +367,25 @@ package laya.renders {
 				
 				var t:*;
 				//TODO:测试webgl下是否有缓存模糊问题
-				if (scaleX!=1||scaleY!=1) {
+				if (scaleX != 1 || scaleY != 1) {
 					var ctx:* = RenderContext(tx).ctx;
 					ctx.save();
 					ctx.scale(scaleX, scaleY);
-					if (!Render.isConchWebGL&&Render.isConchApp)
-					{
+					if (!Render.isConchWebGL && Render.isConchApp) {
 						t = sprite._$P.cf;
-						t&&ctx.setFilterMatrix&&ctx.setFilterMatrix(t._mat,t._alpha);
+						t && ctx.setFilterMatrix && ctx.setFilterMatrix(t._mat, t._alpha);
 					}
 					_next._fun.call(_next, sprite, tx, -left, -top);
 					ctx.restore();
-					if(!Render.isConchApp||Render.isConchWebGL)sprite._applyFilters();
+					if (!Render.isConchApp || Render.isConchWebGL) sprite._applyFilters();
 				} else {
 					ctx = RenderContext(tx).ctx;
-					if (!Render.isConchWebGL&&Render.isConchApp)
-					{
+					if (!Render.isConchWebGL && Render.isConchApp) {
 						t = sprite._$P.cf;
-						t&&ctx.setFilterMatrix&&ctx.setFilterMatrix(t._mat,t._alpha);
+						t && ctx.setFilterMatrix && ctx.setFilterMatrix(t._mat, t._alpha);
 					}
 					_next._fun.call(_next, sprite, tx, -left, -top);
-					if(!Render.isConchApp||Render.isConchWebGL)sprite._applyFilters();
+					if (!Render.isConchApp || Render.isConchWebGL) sprite._applyFilters();
 				}
 				
 				if (sprite._$P.staticCache) _cacheCanvas.reCache = false;

@@ -7,12 +7,17 @@ package laya.d3.core {
 	import laya.d3.core.scene.BaseScene;
 	import laya.d3.graphics.VertexDeclaration;
 	import laya.d3.math.Matrix4x4;
+	import laya.d3.math.Quaternion;
+	import laya.d3.math.Vector3;
+	import laya.d3.shader.ValusArray;
 	import laya.d3.utils.Utils3D;
 	import laya.display.Node;
 	import laya.events.Event;
 	import laya.net.Loader;
 	import laya.net.URL;
+	import laya.resource.ICreateResource;
 	import laya.resource.IDispose;
+	import laya.runtime.IConchNode;
 	import laya.utils.ClassUtils;
 	import laya.utils.Handler;
 	import laya.utils.Stat;
@@ -20,14 +25,66 @@ package laya.d3.core {
 	/**
 	 * <code>Sprite3D</code> 类用于实现3D精灵。
 	 */
-	public class Sprite3D extends Node implements IUpdate, IDispose {
+	public class Sprite3D extends Node implements IUpdate, ICreateResource, IClone {
+		/**着色器变量名，世界矩阵。*/
+		public static const WORLDMATRIX:int = 0;
+		/**着色器变量名，世界视图投影矩阵。*/
+		public static const MVPMATRIX:int = 1;
+		
 		/**唯一标识ID计数器。*/
-		protected static var _uniqueIDCounter:int = 1/*int.MIN_VALUE*/;
+		protected static var _uniqueIDCounter:int = 0;
 		/**名字计数器。*/
 		protected static var _nameNumberCounter:int = 0;
 		
-		/**是否在Stage中。*/
-		protected var _isInStage:Boolean;
+		/**
+		 * 创建精灵的克隆实例。
+		 * @param	original  原始精灵。
+		 * @param	position  世界位置。
+		 * @param	rotation  世界旋转。
+		 * @param   parent    父节点。
+		 * @param   worldPositionStays 是否保持自身世界变换,注意:在position，rotation均为空时有效。
+		 * @return  克隆实例。
+		 */
+		public static function instantiate(original:Sprite3D, position:Vector3 = null, rotation:Quaternion = null, parent:Node = null, worldPositionStays:Boolean = true):Sprite3D {
+			var destSprite3D:Sprite3D = original.clone();
+			
+			var transform:Transform3D;
+			if (position || rotation) {
+				(parent) && (parent.addChild(destSprite3D));
+				transform = destSprite3D.transform;
+				(position) && (transform.position = position);
+				(rotation) && (transform.rotation = rotation);
+			} else {
+				if (worldPositionStays) {
+					transform = destSprite3D.transform;
+					
+					if (parent) {
+						var oriPosition:Vector3 = transform.position;
+						var oriRotation:Quaternion = transform.rotation;
+						parent.addChild(destSprite3D);
+						transform.position = oriPosition;
+						transform.rotation = oriRotation;
+					}
+				} else {
+					if (parent) {
+						parent.addChild(destSprite3D);
+					}
+				}
+			}
+			return destSprite3D;
+		}
+		
+		/**
+		 * 加载网格模板,注意:不缓存。
+		 * @param url 模板地址。
+		 */
+		public static function load(url:String):Sprite3D {
+			return Laya.loader.create(url, null, null, Sprite3D,null, 1, false);
+		}
+		
+		/** @private */
+		private var _projectionViewWorldMatrix:Matrix4x4;
+		
 		/**唯一标识ID。*/
 		private var _id:int;
 		/**是否启用。*/
@@ -35,9 +92,14 @@ package laya.d3.core {
 		/**图层蒙版。*/
 		protected var _layerMask:uint;
 		/**组件名字到索引映射。*/
-		protected var _componentsMap:* = [];
+		protected var _componentsMap:Array = [];
 		/**组件列表。*/
 		protected var _components:Vector.<Component3D> = new Vector.<Component3D>();
+		
+		/** @private */
+		public var _shaderDefineValue:int;
+		/** @private */
+		public var _shaderValues:ValusArray;
 		
 		/**矩阵变换相关。*/
 		public var transform:Transform3D;
@@ -58,14 +120,6 @@ package laya.d3.core {
 		 */
 		public function get enable():Boolean {
 			return _enable;
-		}
-		
-		/**
-		 * 获取是否在场景树。
-		 *   @return	是否在场景树。
-		 */
-		public function get isInStage():Boolean {
-			return _isInStage;
 		}
 		
 		/**
@@ -132,47 +186,44 @@ package laya.d3.core {
 		 * 创建一个 <code>Sprite3D</code> 实例。
 		 */
 		public function Sprite3D(name:String = null) {
-			(name) ? (this.name = name) : (this.name = "Sprite3D-" + _nameNumberCounter++);
+			_projectionViewWorldMatrix = new Matrix4x4();
+			_shaderValues = new ValusArray();
 			
+			(name) ? (this.name = name) : (this.name = "Sprite3D-" + _nameNumberCounter++);
 			_enable = true;
-			_id = _uniqueIDCounter;
-			_uniqueIDCounter++;
+			_id = ++_uniqueIDCounter;
 			layer = Layer.currentCreationLayer;
 			transform = new Transform3D(this);
-			on(Event.ADDED, this, _onAdded);
-			on(Event.REMOVED, this, _onRemoved);
+			on(Event.DISPLAY, this, _onDisplay);
+			on(Event.UNDISPLAY, this, _onUnDisplay);
+		}
+		
+		override public function createConchModel():* {
+			return __JS__("null");
+		}
+		
+		/**
+		 * 增加Shader宏定义。
+		 * @param value 宏定义。
+		 */
+		public function _addShaderDefine(value:int):void {
+			_shaderDefineValue |= value;
 		}
 		
 		/**
 		 * @private
 		 */
-		private function _onAdded():void {
+		private function _onDisplay():void {
 			transform.parent = (_parent as Sprite3D).transform;
-			var isInStage:Boolean = Laya.stage.contains(this);
-			(isInStage) && (_addSelfAndChildrenRenderObjects());
-			(isInStage) && (_changeSelfAndChildrenInStage(true));
+			_addSelfRenderObjects();
 		}
 		
 		/**
 		 * @private
 		 */
-		private function _onRemoved():void {
+		private function _onUnDisplay():void {
 			transform.parent = null;
-			var isInStage:Boolean = Laya.stage.contains(this);//触发时还在stage中
-			(isInStage) && (_clearSelfAndChildrenRenderObjects());
-			(isInStage) && (_changeSelfAndChildrenInStage(false));
-		}
-		
-		/**
-		 * @private
-		 */
-		public function _changeSelfAndChildrenInStage(isInStage:Boolean):void {
-			_isInStage = isInStage;
-			event(Event.INSTAGE_CHANGED, isInStage);
-			
-			var children:Array = _childs;
-			for (var i:int = 0, n:int = children.length; i < n; i++)
-				(_childs[i] as Sprite3D)._changeSelfAndChildrenInStage(isInStage);
+			_clearSelfRenderObjects();
 		}
 		
 		/**
@@ -185,24 +236,6 @@ package laya.d3.core {
 		 * 添加自身渲染物体，请重载此函数。
 		 */
 		protected function _addSelfRenderObjects():void {
-		}
-		
-		/**
-		 * 清理自身和子节点渲染物体,重写此函数。
-		 */
-		public function _clearSelfAndChildrenRenderObjects():void {
-			_clearSelfRenderObjects();
-			for (var i:int = 0, n:int = _childs.length; i < n; i++)
-				(_childs[i] as Sprite3D)._clearSelfAndChildrenRenderObjects();
-		}
-		
-		/**
-		 * 添加自身和子节点渲染物体,重写此函数。
-		 */
-		public function _addSelfAndChildrenRenderObjects():void {
-			_addSelfRenderObjects();
-			for (var i:int = 0, n:int = _childs.length; i < n; i++)
-				(_childs[i] as Sprite3D)._addSelfAndChildrenRenderObjects();
 		}
 		
 		/**
@@ -236,10 +269,8 @@ package laya.d3.core {
 		protected function _updateChilds(state:RenderState):void {
 			var n:int = _childs.length;
 			if (n === 0) return;
-			for (var i:int = 0; i < n; ++i) {
-				var child:Sprite3D = _childs[i];
-				child._update((state));
-			}
+			for (var i:int = 0; i < n; ++i)
+				_childs[i]._update((state));
 		}
 		
 		/**
@@ -247,7 +278,19 @@ package laya.d3.core {
 		 * @param	state 渲染相关状态。
 		 */
 		public function _getSortID(renderElement:IRenderable, material:BaseMaterial):int {
-			return +renderElement._getVertexBuffer().vertexDeclaration.id + material.id * VertexDeclaration._maxVertexDeclarationBit;
+			return renderElement._getVertexBuffer().vertexDeclaration.id + material.id * VertexDeclaration._maxVertexDeclarationBit;
+		}
+		
+		/**
+		 * 准备精灵级Shader数据,可重载此函数。
+		 * @param	view
+		 * @param	projection
+		 * @param	projectionView
+		 */
+		public function _prepareShaderValuetoRender(view:Matrix4x4, projection:Matrix4x4, projectionView:Matrix4x4):void {
+			_setShaderValueMatrix4x4(Sprite3D.WORLDMATRIX, transform.worldMatrix);//TODO:静态合并需要使用,待调整移除。
+			var projViewWorld:Matrix4x4 = getProjectionViewWorldMatrix(projectionView);
+			_setShaderValueMatrix4x4(Sprite3D.MVPMATRIX, projViewWorld);
 		}
 		
 		/**
@@ -262,6 +305,42 @@ package laya.d3.core {
 			}
 			Stat.spriteCount++;
 			_childs.length && _updateChilds(state);
+		}
+		
+		/**
+		 * @private
+		 */
+		public function _setShaderValueMatrix4x4(shaderName:int, matrix4x4:Matrix4x4):void {
+			_shaderValues.setValue(shaderName, matrix4x4 ? matrix4x4.elements : null);
+		}
+		
+		/**
+		 * 设置颜色。
+		 * @param	shaderIndex shader索引。
+		 * @param	color 颜色向量。
+		 */
+		public function _setShaderValueColor(shaderIndex:int, color:*):void {
+			var shaderValue:ValusArray = _shaderValues;
+			shaderValue.setValue(shaderIndex, color ? color.elements : null);
+		}
+		
+		/**
+		 * 获取投影视图世界矩阵。
+		 * @param	projectionViewMatrix 投影视图矩阵。
+		 * @return  投影视图世界矩阵。
+		 */
+		public function getProjectionViewWorldMatrix(projectionViewMatrix:Matrix4x4):Matrix4x4 {
+			var curLoopCount:int = Stat.loopCount;
+			Matrix4x4.multiply(projectionViewMatrix, transform.worldMatrix, _projectionViewWorldMatrix);
+			return _projectionViewWorldMatrix;
+		}
+		
+		/**
+		 * 加载层级文件，并作为该节点的子节点。
+		 * @param	url
+		 */
+		public function loadHierarchy(url:String):void {
+			addChild(Sprite3D.load(url));
 		}
 		
 		override public function addChildAt(node:Node, index:int):Node {
@@ -282,12 +361,12 @@ package laya.d3.core {
 		 * @return	组件。
 		 */
 		public function addComponent(type:*):Component3D {
-			if (!(_componentsMap[type] === undefined))
+			if (_componentsMap.indexOf(type) !== -1)
 				throw new Error("无法创建" + type + "组件" + "，" + type + "组件已存在！");
 			
 			var component:Component3D = ClassUtils.getInstance(type);
 			component._initialize(this);
-			_componentsMap[type] = _components.length;
+			_componentsMap.push(type);
 			_components.push(component);
 			this.event(Event.COMPONENT_ADDED, component);
 			return component;
@@ -299,9 +378,10 @@ package laya.d3.core {
 		 * @return	组件。
 		 */
 		public function getComponentByType(type:*):Component3D {
-			if (_componentsMap[type] === undefined)
+			var index:int = _componentsMap.indexOf(type);
+			if (index === -1)
 				return null;
-			return _components[_componentsMap[type]];
+			return _components[index];
 		}
 		
 		/**
@@ -318,11 +398,13 @@ package laya.d3.core {
 		 * @param	type 组件类型。
 		 */
 		public function removeComponent(type:String):void {
-			if (_componentsMap[type] === undefined)
+			var index:int = _componentsMap.indexOf(type);
+			if (index === -1)
 				return;
-			var component:Component3D = _components[_componentsMap[type]];
-			_components.splice(_componentsMap[type], 1);
-			delete _componentsMap[type];
+			var component:Component3D = _components[index];
+			_components.splice(index, 1);
+			_componentsMap.splice(index, 1);
+			component._uninitialize();
 			this.event(Event.COMPONENT_REMOVED, component);
 		}
 		
@@ -335,32 +417,58 @@ package laya.d3.core {
 		}
 		
 		/**
-		 * 加载场景文件。
-		 * @param	url 地址。
+		 *@private
 		 */
-		public function loadHierarchy(url:String):void {
-			if (url === null) return;
+		public function onAsynLoaded(url:String, data:*, params:Array):void {
+			if (destroyed)//TODO:其它资源是否同样处理
+				return;
 			
-			var loader:Loader = new Loader();
-			url = URL.formatURL(url);
-			var _this:Sprite3D = this;
-			var onComp:Function = function(data:String):void {
-				var preBasePath:String = URL.basePath;
-				URL.basePath = URL.getPath(URL.formatURL(url));
-				var sprite:Sprite3D = ClassUtils.createByJson(data, null, _this, Handler.create(null, Utils3D._parseHierarchyProp, null, false), Handler.create(null, Utils3D._parseHierarchyNode, null, false));
-				addChild(sprite);
-				URL.basePath = preBasePath;
-				event(Event.HIERARCHY_LOADED, [_this, sprite]);
-			}
-			loader.once(Event.COMPLETE, null, onComp);
-			loader.load(url, Loader.TEXT);
+			var oriData:Object = data[0];
+			var innerResouMap:Object = data[1];
+			ClassUtils.createByJson(oriData as String, this, this, Handler.create(null, Utils3D._parseHierarchyProp, [innerResouMap], false), Handler.create(null, Utils3D._parseHierarchyNode, null, false));
+			event(Event.HIERARCHY_LOADED, [this]);
 		}
 		
-		public function dispose():void {
-			off(Event.ADDED, this, _onAdded);
-			off(Event.REMOVED, this, _onRemoved);
+		public function cloneTo(destObject:*):void {
+			var destSprite3D:Sprite3D = destObject as Sprite3D;
+			
+			destSprite3D.name = name/* + "(clone)"*/;//TODO:克隆后不能播放刚体动画，找不到名字
+			destSprite3D.destroyed = destroyed;
+			destSprite3D.timer = timer;
+			destSprite3D._$P = _$P;
+			
+			destSprite3D.enable = enable;
+			
+			var destLocalMatrix:Matrix4x4 = destSprite3D.transform.localMatrix;
+			transform.localMatrix.cloneTo(destLocalMatrix);
+			destSprite3D.transform.localMatrix = destLocalMatrix;
+			destSprite3D.isStatic = isStatic;
+			
+			var i:int, n:int;
+			for (i = 0, n = _componentsMap.length; i < n; i++)
+				destSprite3D.addComponent(_componentsMap[i]);
+			
+			for (i = 0, n = _childs.length; i < n; i++)
+				destSprite3D.addChild(_childs[i].clone());
+		}
+		
+		public function clone():* {
+			var destSprite3D:Sprite3D = __JS__("new this.constructor()");
+			cloneTo(destSprite3D);
+			return destSprite3D;
+		}
+		
+		/**
+		 * <p>销毁此对象。</p>
+		 * @param	destroyChild 是否同时销毁子节点，若值为true,则销毁子节点，否则不销毁子节点。
+		 */
+		override public function destroy(destroyChild:Boolean = true):void {
+			super.destroy(destroyChild);
 			for (var i:int, n:int = _components.length; i < n; i++)
 				_components[i]._uninitialize();
+			_components = null;
+			_componentsMap = null;
+			transform = null;
 		}
 	
 	}

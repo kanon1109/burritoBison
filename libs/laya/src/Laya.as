@@ -35,12 +35,14 @@ package {
 		/** Render 类的引用。*/
 		public static var render:Render;
 		/** 引擎版本。*/
-		public static var version:String = "1.5.2";
+		public static var version:String = "1.6.1Beta";
 		public static var stageBox:Sprite;
 		/**Market对象 只有加速器模式下才有值*/
 		public static var conchMarket:IMarket = __JS__("window.conch?conchMarket:null");
 		/**PlatformClass类，只有加速器模式下才有值 */
 		public static var PlatformClass:ICPlatformClass = __JS__("window.PlatformClass");
+		/**@private */
+		private static var _isinit:Boolean = false;
 		
 		/**
 		 * 初始化引擎。
@@ -50,6 +52,8 @@ package {
 		 * @return	返回原生canvas，方便控制
 		 */
 		public static function init(width:Number, height:Number, ... plugins):* {
+			if (_isinit) return;
+			_isinit = true;
 			Browser.__init__();
 			Context.__init__();
 			Graphics.__init__();
@@ -66,7 +70,7 @@ package {
 			ResourceManager.__init__();
 			CacheManger.beginCheck();
 			stageBox = stage = new Stage();
-			stage.model&&stage.model.setRootNode();
+			stage.conchModel&&stage.conchModel.setRootNode();
 			var location:* = Browser.window.location;
 			var pathName:String = location.pathname;
 			// 索引为2的字符如果是':'就是windows file协议
