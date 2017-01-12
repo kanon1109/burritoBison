@@ -9,6 +9,7 @@ public class Layer
 {
 	public static var GAME_LAYER:Sprite;
 	public static var GAME_ROLE_LAYER:Sprite;
+	public static var GAME_ENEMY_LAYER:Sprite;
 	
 	public static var GAME_BG_COLOR_LAYER:Sprite;
 	public static var GAME_BG_LAYER:Sprite;
@@ -29,10 +30,12 @@ public class Layer
 		GAME_BG_LAYER = new Sprite();
 		GAME_ROLE_LAYER = new Sprite();
 		GAME_FG_LAYER = new Sprite();
+		GAME_ENEMY_LAYER = new Sprite();
 		
 		GAME_LAYER.addChild(GAME_BG_COLOR_LAYER);
 		GAME_LAYER.addChild(GAME_BG_LAYER);
 		GAME_LAYER.addChild(GAME_ROLE_LAYER);
+		GAME_LAYER.addChild(GAME_ENEMY_LAYER);
 		GAME_LAYER.addChild(GAME_FG_LAYER);
 	}
 }

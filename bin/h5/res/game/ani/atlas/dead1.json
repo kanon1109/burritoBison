@@ -1,0 +1,180 @@
+{
+    "frames": {
+        "dead1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 86,
+                "h": 93,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 86,
+                "h": 93
+            },
+            "sourceSize": {
+                "w": 86,
+                "h": 93
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead2.png": {
+            "frame": {
+                "x": 0,
+                "y": 95,
+                "w": 96,
+                "h": 108,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 96,
+                "h": 108
+            },
+            "sourceSize": {
+                "w": 96,
+                "h": 108
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead3.png": {
+            "frame": {
+                "x": 0,
+                "y": 205,
+                "w": 101,
+                "h": 111,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 101,
+                "h": 111
+            },
+            "sourceSize": {
+                "w": 101,
+                "h": 111
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead4.png": {
+            "frame": {
+                "x": 0,
+                "y": 318,
+                "w": 108,
+                "h": 120,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 108,
+                "h": 120
+            },
+            "sourceSize": {
+                "w": 108,
+                "h": 120
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead5.png": {
+            "frame": {
+                "x": 98,
+                "y": 0,
+                "w": 130,
+                "h": 142,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 130,
+                "h": 142
+            },
+            "sourceSize": {
+                "w": 130,
+                "h": 142
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead6.png": {
+            "frame": {
+                "x": 103,
+                "y": 144,
+                "w": 134,
+                "h": 152,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 134,
+                "h": 152
+            },
+            "sourceSize": {
+                "w": 134,
+                "h": 152
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead7.png": {
+            "frame": {
+                "x": 239,
+                "y": 0,
+                "w": 135,
+                "h": 150,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 135,
+                "h": 150
+            },
+            "sourceSize": {
+                "w": 135,
+                "h": 150
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "dead8.png": {
+            "frame": {
+                "x": 239,
+                "y": 152,
+                "w": 134,
+                "h": 149,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 134,
+                "h": 149
+            },
+            "sourceSize": {
+                "w": 134,
+                "h": 149
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "dead1.png",
+        "prefix": ""
+    }
+}

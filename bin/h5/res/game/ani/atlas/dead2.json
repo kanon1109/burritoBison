@@ -1,0 +1,54 @@
+{
+    "frames": {
+        "1.png": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 93,
+                "h": 23,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 93,
+                "h": 23
+            },
+            "sourceSize": {
+                "w": 93,
+                "h": 23
+            },
+            "rotated": false,
+            "trimed": true
+        },
+        "3.png": {
+            "frame": {
+                "x": 0,
+                "y": 25,
+                "w": 124,
+                "h": 30,
+                "idx": 0
+            },
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 124,
+                "h": 30
+            },
+            "sourceSize": {
+                "w": 124,
+                "h": 30
+            },
+            "rotated": false,
+            "trimed": true
+        }
+    },
+    "meta": {
+        "app": "http:\/\/www.layabox.com",
+        "version": "0.1.0 alpha",
+        "format": "json",
+        "scale": 1,
+        "image": "dead2.png",
+        "prefix": ""
+    }
+}

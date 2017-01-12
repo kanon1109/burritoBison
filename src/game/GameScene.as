@@ -4,6 +4,7 @@ import common.Shake;
 import config.GameConstant;
 import config.MsgConstant;
 import game.obj.Boss;
+import game.obj.Enemy;
 import game.obj.GameBackGround;
 import game.obj.PowerMete;
 import game.obj.Role;
@@ -63,8 +64,8 @@ public class GameScene extends View
 	private var canStart:Boolean;
 	//boss
 	private var boss:Boss;
-	//敌人的计时器
-	private var enemyTimer:Timer;
+	//敌人数组
+	private var enemyArr:Array;
 	public function GameScene() 
 	{
 		super();
@@ -128,10 +129,7 @@ public class GameScene extends View
 		
 		Laya.timer.loop(500, this, function() {
 			if (this.role && this.role.isStart)
-			{
-				trace("create enemy");
 				this.createEnemy();
-			}
 		}, null, false);
 		
 	}
@@ -149,6 +147,7 @@ public class GameScene extends View
 		this.groundArr = [];
 		this.cloud1Arr = [];
 		this.cloud2Arr = [];
+		this.enemyArr = [];
 		this.bg1PosY = -GameConstant.BG1_HEIGHT / 2 + 5;
 		this.bg2PosY = 15;
 		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT + 20;
@@ -306,10 +305,16 @@ public class GameScene extends View
 	 */
 	private function createEnemy():void
 	{
-		var num:int = Random.randint(1, 4);
+		var num:int = Random.randint(1, 6);
 		for (var i:int = 0; i < num; i++) 
 		{
-			
+			var enemy:Enemy = new Enemy();
+			enemy.x = 1000 + Random.randnum(-100, 100);
+			enemy.y = this.groundArr[0].y;
+			enemy.vx = this.role.vx + Random.randnum(-25, 25);
+			enemy.create(1);
+			this.enemyArr.push(enemy);
+			Layer.GAME_ENEMY_LAYER.addChild(enemy);
 		}
 	}
 	
@@ -415,6 +420,37 @@ public class GameScene extends View
 	}
 	
 	/**
+	 * 更新单个一层地图位置
+	 * @param	arr		地图数组
+	 * @param	vx		横向速度
+	 * @param	vy		纵向速度
+	 */
+	private function updateEnemy():void
+	{
+		for (var i:int = 0; i < enemyArr.length; ++i) 
+		{
+			var e:Enemy = enemyArr[i];
+			e.vx = 20 - this.role.vx;
+			if (this.role.isOnTop) 
+				e.vy = -this.role.vy;
+			e.update();
+			if (e.y < this.groundPosY)
+			{
+				e.y = this.groundPosY;
+				e.vy = 0;
+			}
+			if (e.y > this.groundPosY + this.bgMoveRangY)
+				e.y = this.groundPosY + this.bgMoveRangY;
+			if (e.x < -100 || e.x > 1500)
+			{
+				enemyArr.slice(i, 1);
+				e.removeSelf();
+			}
+		}
+		trace("length = ", enemyArr.length);
+	}
+	
+	/**
 	 * 游戏主循环
 	 */
 	private function gameLoop():void 
@@ -424,6 +460,8 @@ public class GameScene extends View
 		this.updateAllBg();
 		//角色循环
 		this.updateRole();
+		//敌人循环
+		this.updateEnemy();
 		//震动
 		Shake.update();
 	}
