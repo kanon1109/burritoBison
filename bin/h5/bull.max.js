@@ -405,7 +405,6 @@ var Laya=window.Laya=(function(window,document){
 		Shake.update=function(){
 			if (common.Shake.target){
 				common.Shake.delay--;
-				console.log(common.Shake.delay)
 				if (common.Shake.delay > 0){
 					common.Shake.target.y+=common.Shake.shakeDelta *Random.randint(-1,1);
 				}
@@ -17399,6 +17398,7 @@ var Laya=window.Laya=(function(window,document){
 		function GameObject(){
 			this._vx=0;
 			this._vy=0;
+			this._speedVx=0;
 			GameObject.__super.call(this);
 		}
 
@@ -17424,6 +17424,13 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__getset(0,__proto,'vy',function(){return this._vy;},function(value){
 			this._vy=value;
+		});
+
+		/**
+		*横向速度
+		*/
+		__getset(0,__proto,'speedVx',function(){return this._speedVx;},function(value){
+			this._speedVx=value;
 		});
 
 		return GameObject;
@@ -29702,6 +29709,7 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1PosY=NaN;
 			this.bg2PosY=NaN;
 			this.groundPosY=NaN;
+			this.rolePosY=NaN;
 			this.cloud1PosY=NaN;
 			this.cloud2PosY=NaN;
 			this.startStageImg=null;
@@ -29762,7 +29770,7 @@ var Laya=window.Laya=(function(window,document){
 			NotificationCenter.getInstance().addObserver("roleFailRunComplete",this.roleFailRunCompleteHandler,this);
 			this.on("mousedown",this,this.mouseDownHander);
 			Laya.timer.loop(500,this,function(){
-				if (this.role && this.role.isStart)
+				if (this.role && !this.role.isFail)
 					this.createEnemy();
 			},null,false);
 		}
@@ -29783,6 +29791,7 @@ var Laya=window.Laya=(function(window,document){
 			this.bg1PosY=-636 / 2+5;
 			this.bg2PosY=15;
 			this.groundPosY=Laya.stage.height-153+20;
+			this.rolePosY=this.groundPosY+20;
 			this.cloud1PosY=this.bg1PosY-887-300;
 			this.cloud2PosY=this.cloud1PosY+430;
 			this.bgMoveRangY=-180-this.cloud1PosY;
@@ -29849,7 +29858,6 @@ var Laya=window.Laya=(function(window,document){
 			var bg;
 			for (var i=0;i < count;i++){
 				bg=new GameBackGround();
-				console.log(GameConstant.GAME_BG_PATH+name);
 				bg.loadImage(GameConstant.GAME_BG_PATH+name,0,0,width,height);
 				bg.x=width *i;
 				bg.y=posY;
@@ -29907,7 +29915,7 @@ var Laya=window.Laya=(function(window,document){
 				this.role.y=this.displayHeight / 2+50;
 				this.role.vx=0;
 				this.role.vy=0;
-				this.role.groundY=this.groundPosY+20;
+				this.role.groundY=this.rolePosY;
 				Layer.GAME_ROLE_LAYER.addChild(this.role);
 			}
 		}
@@ -29916,12 +29924,15 @@ var Laya=window.Laya=(function(window,document){
 		*创建敌人
 		*/
 		__proto.createEnemy=function(){
-			var num=Random.randint(1,6);
+			var count=parseInt((this.role.vx / 2).toString());
+			var num=Random.randint(count-10,count);
+			var startX=1136+50;
+			var offsetY=Random.randnum(15,35);
 			for (var i=0;i < num;i++){
 				var enemy=new Enemy();
-				enemy.x=1000+Random.randnum(-100,100);
-				enemy.y=this.groundArr[0].y;
-				enemy.vx=this.role.vx+Random.randnum(-25,25);
+				enemy.x=Random.randrange(startX,startX+500,5);
+				enemy.y=this.groundArr[0].y+offsetY+Random.randnum(0,3);
+				enemy.speedVx=Random.randnum(8,15);
 				enemy.create(1);
 				this.enemyArr.push(enemy);
 				Layer.GAME_ENEMY_LAYER.addChild(enemy);
@@ -30015,22 +30026,24 @@ var Laya=window.Laya=(function(window,document){
 		__proto.updateEnemy=function(){
 			for (var i=0;i < this.enemyArr.length;++i){
 				var e=this.enemyArr[i];
-				e.vx=20-this.role.vx;
-				if (this.role.isOnTop)
-					e.vy=-this.role.vy;
+				e.on("click",this,function(){
+					e.dead();
+				})
+				e.vx=e.speedVx-this.role.vx;
+				if (this.role.isFail)e.vx=20;
+				if (this.role.isOnTop)e.vy=-this.role.vy;
 				e.update();
-				if (e.y < this.groundPosY){
-					e.y=this.groundPosY;
+				if (e.y < this.rolePosY){
+					e.y=this.rolePosY;
 					e.vy=0;
 				}
-				if (e.y > this.groundPosY+this.bgMoveRangY)
-					e.y=this.groundPosY+this.bgMoveRangY;
-				if (e.x <-100 || e.x > 1500){
-					this.enemyArr.slice(i,1);
+				if (e.y > this.rolePosY+this.bgMoveRangY)
+					e.y=this.rolePosY+this.bgMoveRangY;
+				if (e.x <-200 || e.x > 1500){
+					this.enemyArr.splice(i,1);
 					e.removeSelf();
 				}
 			}
-			console.log("length = ",this.enemyArr.length);
 		}
 
 		/**

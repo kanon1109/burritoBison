@@ -10,6 +10,7 @@ public class GameObject extends Sprite
 	//速度
 	private var _vx:Number = 0;
 	private var _vy:Number = 0;
+	private var _speedVx:Number = 0;
 	public function GameObject() 
 	{
 		
@@ -40,6 +41,15 @@ public class GameObject extends Sprite
 	public function set vy(value:Number):void 
 	{
 		_vy = value;
+	}
+	
+	/**
+	 * 横向速度
+	 */
+	public function get speedVx():Number {return _speedVx;}
+	public function set speedVx(value:Number):void 
+	{
+		_speedVx = value;
 	}
 }
 }

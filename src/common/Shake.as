@@ -32,7 +32,6 @@ public class Shake
 		if (Shake.target)
 		{
 			Shake.delay--;
-			trace(Shake.delay)
 			if (Shake.delay > 0)
 			{
 				Shake.target.y += Shake.shakeDelta * Random.randint(-1, 1);
