@@ -1,8 +1,8 @@
 package game.obj 
 {
-	import config.GameConstant;
-	import laya.display.Animation;
-	import laya.utils.Handler;
+import config.GameConstant;
+import laya.display.Animation;
+import laya.utils.Handler;
 /**
  * ...敌人
  * @author Kanon
@@ -12,6 +12,7 @@ public class Enemy extends GameObject
 	private var run:Animation;
 	private var deadEffect1:Animation;
 	private var deadEffect2:Animation;
+	private var isDead:Boolean;
 	public function Enemy() 
 	{
 		super();
@@ -31,11 +32,14 @@ public class Enemy extends GameObject
 		this.addChild(this.run);
 		
 		this.deadEffect2 = this.createAni("dead2.json");
-		this.deadEffect2.y = 60;
+		this.deadEffect2.x = -100;
+		this.deadEffect2.y = 18;
 		this.deadEffect2.visible = false;
 		this.addChild(this.deadEffect2);
 		
 		this.deadEffect1 = this.createAni("dead1.json");
+		this.deadEffect1.x = -102;
+		this.deadEffect1.y = -85;
 		this.deadEffect1.visible = false;
 		this.addChild(this.deadEffect1);
 	}
@@ -60,6 +64,7 @@ public class Enemy extends GameObject
 	public function dead():void
 	{
 		//TODO发送事件
+		if (this.isDead) return;
 		this.stopRun();
 		if (this.deadEffect1)
 		{
@@ -71,6 +76,7 @@ public class Enemy extends GameObject
 			this.deadEffect2.visible = true;
 			this.deadEffect2.play();
 		}
+		this.isDead = true;
 	}
 	
 	/**

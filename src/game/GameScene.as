@@ -10,6 +10,7 @@ import game.obj.PowerMete;
 import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
+import laya.maths.Point;
 import laya.ui.Image;
 import laya.ui.View;
 import laya.utils.Ease;
@@ -90,6 +91,7 @@ public class GameScene extends View
 		this.initPowerMete();
 		this.initBoss();
 		this.initRole();
+		//this.createEnemy();
 	}
 	
 	/**
@@ -309,16 +311,30 @@ public class GameScene extends View
 		var count:int = parseInt((this.role.vx / 2).toString());
 		var num:int = Random.randint(count - 10, count);
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
-		var offsetY:Number = Random.randnum(15, 35);
+		var offsetY:Number = Random.randnum(0, 5);
+		//num = 1;
 		for (var i:int = 0; i < num; i++) 
 		{
 			var enemy:Enemy = new Enemy();
-			enemy.x = Random.randrange(startX, startX + 500, 5);
-			enemy.y = this.groundArr[0].y + offsetY + Random.randnum(0, 3);
+			enemy.x = Random.randrange(startX, startX + 500, 10);
+			enemy.y = this.groundArr[0].y + offsetY;
 			enemy.speedVx = Random.randnum(8, 15);
 			enemy.create(1);
+			//enemy.mouseEnabled = true;
+			//enemy.x = 400;
+			//enemy.y = 200;
+/*			enemy.hitArea = 200;
+			enemy.width = 200;
+			enemy.height = 200;
+			enemy.on(Event.MOUSE_DOWN, this, function(){
+				trace("hit");
+			});*/
 			this.enemyArr.push(enemy);
 			Layer.GAME_ENEMY_LAYER.addChild(enemy);
+			
+/*			Laya.timer.loop(1500, this, function(enemy:Enemy) {
+				enemy.dead();
+			}, [enemy], false);*/
 		}
 	}
 	
@@ -450,12 +466,12 @@ public class GameScene extends View
 				enemyArr.splice(i, 1);
 				e.removeSelf();
 			}
-			/*if (new Point(e.x, e.y).distance(this.role.x, 
-										 this.role.y) <= 20)
+			if (new Point(e.x, e.y).distance(this.role.x, 
+											 this.role.y) <= 100)
 			{
 				trace("hit");
 				e.dead();
-			}*/
+			}
 		}
 	}
 	

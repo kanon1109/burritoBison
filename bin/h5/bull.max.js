@@ -1,7 +1,7 @@
 var window = window || global;
 var document = document || (window.document = {});
 /***********************************/
-/*http://www.layabox.com 2016/11/25*/
+/*http://www.layabox.com 2016/11/11*/
 /***********************************/
 var Laya=window.Laya=(function(window,document){
 	var Laya={
@@ -23,15 +23,10 @@ var Laya=window.Laya=(function(window,document){
 		__extend:function(d,b){
 			for (var p in b){
 				if (!b.hasOwnProperty(p)) continue;
-				var gs=Object.getOwnPropertyDescriptor(b, p);
-				var g = gs.get, s = gs.set; 
+				var g = Object.getOwnPropertyDescriptor(b, p).get, s = Object.getOwnPropertyDescriptor(b, p).set; 
 				if ( g || s ) {
-					if ( g && s)
-						Object.defineProperty(d,p,gs);
-					else{
-						g && Object.defineProperty(d, p, g);
-						s && Object.defineProperty(d, p, s);
-					}
+					g && Object.defineProperty(d, p, g);
+					s && Object.defineProperty(d, p, s);
 				}
 				else d[p] = b[p];
 			}
@@ -20992,6 +20987,7 @@ var Laya=window.Laya=(function(window,document){
 			this.run=null;
 			this.deadEffect1=null;
 			this.deadEffect2=null;
+			this.isDead=false;
 			Enemy.__super.call(this);
 		}
 
@@ -21009,10 +21005,13 @@ var Laya=window.Laya=(function(window,document){
 			this.run.scaleX=-1;
 			this.addChild(this.run);
 			this.deadEffect2=this.createAni("dead2.json");
-			this.deadEffect2.y=60;
+			this.deadEffect2.x=-100;
+			this.deadEffect2.y=18;
 			this.deadEffect2.visible=false;
 			this.addChild(this.deadEffect2);
 			this.deadEffect1=this.createAni("dead1.json");
+			this.deadEffect1.x=-102;
+			this.deadEffect1.y=-85;
 			this.deadEffect1.visible=false;
 			this.addChild(this.deadEffect1);
 		}
@@ -21034,6 +21033,7 @@ var Laya=window.Laya=(function(window,document){
 		*死亡
 		*/
 		__proto.dead=function(){
+			if (this.isDead)return;
 			this.stopRun();
 			if (this.deadEffect1){
 				this.deadEffect1.visible=true;
@@ -21043,6 +21043,7 @@ var Laya=window.Laya=(function(window,document){
 				this.deadEffect2.visible=true;
 				this.deadEffect2.play();
 			}
+			this.isDead=true;
 		}
 
 		/**
@@ -29927,11 +29928,11 @@ var Laya=window.Laya=(function(window,document){
 			var count=parseInt((this.role.vx / 2).toString());
 			var num=Random.randint(count-10,count);
 			var startX=1136+50;
-			var offsetY=Random.randnum(15,35);
+			var offsetY=Random.randnum(0,5);
 			for (var i=0;i < num;i++){
 				var enemy=new Enemy();
-				enemy.x=Random.randrange(startX,startX+500,5);
-				enemy.y=this.groundArr[0].y+offsetY+Random.randnum(0,3);
+				enemy.x=Random.randrange(startX,startX+500,10);
+				enemy.y=this.groundArr[0].y+offsetY;
 				enemy.speedVx=Random.randnum(8,15);
 				enemy.create(1);
 				this.enemyArr.push(enemy);
@@ -30026,9 +30027,6 @@ var Laya=window.Laya=(function(window,document){
 		__proto.updateEnemy=function(){
 			for (var i=0;i < this.enemyArr.length;++i){
 				var e=this.enemyArr[i];
-				e.on("click",this,function(){
-					e.dead();
-				})
 				e.vx=e.speedVx-this.role.vx;
 				if (this.role.isFail)e.vx=20;
 				if (this.role.isOnTop)e.vy=-this.role.vy;
@@ -30042,6 +30040,11 @@ var Laya=window.Laya=(function(window,document){
 				if (e.x <-200 || e.x > 1500){
 					this.enemyArr.splice(i,1);
 					e.removeSelf();
+				}
+				if (new Point(e.x,e.y).distance(this.role.x,
+					this.role.y)<=100){
+					console.log("hit");
+					e.dead();
 				}
 			}
 		}
