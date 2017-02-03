@@ -123,7 +123,7 @@ public class Role extends GameObject
 		this.width = config.GameConstant.ROLE_WIDTH;
 		this.width = config.GameConstant.ROLE_HEIGHT;
 		
-		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+/*		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
 		this.addChild(testImg);
 		testImg.x = 0;
 		testImg.y = 0;
@@ -132,7 +132,7 @@ public class Role extends GameObject
 		this.addChild(testImg);
 		testImg.rotation = 90;
 		testImg.x = 0;
-		testImg.y = 0;
+		testImg.y = 0;*/
 	}
 	
 	/**

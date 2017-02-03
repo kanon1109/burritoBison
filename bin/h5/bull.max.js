@@ -30059,7 +30059,7 @@ var Laya=window.Laya=(function(window,document){
 					e.removeSelf();
 				}
 				if (!this.role.isFail &&
-					this.role.vy > 20 &&
+					this.role.vy > 15 &&
 				Math.abs(e.y-this.role.y)< 90 &&
 				Math.abs(e.x-this.role.x)< 120){
 					console.log("hit");

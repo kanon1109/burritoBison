@@ -17,8 +17,8 @@ public class Enemy extends GameObject
 	public function Enemy() 
 	{
 		super();
-		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
-		this.addChild(testImg);
+/*		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);*/
 	}
 	
 	/**

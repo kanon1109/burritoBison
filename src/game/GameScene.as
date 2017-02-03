@@ -466,7 +466,7 @@ public class GameScene extends View
 				e.removeSelf();
 			}
 			if (!this.role.isFail && 
-				this.role.vy > 20 && 
+				this.role.vy > 15 && 
 				Math.abs(e.y - this.role.y) < 90 && 
 				Math.abs(e.x - this.role.x) < 120)
 			{
