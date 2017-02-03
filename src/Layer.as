@@ -34,8 +34,8 @@ public class Layer
 		
 		GAME_LAYER.addChild(GAME_BG_COLOR_LAYER);
 		GAME_LAYER.addChild(GAME_BG_LAYER);
-		GAME_LAYER.addChild(GAME_ROLE_LAYER);
 		GAME_LAYER.addChild(GAME_ENEMY_LAYER);
+		GAME_LAYER.addChild(GAME_ROLE_LAYER);
 		GAME_LAYER.addChild(GAME_FG_LAYER);
 	}
 }

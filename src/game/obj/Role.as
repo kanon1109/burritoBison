@@ -122,6 +122,17 @@ public class Role extends GameObject
 		this.pivotY = config.GameConstant.ROLE_HEIGHT / 2;
 		this.width = config.GameConstant.ROLE_WIDTH;
 		this.width = config.GameConstant.ROLE_HEIGHT;
+		
+		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
+		testImg.x = 0;
+		testImg.y = 0;
+		
+		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
+		testImg.rotation = 90;
+		testImg.x = 0;
+		testImg.y = 0;
 	}
 	
 	/**
@@ -245,13 +256,11 @@ public class Role extends GameObject
 		if (this.y > this._groundY && !this._isFail)
 		{
 			//弹起
-			this.isBounce = true;
+			this.bounce();
 			this.y = this._groundY;
-			this.vy = -this.vy * this.frictionY;
 			if (!this.swoopOnce)
 			{
 				//如果不处于一次强制冲刺时播放受伤动画。
-				//this.isHurt = Boolean(Random.randint(0, 1));
 				this.isHurt = true;
 				if (this.isHurt)
 				{
@@ -281,7 +290,6 @@ public class Role extends GameObject
 			}
 			this.swoopOnce = false;
 		}
-		
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
@@ -299,6 +307,15 @@ public class Role extends GameObject
 		this.isFall = this.vy > 0;
 		if (this.isFail) this.isStartRush = false;
 		this.updateAniState();
+	}
+		
+	/**
+	 * 弹起
+	 */
+	public function bounce():void 
+	{
+		this.isBounce = true;
+		this.vy = -this.vy * this.frictionY;
 	}
 	
 	/**

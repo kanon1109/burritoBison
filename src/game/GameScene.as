@@ -10,7 +10,6 @@ import game.obj.PowerMete;
 import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
-import laya.maths.Point;
 import laya.ui.Image;
 import laya.ui.View;
 import laya.utils.Ease;
@@ -466,11 +465,14 @@ public class GameScene extends View
 				enemyArr.splice(i, 1);
 				e.removeSelf();
 			}
-			if (new Point(e.x, e.y).distance(this.role.x, 
-											 this.role.y) <= 100)
+			if (!this.role.isFail && 
+				this.role.vy > 20 && 
+				Math.abs(e.y - this.role.y) < 90 && 
+				Math.abs(e.x - this.role.x) < 120)
 			{
 				trace("hit");
 				e.dead();
+				this.role.bounce();
 			}
 		}
 	}

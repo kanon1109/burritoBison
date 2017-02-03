@@ -2,6 +2,7 @@ package game.obj
 {
 import config.GameConstant;
 import laya.display.Animation;
+import laya.ui.Image;
 import laya.utils.Handler;
 /**
  * ...敌人
@@ -16,6 +17,8 @@ public class Enemy extends GameObject
 	public function Enemy() 
 	{
 		super();
+		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
 	}
 	
 	/**
@@ -24,8 +27,7 @@ public class Enemy extends GameObject
 	 */
 	public function create(type:int):void
 	{
-		this.run = this.createAni("enemy" + type + ".json", Handler.create(this, function(){
-		}));
+		this.run = this.createAni("enemy" + type + ".json");
 		this.run.y = -60;
 		this.run.play();
 		this.run.scaleX = -1;

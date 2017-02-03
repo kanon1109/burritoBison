@@ -781,8 +781,8 @@ var Laya=window.Laya=(function(window,document){
 			Layer.GAME_ENEMY_LAYER=new Sprite();
 			Layer.GAME_LAYER.addChild(Layer.GAME_BG_COLOR_LAYER);
 			Layer.GAME_LAYER.addChild(Layer.GAME_BG_LAYER);
-			Layer.GAME_LAYER.addChild(Layer.GAME_ROLE_LAYER);
 			Layer.GAME_LAYER.addChild(Layer.GAME_ENEMY_LAYER);
+			Layer.GAME_LAYER.addChild(Layer.GAME_ROLE_LAYER);
 			Layer.GAME_LAYER.addChild(Layer.GAME_FG_LAYER);
 		}
 
@@ -20989,6 +20989,8 @@ var Laya=window.Laya=(function(window,document){
 			this.deadEffect2=null;
 			this.isDead=false;
 			Enemy.__super.call(this);
+			var testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
 		}
 
 		__class(Enemy,'game.obj.Enemy',_super);
@@ -20998,8 +21000,7 @@ var Laya=window.Laya=(function(window,document){
 		*@param type 敌人类型
 		*/
 		__proto.create=function(type){
-			this.run=this.createAni("enemy"+type+".json",Handler.create(this,function(){
-			}));
+			this.run=this.createAni("enemy"+type+".json");
 			this.run.y=-60;
 			this.run.play();
 			this.run.scaleX=-1;
@@ -21172,6 +21173,15 @@ var Laya=window.Laya=(function(window,document){
 			this.pivotY=98 / 2;
 			this.width=133;
 			this.width=98;
+			var testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
+			testImg.x=0;
+			testImg.y=0;
+			var testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
+			testImg.rotation=90;
+			testImg.x=0;
+			testImg.y=0;
 		}
 
 		/**
@@ -21272,9 +21282,8 @@ var Laya=window.Laya=(function(window,document){
 			if (!this._isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
 			if (this.y > this._groundY && !this._isFail){
-				this.isBounce=true;
+				this.bounce();
 				this.y=this._groundY;
-				this.vy=-this.vy *this.frictionY;
 				if (!this.swoopOnce){
 					this.isHurt=true;
 					if (this.isHurt){
@@ -21312,6 +21321,14 @@ var Laya=window.Laya=(function(window,document){
 			this.isFall=this.vy > 0;
 			if (this.isFail)this.isStartRush=false;
 			this.updateAniState();
+		}
+
+		/**
+		*弹起
+		*/
+		__proto.bounce=function(){
+			this.isBounce=true;
+			this.vy=-this.vy *this.frictionY;
 		}
 
 		/**
@@ -30041,10 +30058,13 @@ var Laya=window.Laya=(function(window,document){
 					this.enemyArr.splice(i,1);
 					e.removeSelf();
 				}
-				if (new Point(e.x,e.y).distance(this.role.x,
-					this.role.y)<=100){
+				if (!this.role.isFail &&
+					this.role.vy > 20 &&
+				Math.abs(e.y-this.role.y)< 90 &&
+				Math.abs(e.x-this.role.x)< 120){
 					console.log("hit");
 					e.dead();
+					this.role.bounce();
 				}
 			}
 		}
