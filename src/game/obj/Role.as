@@ -20,8 +20,6 @@ public class Role extends GameObject
 {
 	//重力
 	private var gravity:Number;
-	//移动速度
-	private var _speed:Number;
 	//横向摩擦力
 	private var frictionX:Number;
 	//纵向摩擦力
@@ -32,9 +30,6 @@ public class Role extends GameObject
 	private var minVx:Number;
 	//角色最小下落速度（小于这个速度不再弹起）
 	private var minVy:Number;
-
-	//地板坐标
-	private var _groundY:int;
 	//动作动画
 	private var flyAni:Animation;
 	private var bounceAni:Animation;
@@ -75,17 +70,27 @@ public class Role extends GameObject
 	private var isBounceComplete:Boolean;
 	//是否在飞行
 	private var isFlying:Boolean;
-	//是否飞入顶部区域
-	private var _isOutTop:Boolean;
-	//是否到滚屏位置
-	private var _isOnTop:Boolean;
 	//是否受伤
 	private var isHurt:Boolean;
 	//一次冲刺
 	private var swoopOnce:Boolean;
-	
-	private var _isStart:Boolean;
+	//是否开始冲撞boss
 	private var isStartRush:Boolean;
+
+	
+	//----------public-----------
+	//地板坐标
+	public var groundY:int;
+	//是否飞入顶部区域
+	public var isOutTop:Boolean;
+	//是否到滚屏位置
+	public var isOnTop:Boolean;
+	//是否开始
+	public var isStart:Boolean;
+	//俯冲速度
+	public var swoopSpeed:Number;
+	//超级俯冲
+	public var superSwoopSpeed:Number;
 	public function Role() 
 	{
 		super();
@@ -98,8 +103,10 @@ public class Role extends GameObject
 	 */
 	private function initData():void
 	{
-		this._isOutTop = false;
+		this.isOutTop = false;
 		this.gravity = .98;
+		this.swoopSpeed = 40;
+		this.superSwoopSpeed = 50;
 		this.topY = 200;
 		this.minVx = 20;
 		this.minVy = 20;
@@ -115,7 +122,7 @@ public class Role extends GameObject
 		this.hurtIndex = 1;
 		this.hurtCount = 3;
 		this.isBounceComplete = true;
-		this._isStart = false;
+		this.isStart = false;
 		this.isStartRush = false;
 		
 		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
@@ -251,13 +258,13 @@ public class Role extends GameObject
 	override public function update():void 
 	{
 		if (!this.isStart) return;
-		if (!this._isOnTop) this.y += this.vy;
+		if (!this.isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
-		if (this.y > this._groundY && !this._isFail)
+		if (this.y > this.groundY && !this._isFail)
 		{
 			//弹起
 			this.bounce();
-			this.y = this._groundY;
+			this.y = this.groundY;
 			if (!this.swoopOnce)
 			{
 				//如果不处于一次强制冲刺时播放受伤动画。
@@ -293,12 +300,12 @@ public class Role extends GameObject
 		//超过顶部范围
 		if (this.y < this.topY)
 		{
-			if (!this._isOutTop) this.y = this.topY;
-			this._isOnTop = true;
+			if (!this.isOutTop) this.y = this.topY;
+			this.isOnTop = true;
 		}
 		else if (this.y > this.topY)
 		{
-			this._isOutTop = false;
+			this.isOutTop = false;
 		}
 		
 		if (this.isHurt && this.hurt)
@@ -307,6 +314,25 @@ public class Role extends GameObject
 		this.isFall = this.vy > 0;
 		if (this.isFail) this.isStartRush = false;
 		this.updateAniState();
+	}
+	
+	/**
+	 * 起始冲刺
+	 * @param	isMaxPower	是否最大力冲刺
+	 */
+	public function startRush(isMaxPower:Boolean):void
+	{
+		if (!isMaxPower)
+		{
+			this.vx = 25;
+			this.vy = -30;
+		}
+		else
+		{
+			this.vx = 50;
+			this.vy = -35;
+		}
+		this.isStart = true;
 	}
 		
 	/**
@@ -511,50 +537,13 @@ public class Role extends GameObject
 	{
 		this.isHurt = false;
 		this.swoopOnce = true;
-		//TODO 播放冲刺动画
 		this.vy = speed;
-	}
-
-	/**
-	 * 是否飞入顶部区域
-	 */
-	public function get isOutTop():Boolean { return _isOutTop; }
-	public function set isOutTop(value:Boolean):void 
-	{
-		_isOutTop = value;
-	}
-	
-	/**
-	 * 地板坐标
-	 */
-	public function get groundY():int { return _groundY; }
-	public function set groundY(value:int):void 
-	{
-		_groundY = value;
-	}
-
-	/**
-	 * 是否到滚屏位置
-	 */
-	public function get isOnTop():Boolean { return _isOnTop; }
-	public function set isOnTop(value:Boolean):void 
-	{
-		_isOnTop = value;
 	}
 	
 	/**
 	 * 是否失败了
 	 */
 	public function get isFail():Boolean { return _isFail; }
-	
-	/**
-	 * 是否开始
-	 */
-	public function get isStart():Boolean {return _isStart;}
-	public function set isStart(value:Boolean):void 
-	{
-		_isStart = value;
-	}
 
 	/**
 	 * 是否允许加速俯冲
@@ -562,7 +551,7 @@ public class Role extends GameObject
 	 */
 	public function canSwoop():Boolean
 	{
-		return !this._isOutTop && !this._isFail;
+		return !this.isOutTop && !this._isFail;
 	}
 }
 }

@@ -31,6 +31,8 @@ import utils.Random;
  * 敌人出现移动删除
  * 人物动作变化
  * 地图高宽需要配置
+ * bug
+ * 敌人初始位置在角色顶部的时候发生错误
  * @author Kanon
  */
 public class GameScene extends View 
@@ -44,12 +46,11 @@ public class GameScene extends View
 	//云数组
 	private var cloud1Arr:Array;
 	private var cloud2Arr:Array;
-	
 	//背景初始y坐标位置
 	private var bg1PosY:Number;
 	private var bg2PosY:Number;
 	private var groundPosY:Number;
-	private var rolePosY:Number;
+	private var roleGroundY:Number;
 	//初始化云的位置
 	private var cloud1PosY:Number;
 	private var cloud2PosY:Number;
@@ -90,6 +91,7 @@ public class GameScene extends View
 		this.initPowerMete();
 		this.initBoss();
 		this.initRole();
+		trace("init");
 		//this.createEnemy();
 	}
 	
@@ -127,9 +129,10 @@ public class GameScene extends View
 	{
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_BOUNCE, roleBounceHandler, this);
 		NotificationCenter.getInstance().addObserver(MsgConstant.ROLE_FAIL_RUN_COMPLETE, roleFailRunCompleteHandler, this);
+		NotificationCenter.getInstance().addObserver(MsgConstant.ENEMY_DEAD_EFFECT_COMPLETE, enemyDeadEffectCompleteHandler, this);
 		this.on(Event.MOUSE_DOWN, this, mouseDownHander);
-		
-		Laya.timer.loop(500, this, function() {
+		Laya.timer.loop(GameConstant.CREATE_ENEMY_DELAY, this, 
+		function() {
 			if (this.role && !this.role.isFail)
 				this.createEnemy();
 		}, null, false);
@@ -153,10 +156,12 @@ public class GameScene extends View
 		this.bg1PosY = -GameConstant.BG1_HEIGHT / 2 + 5;
 		this.bg2PosY = 15;
 		this.groundPosY = Laya.stage.height - GameConstant.GROUND_HEIGHT + 20;
-		this.rolePosY = this.groundPosY + 20;
+		this.roleGroundY = this.groundPosY + 20;
 		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
 		this.cloud2PosY = this.cloud1PosY + 430;
 		this.bgMoveRangY =  -180 - this.cloud1PosY;
+		bgMoveRangY = 300;
+		trace("bgMoveRangY", this.bgMoveRangY);
 		this.canStart = false;
 	}
 	
@@ -254,7 +259,7 @@ public class GameScene extends View
 		{
 			if (this.role.isStart)
 			{
-				this.role.swoop(40);
+				this.role.swoop(this.role.swoopSpeed);
 			}
 			else
 			{
@@ -268,18 +273,15 @@ public class GameScene extends View
 					Tween.to(this.role, {x: 620}, 600, Ease.linearNone, null);
 					Tween.to(this.role, {y: this.role.y - 250}, 300, Ease.circOut, null);
 					Tween.to(this.role, {y: this.role.y - 130}, 300, Ease.circIn, Handler.create(this, function(){
-							this.role.vx = 80;
-							this.role.vy = -45;
-							this.role.isStart = true;
-							Tween.to(this.role, {x: startPosX}, 200, Ease.linearNone, null);
+							this.role.startRush(true);
 							this.boss.hurt();
+							//返回原始位置
+							Tween.to(this.role, {x: startPosX}, 200, Ease.linearNone, null);
 					}), 300);
 				}
 				else
 				{
-					this.role.vx = 40;
-					this.role.vy = -40;
-					this.role.isStart = true;
+					this.role.startRush(false);
 				}
 			}
 		}
@@ -297,7 +299,7 @@ public class GameScene extends View
 			this.role.y = this.displayHeight / 2 + 50;
 			this.role.vx = 0;
 			this.role.vy = 0;
-			this.role.groundY = this.rolePosY;
+			this.role.groundY = this.roleGroundY;
 			Layer.GAME_ROLE_LAYER.addChild(this.role);
 		}
 	}
@@ -311,29 +313,24 @@ public class GameScene extends View
 		var num:int = Random.randint(count - 10, count);
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
 		var offsetY:Number = Random.randnum(0, 5);
-		//num = 1;
 		for (var i:int = 0; i < num; i++) 
 		{
 			var enemy:Enemy = new Enemy();
 			enemy.x = Random.randrange(startX, startX + 500, 10);
-			enemy.y = this.groundArr[0].y + offsetY;
+			if (!this.role.isOutTop)
+			{
+				enemy.y = this.groundArr[0].y - offsetY;
+				trace(" this.groundArr[0].y",  this.groundArr[0].y);
+			}
+			else
+			{
+				enemy.y = this.groundPosY + this.bgMoveRangY - offsetY;
+				trace("this.groundPosY + this.bgMoveRangY",  this.groundPosY + this.bgMoveRangY);
+			}
 			enemy.speedVx = Random.randnum(8, 15);
 			enemy.create(1);
-			//enemy.mouseEnabled = true;
-			//enemy.x = 400;
-			//enemy.y = 200;
-/*			enemy.hitArea = 200;
-			enemy.width = 200;
-			enemy.height = 200;
-			enemy.on(Event.MOUSE_DOWN, this, function(){
-				trace("hit");
-			});*/
 			this.enemyArr.push(enemy);
 			Layer.GAME_ENEMY_LAYER.addChild(enemy);
-			
-/*			Laya.timer.loop(1500, this, function(enemy:Enemy) {
-				enemy.dead();
-			}, [enemy], false);*/
 		}
 	}
 	
@@ -374,6 +371,7 @@ public class GameScene extends View
 			if (go.y > posY + this.bgMoveRangY)
 			{
 				go.y = posY + this.bgMoveRangY;
+				//吸入云层
 				if (!this.role.isOutTop)
 				{
 					this.role.isOutTop = true;
@@ -385,7 +383,7 @@ public class GameScene extends View
 	
 	private function roleMoveTopComplete():void
 	{
-		this.role.swoop(50);
+		this.role.swoop(this.role.superSwoopSpeed);
 	}
 	
 	/**
@@ -398,7 +396,6 @@ public class GameScene extends View
 		this.updateBg(this.groundArr, -this.role.vx, -this.role.vy);
 		this.updateBg(this.cloud1Arr, -this.role.vx * 1.5, -this.role.vy);
 		this.updateBg(this.cloud2Arr, -this.role.vx * .1, -this.role.vy);
-		
 		//滚屏
 		this.scrollBg(this.bg1Arr, this.bg1PosY);
 		this.scrollBg(this.bg2Arr, this.bg2PosY);
@@ -452,14 +449,19 @@ public class GameScene extends View
 			e.vx = e.speedVx - this.role.vx;
 			if (this.role.isFail) e.vx = 20;
 			if (this.role.isOnTop) e.vy = -this.role.vy;
+			//死亡效果时去除往前的速度
+			if (e.isDead) e.vx = - this.role.vx;
 			e.update();
-			if (e.y < this.rolePosY)
+			//role下落后 防止敌人向上越界
+			if (e.y < this.roleGroundY)
 			{
-				e.y = this.rolePosY;
+				e.y = this.roleGroundY;
 				e.vy = 0;
 			}
-			if (e.y > this.rolePosY + this.bgMoveRangY)
-				e.y = this.rolePosY + this.bgMoveRangY;
+			//role上升到一定程度后 防止敌人向下越界
+			if (e.y > this.roleGroundY + this.bgMoveRangY)
+				e.y = this.roleGroundY + this.bgMoveRangY;
+			//判断碰撞
 			if (e.x < -200 || e.x > 1500)
 			{
 				enemyArr.splice(i, 1);
@@ -470,11 +472,26 @@ public class GameScene extends View
 				Math.abs(e.y - this.role.y) < 90 && 
 				Math.abs(e.x - this.role.x) < 120)
 			{
-				trace("hit");
 				e.dead();
+				if (this.role.vy < 20) this.role.vy = 20;
 				this.role.bounce();
 			}
 		}
+	}
+		
+	private function enemyDeadEffectCompleteHandler(enemy:Enemy):void 
+	{
+		var length:int = enemyArr.length;
+		for (var i:int = 0; i < length; ++i) 
+		{
+			var e:Enemy = enemyArr[i];
+			if (e == enemy)
+			{
+				enemyArr.splice(i, 1);
+				break;
+			}
+		}
+		enemy.removeSelf();
 	}
 	
 	/**
@@ -483,7 +500,6 @@ public class GameScene extends View
 	private function gameLoop():void 
 	{
 		//背景循环
-		//前景循环
 		this.updateAllBg();
 		//角色循环
 		this.updateRole();

@@ -1,9 +1,12 @@
 package game.obj 
 {
 import config.GameConstant;
+import config.MsgConstant;
 import laya.display.Animation;
+import laya.events.Event;
 import laya.ui.Image;
 import laya.utils.Handler;
+import support.NotificationCenter;
 /**
  * ...敌人
  * @author Kanon
@@ -13,12 +16,14 @@ public class Enemy extends GameObject
 	private var run:Animation;
 	private var deadEffect1:Animation;
 	private var deadEffect2:Animation;
-	private var isDead:Boolean;
+	private var _isDead:Boolean;
 	public function Enemy() 
 	{
 		super();
-/*		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
-		this.addChild(testImg);*/
+		this.width = 60;
+		this.height = 90;
+		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
 	}
 	
 	/**
@@ -28,20 +33,20 @@ public class Enemy extends GameObject
 	public function create(type:int):void
 	{
 		this.run = this.createAni("enemy" + type + ".json");
-		this.run.y = -60;
+		this.run.y = -this.height;
 		this.run.play();
 		this.run.scaleX = -1;
 		this.addChild(this.run);
 		
 		this.deadEffect2 = this.createAni("dead2.json");
 		this.deadEffect2.x = -100;
-		this.deadEffect2.y = 18;
+		this.deadEffect2.y = -28;
 		this.deadEffect2.visible = false;
 		this.addChild(this.deadEffect2);
 		
 		this.deadEffect1 = this.createAni("dead1.json");
 		this.deadEffect1.x = -102;
-		this.deadEffect1.y = -85;
+		this.deadEffect1.y = -115;
 		this.deadEffect1.visible = false;
 		this.addChild(this.deadEffect1);
 	}
@@ -66,19 +71,22 @@ public class Enemy extends GameObject
 	public function dead():void
 	{
 		//TODO发送事件
-		if (this.isDead) return;
+		if (this._isDead) return;
 		this.stopRun();
 		if (this.deadEffect1)
 		{
 			this.deadEffect1.visible = true;
-			this.deadEffect1.play();
+			this.deadEffect1.on(Event.COMPLETE, this, function(){
+				NotificationCenter.getInstance().postNotification(MsgConstant.ENEMY_DEAD_EFFECT_COMPLETE, this);
+			});
+			this.deadEffect1.play(0, false);
 		}
 		if (this.deadEffect2)
 		{
 			this.deadEffect2.visible = true;
-			this.deadEffect2.play();
+			this.deadEffect2.play(0, false);
 		}
-		this.isDead = true;
+		this._isDead = true;
 	}
 	
 	/**
@@ -92,5 +100,10 @@ public class Enemy extends GameObject
 			this.run.visible = false;
 		}
 	}
+	
+	/**
+	 * 是否死亡
+	 */
+	public function get isDead():Boolean {return _isDead; }
 }
 }
