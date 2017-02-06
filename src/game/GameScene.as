@@ -29,12 +29,14 @@ import utils.Random;
  * [角色失败停下动作]
  * [角色起始动作]
  * [撞击boss]
+ * 敌人销毁动画滤镜
  * 重置角色位置速度
  * 敌人出现移动删除
  * 人物动作变化
  * 地图高宽需要配置
  * bug
- * 敌人初始位置在角色顶部的时候发生错误
+ * [敌人初始位置在角色顶部的时候发生错误]
+ * role速度过慢时敌人不出现
  * @author Kanon
  */
 public class GameScene extends View 
@@ -311,7 +313,7 @@ public class GameScene extends View
 	{
 		var count:int = parseInt((this.role.vx / 2).toString());
 		var num:int = Random.randint(count - 10, count);
-		num = 1;
+		//num = 1;
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
 		for (var i:int = 0; i < num; i++) 
 		{
@@ -445,6 +447,10 @@ public class GameScene extends View
 		{
 			var e:Enemy = enemyArr[i];
 			e.vx = e.speedVx - this.role.vx;
+			if (this.role.vx <= e.speedVx)
+			{
+			}
+			trace(e.vx);
 			if (this.role.isFail) e.vx = 20;
 			//死亡效果时去除往前的速度
 			if (e.isDead) e.vx = - this.role.vx;
@@ -457,24 +463,14 @@ public class GameScene extends View
 				e.removeSelf();
 				continue;
 			}
-			
-			var pos:Point = this.localToGlobal(new Point(e.x, e.y));
-			var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
-			e.parent.addChild(testImg);
-			testImg.x = e.x;
-			testImg.y = e.y - e.height;
-			trace("e.x, e.x", e.x, e.y);
-			trace(pos.x, pos.y);
-			
 			if (!this.role.isFail && 
 				this.role.vy > 15 && 
-				(this.role.y + this.role.height / 2) >= (e.y - e.height) && 
-				Math.abs(e.x - this.role.x) < 20)
+				(e.y - e.height) - (this.role.y + this.role.height / 2) < 15 && 
+				Math.abs(e.x - this.role.x) < 80)
 			{
 				e.dead();
-				if (this.role.vy < 20) this.role.vy = 20;
-				this.role.bounce();
-				continue;
+/*				if (this.role.vy < 20) this.role.vy = 20;
+				this.role.bounce();*/
 			}
 		}
 	}

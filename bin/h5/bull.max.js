@@ -426,7 +426,7 @@ var Laya=window.Laya=(function(window,document){
 	var GameConstant=(function(){
 		function GameConstant(){};
 		__class(GameConstant,'config.GameConstant');
-		GameConstant.GAME_FRAME=10;
+		GameConstant.GAME_FRAME=60;
 		GameConstant.GAME_WIDTH=1136;
 		GameConstant.GAME_HEIGHT=640;
 		GameConstant.GAME_RES_PATH="res/game/";
@@ -444,7 +444,7 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.ROLE_HEIGHT=98;
 		GameConstant.BOSS1_WIDTH=235;
 		GameConstant.BOSS1_HEIGHT=167;
-		GameConstant.CREATE_ENEMY_DELAY=5000;
+		GameConstant.CREATE_ENEMY_DELAY=500;
 		__static(GameConstant,
 		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH=config.GameConstant.GAME_ANI_PATH+"atlas/";},'GAME_BONES_PATH',function(){return this.GAME_BONES_PATH=config.GameConstant.GAME_ANI_PATH+"bones/";},'GAME_BG_PATH',function(){return this.GAME_BG_PATH=config.GameConstant.GAME_IMG_PATH+"bg/";},'GAME_ROLE_PATH',function(){return this.GAME_ROLE_PATH=config.GameConstant.GAME_IMG_PATH+"role/";},'GAME_BOSS_PATH',function(){return this.GAME_BOSS_PATH=config.GameConstant.GAME_IMG_PATH+"boss/";}
 		]);
@@ -20994,6 +20994,7 @@ var Laya=window.Laya=(function(window,document){
 			this.width=60;
 			this.height=90;
 			this.pivotX=this.width / 2;
+			this.scaleX=-this.scaleX;
 		}
 
 		__class(Enemy,'game.obj.Enemy',_super);
@@ -21006,7 +21007,6 @@ var Laya=window.Laya=(function(window,document){
 			this.run=this.createAni("enemy"+type+".json");
 			this.run.y=-this.height;
 			this.run.play();
-			this.run.scaleX=-1;
 			this.addChild(this.run);
 			this.deadEffect2=this.createAni("dead2.json");
 			this.deadEffect2.x=-100;
@@ -29701,12 +29701,14 @@ var Laya=window.Laya=(function(window,document){
 	*[角色失败停下动作]
 	*[角色起始动作]
 	*[撞击boss]
+	*敌人销毁动画滤镜
 	*重置角色位置速度
 	*敌人出现移动删除
 	*人物动作变化
 	*地图高宽需要配置
 	*bug
-	*敌人初始位置在角色顶部的时候发生错误
+	*[敌人初始位置在角色顶部的时候发生错误]
+	*role速度过慢时敌人不出现
 	*@author Kanon
 	*/
 	//class game.GameScene extends laya.ui.View
@@ -29783,7 +29785,7 @@ var Laya=window.Laya=(function(window,document){
 			NotificationCenter.getInstance().addObserver("roleFailRunComplete",this.roleFailRunCompleteHandler,this);
 			NotificationCenter.getInstance().addObserver("enemyDeadEffectComplete",this.enemyDeadEffectCompleteHandler,this);
 			this.on("mousedown",this,this.mouseDownHander);
-			Laya.timer.loop(5000,this,
+			Laya.timer.loop(500,this,
 			function(){
 				if (this.role && !this.role.isFail)
 					this.createEnemy();
@@ -29796,7 +29798,7 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initData=function(){
 			this.size(1136,640);
 			this.bgCount=3;
-			this.timerLoop(1 / 10 *1000,this,this.gameLoop);
+			this.timerLoop(1 / 60 *1000,this,this.gameLoop);
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
@@ -29937,7 +29939,6 @@ var Laya=window.Laya=(function(window,document){
 		__proto.createEnemy=function(){
 			var count=parseInt((this.role.vx / 2).toString());
 			var num=Random.randint(count-10,count);
-			num=1;
 			var startX=1136+50;
 			for (var i=0;i < num;i++){
 				var enemy=new Enemy();
@@ -30043,6 +30044,7 @@ var Laya=window.Laya=(function(window,document){
 			for (var i=0;i < this.enemyArr.length;++i){
 				var e=this.enemyArr[i];
 				e.vx=e.speedVx-this.role.vx;
+				console.log(e.vx);
 				if (this.role.isFail)e.vx=20;
 				if (e.isDead)e.vx=-this.role.vx;
 				e.update();
@@ -30050,26 +30052,18 @@ var Laya=window.Laya=(function(window,document){
 					this.enemyArr.splice(i,1);
 					e.removeSelf();
 					continue ;
-				};
-				var pos=this.localToGlobal(new Point(e.x,e.y));
-				var testImg=new Image("res/game/"+"test.png");
-				e.parent.addChild(testImg);
-				testImg.x=e.x;
-				testImg.y=e.y-e.height;
-				console.log("e.x, e.x",e.x,e.y);
-				console.log(pos.x,pos.y);
+				}
 				if (!this.role.isFail &&
 					this.role.vy > 15 &&
-				(this.role.y+this.role.height / 2)>=(e.y-e.height)&&
-				Math.abs(e.x-this.role.x)< 20){
+				(e.y-e.height)-(this.role.y+this.role.height / 2)< 15 &&
+				Math.abs(e.x-this.role.x)< 80){
 					e.dead();
-					if (this.role.vy < 20)this.role.vy=20;
-					this.role.bounce();
-					continue ;
 				}
 			}
 		}
 
+		/*if (this.role.vy < 20)this.role.vy=20;
+		this.role.bounce();*/
 		__proto.enemyDeadEffectCompleteHandler=function(enemy){
 			var length=this.enemyArr.length;
 			for (var i=0;i < length;++i){

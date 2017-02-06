@@ -17,12 +17,14 @@ public class Enemy extends GameObject
 	private var deadEffect1:Animation;
 	private var deadEffect2:Animation;
 	private var _isDead:Boolean;
+	public var speedVx:Number;
 	public function Enemy() 
 	{
 		super();
 		this.width = 60;
 		this.height = 90;
 		this.pivotX = this.width / 2;
+		this.scaleX = -this.scaleX;
 
 /*		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
 		this.addChild(testImg);
@@ -42,7 +44,6 @@ public class Enemy extends GameObject
 		this.run = this.createAni("enemy" + type + ".json");
 		this.run.y = -this.height;
 		this.run.play();
-		this.run.scaleX = -1;
 		this.addChild(this.run);
 		
 		this.deadEffect2 = this.createAni("dead2.json");

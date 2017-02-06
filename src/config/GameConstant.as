@@ -7,7 +7,7 @@ package config
 public class GameConstant 
 {
 	//游戏帧频
-	public static const GAME_FRAME:int = 10;
+	public static const GAME_FRAME:int = 60;
 	//游戏高宽
 	public static const GAME_WIDTH:int = 1136;
 	public static const GAME_HEIGHT:int = 640;
@@ -46,6 +46,6 @@ public class GameConstant
 	public static const BOSS1_HEIGHT:int = 167;
 	
 	//创建敌人的频率
-	public static const CREATE_ENEMY_DELAY:int = 5000;
+	public static const CREATE_ENEMY_DELAY:int = 500;
 }
 }
