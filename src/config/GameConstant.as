@@ -7,7 +7,7 @@ package config
 public class GameConstant 
 {
 	//游戏帧频
-	public static const GAME_FRAME:int = 5;
+	public static const GAME_FRAME:int = 10;
 	//游戏高宽
 	public static const GAME_WIDTH:int = 1136;
 	public static const GAME_HEIGHT:int = 640;

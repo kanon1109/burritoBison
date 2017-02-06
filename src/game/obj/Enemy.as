@@ -22,8 +22,14 @@ public class Enemy extends GameObject
 		super();
 		this.width = 60;
 		this.height = 90;
+		
 		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
 		this.addChild(testImg);
+		testImg.x = -this.width / 2;
+		
+		testImg = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
+		testImg.rotation = 90;
 	}
 	
 	/**

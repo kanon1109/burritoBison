@@ -10,6 +10,7 @@ import game.obj.PowerMete;
 import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
+import laya.maths.MathUtil;
 import laya.ui.Image;
 import laya.ui.View;
 import laya.utils.Ease;
@@ -160,8 +161,6 @@ public class GameScene extends View
 		this.cloud1PosY = this.bg1PosY - GameConstant.CLOUD1_HEIGHT - 300;
 		this.cloud2PosY = this.cloud1PosY + 430;
 		this.bgMoveRangY =  -180 - this.cloud1PosY;
-		bgMoveRangY = 300;
-		trace("bgMoveRangY", this.bgMoveRangY);
 		this.canStart = false;
 	}
 	
@@ -312,24 +311,20 @@ public class GameScene extends View
 		var count:int = parseInt((this.role.vx / 2).toString());
 		var num:int = Random.randint(count - 10, count);
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
-		var offsetY:Number = Random.randnum(0, 5);
 		for (var i:int = 0; i < num; i++) 
 		{
 			var enemy:Enemy = new Enemy();
 			enemy.x = Random.randrange(startX, startX + 500, 10);
-			if (!this.role.isOutTop)
-			{
-				enemy.y = this.groundArr[0].y - offsetY;
-				trace(" this.groundArr[0].y",  this.groundArr[0].y);
-			}
-			else
-			{
-				enemy.y = this.groundPosY + this.bgMoveRangY - offsetY;
-				trace("this.groundPosY + this.bgMoveRangY",  this.groundPosY + this.bgMoveRangY);
-			}
+			enemy.y = this.roleGroundY + Random.randnum(0, 10);
 			enemy.speedVx = Random.randnum(8, 15);
 			enemy.create(1);
 			this.enemyArr.push(enemy);
+		}
+		//深度排序
+		this.enemyArr.sort(MathUtil.sortByKey("y"));
+		for (var i:int = 0; i < this.enemyArr.length; i++) 
+		{
+			var enemy:Enemy = this.enemyArr[i];
 			Layer.GAME_ENEMY_LAYER.addChild(enemy);
 		}
 	}
@@ -443,25 +438,17 @@ public class GameScene extends View
 	 */
 	private function updateEnemy():void
 	{
+		Layer.GAME_ENEMY_LAYER.y = this.groundArr[0].y - this.groundPosY;
 		for (var i:int = 0; i < enemyArr.length; ++i) 
 		{
 			var e:Enemy = enemyArr[i];
 			e.vx = e.speedVx - this.role.vx;
 			if (this.role.isFail) e.vx = 20;
-			if (this.role.isOnTop) e.vy = -this.role.vy;
 			//死亡效果时去除往前的速度
 			if (e.isDead) e.vx = - this.role.vx;
 			e.update();
 			//role下落后 防止敌人向上越界
-			if (e.y < this.roleGroundY)
-			{
-				e.y = this.roleGroundY;
-				e.vy = 0;
-			}
-			//role上升到一定程度后 防止敌人向下越界
-			if (e.y > this.roleGroundY + this.bgMoveRangY)
-				e.y = this.roleGroundY + this.bgMoveRangY;
-			//判断碰撞
+			//判断
 			if (e.x < -200 || e.x > 1500)
 			{
 				enemyArr.splice(i, 1);
@@ -469,8 +456,8 @@ public class GameScene extends View
 			}
 			if (!this.role.isFail && 
 				this.role.vy > 15 && 
-				Math.abs(e.y - this.role.y) < 90 && 
-				Math.abs(e.x - this.role.x) < 120)
+				(this.role.y + this.role.height) > (e.y - e.height) && 
+				Math.abs((e.x - e.width / 2) - (this.role.x - this.role.width / 2)) < 20)
 			{
 				e.dead();
 				if (this.role.vy < 20) this.role.vy = 20;

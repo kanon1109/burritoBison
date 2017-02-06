@@ -128,18 +128,15 @@ public class Role extends GameObject
 		this.pivotX = config.GameConstant.ROLE_WIDTH / 2;
 		this.pivotY = config.GameConstant.ROLE_HEIGHT / 2;
 		this.width = config.GameConstant.ROLE_WIDTH;
-		this.width = config.GameConstant.ROLE_HEIGHT;
-		
-/*		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
-		this.addChild(testImg);
-		testImg.x = 0;
-		testImg.y = 0;
+		this.height = config.GameConstant.ROLE_HEIGHT;
 		
 		var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
 		this.addChild(testImg);
+		testImg.x = -this.width / 2;
+
+		testImg = new Image(GameConstant.GAME_RES_PATH + "test.png");
+		this.addChild(testImg);
 		testImg.rotation = 90;
-		testImg.x = 0;
-		testImg.y = 0;*/
 	}
 	
 	/**
@@ -419,7 +416,6 @@ public class Role extends GameObject
 				this.stopFly();
 				this.stopBounce();
 				this.stopHurt();
-
 				this.failAni.visible = true;
 				this.failAni.y = 0;
 				this.timerOnce(400, this, function() {

@@ -426,7 +426,7 @@ var Laya=window.Laya=(function(window,document){
 	var GameConstant=(function(){
 		function GameConstant(){};
 		__class(GameConstant,'config.GameConstant');
-		GameConstant.GAME_FRAME=5;
+		GameConstant.GAME_FRAME=10;
 		GameConstant.GAME_WIDTH=1136;
 		GameConstant.GAME_HEIGHT=640;
 		GameConstant.GAME_RES_PATH="res/game/";
@@ -20995,6 +20995,10 @@ var Laya=window.Laya=(function(window,document){
 			this.height=90;
 			var testImg=new Image("res/game/"+"test.png");
 			this.addChild(testImg);
+			testImg.x=-this.width / 2;
+			testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
+			testImg.rotation=90;
 		}
 
 		__class(Enemy,'game.obj.Enemy',_super);
@@ -21186,7 +21190,13 @@ var Laya=window.Laya=(function(window,document){
 			this.pivotX=133 / 2;
 			this.pivotY=98 / 2;
 			this.width=133;
-			this.width=98;
+			this.height=98;
+			var testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
+			testImg.x=-this.width / 2;
+			testImg=new Image("res/game/"+"test.png");
+			this.addChild(testImg);
+			testImg.rotation=90;
 		}
 
 		/**
@@ -29797,7 +29807,7 @@ var Laya=window.Laya=(function(window,document){
 		__proto.initData=function(){
 			this.size(1136,640);
 			this.bgCount=3;
-			this.timerLoop(1 / 5 *1000,this,this.gameLoop);
+			this.timerLoop(1 / 10 *1000,this,this.gameLoop);
 			this.bg1Arr=[];
 			this.bg2Arr=[];
 			this.groundArr=[];
@@ -29811,8 +29821,6 @@ var Laya=window.Laya=(function(window,document){
 			this.cloud1PosY=this.bg1PosY-887-300;
 			this.cloud2PosY=this.cloud1PosY+430;
 			this.bgMoveRangY=-180-this.cloud1PosY;
-			this.bgMoveRangY=300;
-			console.log("bgMoveRangY",this.bgMoveRangY);
 			this.canStart=false;
 		}
 
@@ -29941,21 +29949,17 @@ var Laya=window.Laya=(function(window,document){
 			var count=parseInt((this.role.vx / 2).toString());
 			var num=Random.randint(count-10,count);
 			var startX=1136+50;
-			var offsetY=Random.randnum(0,5);
 			for (var i=0;i < num;i++){
 				var enemy=new Enemy();
 				enemy.x=Random.randrange(startX,startX+500,10);
-				if (!this.role.isOutTop){
-					enemy.y=this.groundArr[0].y-offsetY;
-					console.log(" this.groundArr[0].y",this.groundArr[0].y);
-				}
-				else{
-					enemy.y=this.groundPosY+this.bgMoveRangY-offsetY;
-					console.log("this.groundPosY + this.bgMoveRangY",this.groundPosY+this.bgMoveRangY);
-				}
+				enemy.y=this.roleGroundY+Random.randnum(0,10);
 				enemy.speedVx=Random.randnum(8,15);
 				enemy.create(1);
 				this.enemyArr.push(enemy);
+			}
+			this.enemyArr.sort(MathUtil.sortByKey("y"));
+			for (var i=0;i < this.enemyArr.length;i++){
+				var enemy=this.enemyArr[i];
 				Layer.GAME_ENEMY_LAYER.addChild(enemy);
 			}
 		}
@@ -30045,27 +30049,21 @@ var Laya=window.Laya=(function(window,document){
 		*@param vy 纵向速度
 		*/
 		__proto.updateEnemy=function(){
+			Layer.GAME_ENEMY_LAYER.y=this.groundArr[0].y-this.groundPosY;
 			for (var i=0;i < this.enemyArr.length;++i){
 				var e=this.enemyArr[i];
 				e.vx=e.speedVx-this.role.vx;
 				if (this.role.isFail)e.vx=20;
-				if (this.role.isOnTop)e.vy=-this.role.vy;
 				if (e.isDead)e.vx=-this.role.vx;
 				e.update();
-				if (e.y < this.roleGroundY){
-					e.y=this.roleGroundY;
-					e.vy=0;
-				}
-				if (e.y > this.roleGroundY+this.bgMoveRangY)
-					e.y=this.roleGroundY+this.bgMoveRangY;
 				if (e.x <-200 || e.x > 1500){
 					this.enemyArr.splice(i,1);
 					e.removeSelf();
 				}
 				if (!this.role.isFail &&
 					this.role.vy > 15 &&
-				Math.abs(e.y-this.role.y)< 90 &&
-				Math.abs(e.x-this.role.x)< 120){
+				(this.role.y+this.role.height)> (e.y-e.height)&&
+				Math.abs((e.x-e.width / 2)-(this.role.x-this.role.width / 2))< 20){
 					e.dead();
 					if (this.role.vy < 20)this.role.vy=20;
 					this.role.bounce();
