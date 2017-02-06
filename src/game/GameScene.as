@@ -11,6 +11,7 @@ import game.obj.Role;
 import laya.display.Sprite;
 import laya.events.Event;
 import laya.maths.MathUtil;
+import laya.maths.Point;
 import laya.ui.Image;
 import laya.ui.View;
 import laya.utils.Ease;
@@ -310,6 +311,7 @@ public class GameScene extends View
 	{
 		var count:int = parseInt((this.role.vx / 2).toString());
 		var num:int = Random.randint(count - 10, count);
+		num = 1;
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
 		for (var i:int = 0; i < num; i++) 
 		{
@@ -453,15 +455,26 @@ public class GameScene extends View
 			{
 				enemyArr.splice(i, 1);
 				e.removeSelf();
+				continue;
 			}
+			
+			var pos:Point = this.localToGlobal(new Point(e.x, e.y));
+			var testImg:Image = new Image(GameConstant.GAME_RES_PATH + "test.png");
+			e.parent.addChild(testImg);
+			testImg.x = e.x;
+			testImg.y = e.y - e.height;
+			trace("e.x, e.x", e.x, e.y);
+			trace(pos.x, pos.y);
+			
 			if (!this.role.isFail && 
 				this.role.vy > 15 && 
-				(this.role.y + this.role.height) > (e.y - e.height) && 
-				Math.abs((e.x - e.width / 2) - (this.role.x - this.role.width / 2)) < 20)
+				(this.role.y + this.role.height / 2) >= (e.y - e.height) && 
+				Math.abs(e.x - this.role.x) < 20)
 			{
 				e.dead();
 				if (this.role.vy < 20) this.role.vy = 20;
 				this.role.bounce();
+				continue;
 			}
 		}
 	}
