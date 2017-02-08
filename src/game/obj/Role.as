@@ -72,8 +72,6 @@ public class Role extends GameObject
 	private var isFlying:Boolean;
 	//是否受伤
 	private var isHurt:Boolean;
-	//一次冲刺
-	private var swoopOnce:Boolean;
 	//是否开始冲撞boss
 	private var isStartRush:Boolean;
 
@@ -91,6 +89,8 @@ public class Role extends GameObject
 	public var swoopSpeed:Number;
 	//超级俯冲
 	public var superSwoopSpeed:Number;
+	//一次冲刺
+	public var swoopOnce:Boolean;
 	public function Role() 
 	{
 		super();

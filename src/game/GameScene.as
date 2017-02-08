@@ -449,8 +449,8 @@ public class GameScene extends View
 			e.vx = e.speedVx - this.role.vx;
 			if (this.role.vx <= e.speedVx)
 			{
+				
 			}
-			trace(e.vx);
 			if (this.role.isFail) e.vx = 20;
 			//死亡效果时去除往前的速度
 			if (e.isDead) e.vx = - this.role.vx;
@@ -464,13 +464,16 @@ public class GameScene extends View
 				continue;
 			}
 			if (!this.role.isFail && 
-				this.role.vy > 15 && 
-				(e.y - e.height) - (this.role.y + this.role.height / 2) < 15 && 
+				this.role.vy > 0 && 
+				(e.y - e.height) - (this.role.y + this.role.height / 2) <= 0 && 
 				Math.abs(e.x - this.role.x) < 80)
 			{
 				e.dead();
-/*				if (this.role.vy < 20) this.role.vy = 20;
-				this.role.bounce();*/
+				if (!this.role.swoopOnce)
+				{
+					if (this.role.vy < 20) this.role.vy = 20;
+					this.role.bounce();
+				}
 			}
 		}
 	}
