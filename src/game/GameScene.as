@@ -36,7 +36,7 @@ import utils.Random;
  * 地图高宽需要配置
  * bug
  * [敌人初始位置在角色顶部的时候发生错误]
- * role速度过慢时敌人不出现
+ * [role速度过慢时敌人不出现]
  * @author Kanon
  */
 public class GameScene extends View 
@@ -95,8 +95,6 @@ public class GameScene extends View
 		this.initPowerMete();
 		this.initBoss();
 		this.initRole();
-		trace("init");
-		//this.createEnemy();
 	}
 	
 	/**
@@ -137,7 +135,7 @@ public class GameScene extends View
 		this.on(Event.MOUSE_DOWN, this, mouseDownHander);
 		Laya.timer.loop(GameConstant.CREATE_ENEMY_DELAY, this, 
 		function() {
-			if (this.role && !this.role.isFail)
+			if (this.role && this.role.isStart && !this.role.isFail)
 				this.createEnemy();
 		}, null, false);
 		
@@ -173,7 +171,7 @@ public class GameScene extends View
 	private function initBg():void 
 	{		
 		var bgColor:Sprite = new Sprite();
-		bgColor.graphics.drawRect(0, 0, GameConstant.GAME_WIDTH, GameConstant.GAME_HEIGHT, "#BFF5F2");
+		bgColor.graphics.drawRect(-50, -50, GameConstant.GAME_WIDTH + 50, GameConstant.GAME_HEIGHT + 50, "#BFF5F2");
 		Layer.GAME_BG_COLOR_LAYER.addChild(bgColor);
 		
 		//背景滚屏
@@ -312,8 +310,13 @@ public class GameScene extends View
 	private function createEnemy():void
 	{
 		var count:int = parseInt((this.role.vx / 2).toString());
-		var num:int = Random.randint(count - 10, count);
-		//num = 1;
+		var minCount:int = 2;
+		var maxCount:int = 25;
+		if (count > maxCount) 
+			count = maxCount;
+		else (count < minCount) 
+			count = minCount;
+		var num:int = Random.randint(minCount, count);
 		var startX:Number = config.GameConstant.GAME_WIDTH + 50;
 		for (var i:int = 0; i < num; i++) 
 		{
@@ -447,13 +450,11 @@ public class GameScene extends View
 		{
 			var e:Enemy = enemyArr[i];
 			e.vx = e.speedVx - this.role.vx;
-			if (this.role.vx <= e.speedVx)
-			{
-				
-			}
+			if (e.vx > -5) e.vx = -5;
+			//trace("e.vx", e.vx);
 			if (this.role.isFail) e.vx = 20;
 			//死亡效果时去除往前的速度
-			if (e.isDead) e.vx = - this.role.vx;
+			if (e.isDead) e.vx = -this.role.vx;
 			e.update();
 			//role下落后 防止敌人向上越界
 			//判断

@@ -61,8 +61,7 @@ public class Role extends GameObject
 	private var hurtCount:int;
 	//是否在下落
 	private var isFall:Boolean;
-	//是否着地停下
-	private var _isFail:Boolean;
+
 	private var isFailRun:Boolean;
 	//是否在弹起
 	private var isBounce:Boolean;
@@ -91,6 +90,8 @@ public class Role extends GameObject
 	public var superSwoopSpeed:Number;
 	//一次冲刺
 	public var swoopOnce:Boolean;
+	//是否着地停下
+	private var isFail:Boolean;
 	public function Role() 
 	{
 		super();
@@ -112,7 +113,7 @@ public class Role extends GameObject
 		this.minVy = 20;
 		this.frictionX = .9;
 		this.frictionY = .8;
-		this._isFail = false;
+		this.isFail = false;
 		this.isFailRun = false;
 		this.isFall = false;
 		this.isBounce = false;
@@ -257,7 +258,7 @@ public class Role extends GameObject
 		if (!this.isStart) return;
 		if (!this.isOnTop) this.y += this.vy;
 		this.vy += this.gravity;
-		if (this.y > this.groundY && !this._isFail)
+		if (this.y > this.groundY && !this.isFail)
 		{
 			//弹起
 			this.bounce();
@@ -278,18 +279,18 @@ public class Role extends GameObject
 				//速度过小停下
 				if (Math.abs(this.vx) < this.minVx && Math.abs(this.vy) < this.minVy) 
 				{
-					this._isFail = true;
+					this.isFail = true;
 					this.vx = 0;
 					this.vy = 0;
 					Shake.shake(this, 5);
 				}
 			}
 			//最后一次停下不需要震动
-			if (!this._isFail)
+			if (!this.isFail)
 			{
 				var shakeDelta:int = 7;
 				if (this.swoopOnce) shakeDelta = 15;
-				Shake.shake(Layer.GAME_BG_LAYER, 5, shakeDelta);
+				Shake.shake(Layer.GAME_LAYER, 5, shakeDelta);
 				NotificationCenter.getInstance().postNotification(MsgConstant.ROLE_BOUNCE);
 			}
 			this.swoopOnce = false;
@@ -355,7 +356,7 @@ public class Role extends GameObject
 	 */
 	private function updateAniState():void
 	{
-		if (!this._isFail)
+		if (!this.isFail)
 		{	
 			if (this.isStart)
 			{
@@ -535,11 +536,6 @@ public class Role extends GameObject
 		this.swoopOnce = true;
 		this.vy = speed;
 	}
-	
-	/**
-	 * 是否失败了
-	 */
-	public function get isFail():Boolean { return _isFail; }
 
 	/**
 	 * 是否允许加速俯冲
@@ -547,7 +543,7 @@ public class Role extends GameObject
 	 */
 	public function canSwoop():Boolean
 	{
-		return !this.isOutTop && !this._isFail;
+		return !this.isOutTop && !this.isFail;
 	}
 }
 }

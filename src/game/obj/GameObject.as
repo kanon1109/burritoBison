@@ -8,9 +8,9 @@ import laya.display.Sprite;
 public class GameObject extends Sprite 
 {
 	//速度
-	private var _vx:Number = 0;
-	private var _vy:Number = 0;
-	private var _speedVx:Number = 0;
+	private var vx:Number = 0;
+	private var vy:Number = 0;
+	private var speedVx:Number = 0;
 	public function GameObject() 
 	{
 		
@@ -23,33 +23,6 @@ public class GameObject extends Sprite
 	{
 		this.x += this.vx;
 		this.y += this.vy;
-	}
-	
-	/**
-	 * 横向速度
-	 */
-	public function get vx():Number {return _vx;}
-	public function set vx(value:Number):void 
-	{
-		_vx = value;
-	}
-	
-	/**
-	 * 纵向速度
-	 */
-	public function get vy():Number {return _vy;}
-	public function set vy(value:Number):void 
-	{
-		_vy = value;
-	}
-	
-	/**
-	 * 横向速度
-	 */
-	public function get speedVx():Number {return _speedVx;}
-	public function set speedVx(value:Number):void 
-	{
-		_speedVx = value;
 	}
 }
 }

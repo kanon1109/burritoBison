@@ -4,6 +4,7 @@ import config.GameConstant;
 import config.MsgConstant;
 import laya.display.Animation;
 import laya.events.Event;
+import laya.filters.ColorFilter;
 import laya.ui.Image;
 import laya.utils.Handler;
 import support.NotificationCenter;
@@ -16,7 +17,8 @@ public class Enemy extends GameObject
 	private var run:Animation;
 	private var deadEffect1:Animation;
 	private var deadEffect2:Animation;
-	private var _isDead:Boolean;
+	//是否死亡
+	public var isDead:Boolean;
 	public var speedVx:Number;
 	public function Enemy() 
 	{
@@ -47,16 +49,26 @@ public class Enemy extends GameObject
 		this.addChild(this.run);
 		
 		this.deadEffect2 = this.createAni("dead2.json");
-		this.deadEffect2.x = -100;
-		this.deadEffect2.y = -28;
+		this.deadEffect2.x = -120;
+		this.deadEffect2.y = -14;
 		this.deadEffect2.visible = false;
 		this.addChild(this.deadEffect2);
 		
 		this.deadEffect1 = this.createAni("dead1.json");
-		this.deadEffect1.x = -102;
-		this.deadEffect1.y = -115;
+		this.deadEffect1.x = -100;
+		this.deadEffect1.y = -125;
 		this.deadEffect1.visible = false;
 		this.addChild(this.deadEffect1);
+		
+		var yellowMat:Array = 
+			[
+				1, 1, 1, 0, 0, //R
+				0.65, 0.5, 0.5, 0, 0, //G
+				0, 0, 0, 0, 0, //B
+				0, 0, 0, 1, 0, //A
+			];
+		this.deadEffect1.filters = [new ColorFilter(yellowMat)];
+		this.deadEffect2.filters = [new ColorFilter(yellowMat)];
 	}
 	
 	/**
@@ -79,7 +91,7 @@ public class Enemy extends GameObject
 	public function dead():void
 	{
 		//TODO发送事件
-		if (this._isDead) return;
+		if (this.isDead) return;
 		this.stopRun();
 		if (this.deadEffect1)
 		{
@@ -94,7 +106,7 @@ public class Enemy extends GameObject
 			this.deadEffect2.visible = true;
 			this.deadEffect2.play(0, false);
 		}
-		this._isDead = true;
+		this.isDead = true;
 	}
 	
 	/**
@@ -108,10 +120,5 @@ public class Enemy extends GameObject
 			this.run.visible = false;
 		}
 	}
-	
-	/**
-	 * 是否死亡
-	 */
-	public function get isDead():Boolean {return _isDead; }
 }
 }

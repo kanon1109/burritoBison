@@ -46,6 +46,6 @@ public class GameConstant
 	public static const BOSS1_HEIGHT:int = 167;
 	
 	//创建敌人的频率
-	public static const CREATE_ENEMY_DELAY:int = 500;
+	public static const CREATE_ENEMY_DELAY:int = 800;
 }
 }

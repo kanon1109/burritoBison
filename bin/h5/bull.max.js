@@ -444,7 +444,7 @@ var Laya=window.Laya=(function(window,document){
 		GameConstant.ROLE_HEIGHT=98;
 		GameConstant.BOSS1_WIDTH=235;
 		GameConstant.BOSS1_HEIGHT=167;
-		GameConstant.CREATE_ENEMY_DELAY=500;
+		GameConstant.CREATE_ENEMY_DELAY=800;
 		__static(GameConstant,
 		['GAME_IMG_PATH',function(){return this.GAME_IMG_PATH="res/game/"+"img/";},'GAME_ANI_PATH',function(){return this.GAME_ANI_PATH="res/game/"+"ani/";},'GAME_ATLAS_PATH',function(){return this.GAME_ATLAS_PATH=config.GameConstant.GAME_ANI_PATH+"atlas/";},'GAME_BONES_PATH',function(){return this.GAME_BONES_PATH=config.GameConstant.GAME_ANI_PATH+"bones/";},'GAME_BG_PATH',function(){return this.GAME_BG_PATH=config.GameConstant.GAME_IMG_PATH+"bg/";},'GAME_ROLE_PATH',function(){return this.GAME_ROLE_PATH=config.GameConstant.GAME_IMG_PATH+"role/";},'GAME_BOSS_PATH',function(){return this.GAME_BOSS_PATH=config.GameConstant.GAME_IMG_PATH+"boss/";}
 		]);
@@ -17393,9 +17393,9 @@ var Laya=window.Laya=(function(window,document){
 	//class game.obj.GameObject extends laya.display.Sprite
 	var GameObject=(function(_super){
 		function GameObject(){
-			this._vx=0;
-			this._vy=0;
-			this._speedVx=0;
+			this.vx=0;
+			this.vy=0;
+			this._$3_speedVx=0;
 			GameObject.__super.call(this);
 		}
 
@@ -17408,27 +17408,6 @@ var Laya=window.Laya=(function(window,document){
 			this.x+=this.vx;
 			this.y+=this.vy;
 		}
-
-		/**
-		*横向速度
-		*/
-		__getset(0,__proto,'vx',function(){return this._vx;},function(value){
-			this._vx=value;
-		});
-
-		/**
-		*纵向速度
-		*/
-		__getset(0,__proto,'vy',function(){return this._vy;},function(value){
-			this._vy=value;
-		});
-
-		/**
-		*横向速度
-		*/
-		__getset(0,__proto,'speedVx',function(){return this._speedVx;},function(value){
-			this._speedVx=value;
-		});
 
 		return GameObject;
 	})(Sprite)
@@ -20989,7 +20968,7 @@ var Laya=window.Laya=(function(window,document){
 			this.run=null;
 			this.deadEffect1=null;
 			this.deadEffect2=null;
-			this._isDead=false;
+			this.isDead=false;
 			this.speedVx=NaN;
 			Enemy.__super.call(this);
 			this.width=60;
@@ -21010,15 +20989,23 @@ var Laya=window.Laya=(function(window,document){
 			this.run.play();
 			this.addChild(this.run);
 			this.deadEffect2=this.createAni("dead2.json");
-			this.deadEffect2.x=-100;
-			this.deadEffect2.y=-28;
+			this.deadEffect2.x=-120;
+			this.deadEffect2.y=-14;
 			this.deadEffect2.visible=false;
 			this.addChild(this.deadEffect2);
 			this.deadEffect1=this.createAni("dead1.json");
-			this.deadEffect1.x=-102;
-			this.deadEffect1.y=-115;
+			this.deadEffect1.x=-100;
+			this.deadEffect1.y=-125;
 			this.deadEffect1.visible=false;
 			this.addChild(this.deadEffect1);
+			var yellowMat=
+			[
+			1,1,1,0,0,
+			0.65,0.5,0.5,0,0,
+			0,0,0,0,0,
+			0,0,0,1,0,];
+			this.deadEffect1.filters=[new ColorFilter(yellowMat)];
+			this.deadEffect2.filters=[new ColorFilter(yellowMat)];
 		}
 
 		/**
@@ -21038,7 +21025,7 @@ var Laya=window.Laya=(function(window,document){
 		*死亡
 		*/
 		__proto.dead=function(){
-			if (this._isDead)return;
+			if (this.isDead)return;
 			this.stopRun();
 			if (this.deadEffect1){
 				this.deadEffect1.visible=true;
@@ -21051,7 +21038,7 @@ var Laya=window.Laya=(function(window,document){
 				this.deadEffect2.visible=true;
 				this.deadEffect2.play(0,false);
 			}
-			this._isDead=true;
+			this.isDead=true;
 		}
 
 		/**
@@ -21064,10 +21051,6 @@ var Laya=window.Laya=(function(window,document){
 			}
 		}
 
-		/**
-		*是否死亡
-		*/
-		__getset(0,__proto,'isDead',function(){return this._isDead;});
 		return Enemy;
 	})(GameObject)
 
@@ -21079,19 +21062,11 @@ var Laya=window.Laya=(function(window,document){
 	//class game.obj.GameBackGround extends game.obj.GameObject
 	var GameBackGround=(function(_super){
 		function GameBackGround(){
-			this._prevBg=null;
+			this.prevBg=null;
 			GameBackGround.__super.call(this);
 		}
 
 		__class(GameBackGround,'game.obj.GameBackGround',_super);
-		var __proto=GameBackGround.prototype;
-		/**
-		*上一个背景
-		*/
-		__getset(0,__proto,'prevBg',function(){return this._prevBg;},function(value){
-			this._prevBg=value;
-		});
-
 		return GameBackGround;
 	})(GameObject)
 
@@ -21137,7 +21112,6 @@ var Laya=window.Laya=(function(window,document){
 			this.hurtIndex=0;
 			this.hurtCount=0;
 			this.isFall=false;
-			this._isFail=false;
 			this.isFailRun=false;
 			this.isBounce=false;
 			this.isBounceComplete=false;
@@ -21151,6 +21125,7 @@ var Laya=window.Laya=(function(window,document){
 			this.swoopSpeed=NaN;
 			this.superSwoopSpeed=NaN;
 			this.swoopOnce=false;
+			this.isFail=false;
 			Role.__super.call(this);
 			this.initData();
 			this.init();
@@ -21171,7 +21146,7 @@ var Laya=window.Laya=(function(window,document){
 			this.minVy=20;
 			this.frictionX=.9;
 			this.frictionY=.8;
-			this._isFail=false;
+			this.isFail=false;
 			this.isFailRun=false;
 			this.isFall=false;
 			this.isBounce=false;
@@ -21286,7 +21261,7 @@ var Laya=window.Laya=(function(window,document){
 			if (!this.isStart)return;
 			if (!this.isOnTop)this.y+=this.vy;
 			this.vy+=this.gravity;
-			if (this.y > this.groundY && !this._isFail){
+			if (this.y > this.groundY && !this.isFail){
 				this.bounce();
 				this.y=this.groundY;
 				if (!this.swoopOnce){
@@ -21300,16 +21275,16 @@ var Laya=window.Laya=(function(window,document){
 					}
 					this.vx *=this.frictionX;
 					if (Math.abs(this.vx)< this.minVx && Math.abs(this.vy)< this.minVy){
-						this._isFail=true;
+						this.isFail=true;
 						this.vx=0;
 						this.vy=0;
 						Shake.shake(this,5);
 					}
 				}
-				if (!this._isFail){
+				if (!this.isFail){
 					var shakeDelta=7;
 					if (this.swoopOnce)shakeDelta=15;
-					Shake.shake(Layer.GAME_BG_LAYER,5,shakeDelta);
+					Shake.shake(Layer.GAME_LAYER,5,shakeDelta);
 					NotificationCenter.getInstance().postNotification("roleBounce");
 				}
 				this.swoopOnce=false;
@@ -21364,7 +21339,7 @@ var Laya=window.Laya=(function(window,document){
 		*更新状态
 		*/
 		__proto.updateAniState=function(){
-			if (!this._isFail){
+			if (!this.isFail){
 				if (this.isStart){
 					this.stopStart();
 					if (!this.isStartRush){
@@ -21520,13 +21495,9 @@ var Laya=window.Laya=(function(window,document){
 		*@return
 		*/
 		__proto.canSwoop=function(){
-			return !this.isOutTop && !this._isFail;
+			return !this.isOutTop && !this.isFail;
 		}
 
-		/**
-		*是否失败了
-		*/
-		__getset(0,__proto,'isFail',function(){return this._isFail;});
 		return Role;
 	})(GameObject)
 
@@ -29751,7 +29722,6 @@ var Laya=window.Laya=(function(window,document){
 			this.initPowerMete();
 			this.initBoss();
 			this.initRole();
-			console.log("init");
 		}
 
 		/**
@@ -29786,9 +29756,9 @@ var Laya=window.Laya=(function(window,document){
 			NotificationCenter.getInstance().addObserver("roleFailRunComplete",this.roleFailRunCompleteHandler,this);
 			NotificationCenter.getInstance().addObserver("enemyDeadEffectComplete",this.enemyDeadEffectCompleteHandler,this);
 			this.on("mousedown",this,this.mouseDownHander);
-			Laya.timer.loop(500,this,
+			Laya.timer.loop(800,this,
 			function(){
-				if (this.role && !this.role.isFail)
+				if (this.role && this.role.isStart && !this.role.isFail)
 					this.createEnemy();
 			},null,false);
 		}
@@ -29821,7 +29791,7 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.initBg=function(){
 			var bgColor=new Sprite();
-			bgColor.graphics.drawRect(0,0,1136,640,"#BFF5F2");
+			bgColor.graphics.drawRect(-50,-50,1136+50,640+50,"#BFF5F2");
 			Layer.GAME_BG_COLOR_LAYER.addChild(bgColor);
 			this.createBg("bg1_1.png",
 			1758,
@@ -29939,7 +29909,13 @@ var Laya=window.Laya=(function(window,document){
 		*/
 		__proto.createEnemy=function(){
 			var count=parseInt((this.role.vx / 2).toString());
-			var num=Random.randint(count-10,count);
+			var minCount=2;
+			var maxCount=25;
+			if (count > maxCount)
+				count=maxCount;
+			else (count < minCount)
+			count=minCount;
+			var num=Random.randint(minCount,count);
 			var startX=1136+50;
 			for (var i=0;i < num;i++){
 				var enemy=new Enemy();
@@ -30045,8 +30021,7 @@ var Laya=window.Laya=(function(window,document){
 			for (var i=0;i < this.enemyArr.length;++i){
 				var e=this.enemyArr[i];
 				e.vx=e.speedVx-this.role.vx;
-				if (this.role.vx <=e.speedVx){
-				}
+				if (e.vx >-5)e.vx=-5;
 				if (this.role.isFail)e.vx=20;
 				if (e.isDead)e.vx=-this.role.vx;
 				e.update();
